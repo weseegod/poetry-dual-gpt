@@ -370,17 +370,191 @@ def explore_dataset(csv_path: str = None):
 
 
 # =========================================================================
-# PyTorch Dataset — for training (implement later in Phase 3)
+# PyTorch Dataset — causal LM style (flat tensor → random windows)
+# =========================================================================
+#
+# Pattern (compare with NSFWDataset):
+#   NSFWDataset:  __init__ scans dirs → self.samples = [(path, label), ...]
+#                 __getitem__ loads image → transform → (image_tensor, label)
+#
+#   PoetryDataset: __init__ receives flat token tensor + block_size
+#                  __getitem__ slices a random window → (x, y) with y shifted
+#
+# Key difference: no transforms (text data doesn't need augmentation).
+# The "shift by 1" IS the label — the model predicts the next token.
+
+
+class PoetryDataset(Dataset):
+    """
+    PyTorch Dataset wrapping a flat tensor of token IDs for causal LM.
+
+    Given a giant tensor: [tok_0, tok_1, tok_2, ..., tok_N]
+    Each sample is a window of block_size+1 tokens:
+      x = window[:block_size]           # input:  [tok_i, ..., tok_{i+T-1}]
+      y = window[1:block_size+1]        # target: [tok_{i+1}, ..., tok_{i+T}]
+
+    Pattern matches NSFWDataset:
+      - __init__:  prepare self.samples (here: just the data tensor)
+      - __len__:   return how many windows we can extract
+      - __getitem__: extract one window, return (x, y)
+
+    Args:
+        data:       flat LongTensor of token IDs, shape (N,)
+        block_size: max context length (256)
+    """
+
+    def __init__(self, data: torch.Tensor, block_size: int):
+        assert len(data.shape) == 1, f"data must be 1D tensor, got shape {data.shape}"
+        assert len(data) > block_size, (
+            f"Data too short: {len(data)} tokens, need > {block_size} (block_size)"
+        )
+        self.data = data
+        self.block_size = block_size
+
+    def __len__(self) -> int:
+        # Number of possible windows.
+        # Need block_size+1 tokens per sample (block_size for input, 1 extra for target).
+        return len(self.data) - self.block_size
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Extract a window of block_size+1 tokens
+        chunk = self.data[idx : idx + self.block_size + 1]
+        x = chunk[:self.block_size]      # input:  positions 0 .. T-1
+        y = chunk[1:]                     # target: positions 1 .. T  (shifted by 1)
+        return x, y
+
+
+# =========================================================================
+# DataLoader factory — like get_dataloaders() in the image classifier
+# =========================================================================
+#
+# Pattern (compare with NSFWDataset.get_dataloaders):
+#   1. Split indices into train/val/test
+#   2. Apply different transforms per split (none needed for poetry)
+#   3. Create DataLoader for each split with batch_size, shuffle, pin_memory
+#
+# Because PoetryDataset works on a flat tensor, we split the TENSOR first,
+# then create a Dataset per split. No SubsetWithTransform needed.
+
+
+def get_dataloaders(
+    data: torch.Tensor,
+    block_size: int = 256,
+    batch_size: int = 64,
+    val_fraction: float = 0.05,
+    test_fraction: float = 0.05,
+    num_workers: int = 2,
+):
+    """
+    Split flat token data into train/val/test and return DataLoaders.
+
+    Pattern follows NSFWDataset.get_dataloaders():
+      1. Compute split sizes
+      2. Slice the tensor (no SubsetWithTransform needed — no transforms)
+      3. Create PoetryDataset per split
+      4. Wrap in DataLoader with shuffle/pin_memory/num_workers
+
+    Args:
+        data:          flat LongTensor of all token IDs, shape (N,)
+        block_size:    max context window (256)
+        batch_size:    samples per batch (64)
+        val_fraction:  fraction for validation (0.05 = 5%)
+        test_fraction: fraction for test (0.05 = 5%)
+        num_workers:   parallel data-loading threads (2-4)
+
+    Returns:
+        train_loader, val_loader, test_loader
+    """
+    total_tokens = len(data)
+    val_size = int(total_tokens * val_fraction)
+    test_size = int(total_tokens * test_fraction)
+    train_size = total_tokens - val_size - test_size
+
+    # Split the flat tensor into three contiguous chunks
+    train_data = data[:train_size]
+    val_data = data[train_size : train_size + val_size]
+    test_data = data[train_size + val_size :]
+
+    # Create Dataset for each split
+    train_ds = PoetryDataset(train_data, block_size)
+    val_ds = PoetryDataset(val_data, block_size)
+    test_ds = PoetryDataset(test_data, block_size)
+
+    print(f"\n📦  DataLoader created:")
+    print(f"    Train: {train_size:,} tokens → {len(train_ds):,} samples")
+    print(f"    Val:   {val_size:,} tokens → {len(val_ds):,} samples")
+    print(f"    Test:  {test_size:,} tokens → {len(test_ds):,} samples")
+    print(f"    Batch size: {batch_size}, Block size: {block_size}")
+    print(f"    ~{len(train_ds) // batch_size:,} batches/epoch")
+
+    # Create DataLoaders (mirrors image classifier pattern)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,            # train: randomize order each epoch
+        pin_memory=True,          # faster CPU→GPU transfer
+        num_workers=num_workers,
+        drop_last=True,           # drop incomplete last batch (no batch-norm issues)
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,            # val: fixed order, reproducible
+        pin_memory=True,
+        num_workers=num_workers,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=batch_size,
+        shuffle=False,            # test: fixed order
+        pin_memory=True,
+        num_workers=num_workers,
+    )
+
+    return train_loader, val_loader, test_loader
+
+
+# =========================================================================
+# Tokenize helper — wrap tokenizer.encode into something reusable
 # =========================================================================
 
-# class PoetryDataset(Dataset):
-#     ...
+def tokenize_corpus(text_lines: List[str], tokenizer) -> torch.Tensor:
+    """
+    Tokenize a list of preprocessed text lines into one flat LongTensor.
+
+    Call this BEFORE get_dataloaders().
+
+    Args:
+        text_lines: list of strings, each already formatted like:
+                    "<|start|> [LUC_BAT] prompt, <|reply|> reply <|end|>"
+        tokenizer:  HuggingFace Tokenizer (from train_bpe.py)
+
+    Returns:
+        Flat LongTensor of all token IDs concatenated
+
+    Example:
+        from tokenizers import Tokenizer
+        tok = Tokenizer.from_file("tokenizer/poetry_bpe.model")
+        lines = ["<|start|> [LUC_BAT] Trăm năm, <|reply|> Chữ tài <|end|>", ...]
+        data = tokenize_corpus(lines, tok)
+        train_loader, val_loader, test_loader = get_dataloaders(data)
+    """
+    all_ids = []
+    for line in tqdm(text_lines, desc="Tokenizing"):
+        if line:
+            ids = tokenizer.encode(line).ids
+            all_ids.extend(ids)
+
+    tensor = torch.tensor(all_ids, dtype=torch.long)
+    print(f"Tokenized {len(text_lines):,} lines → {len(tensor):,} tokens")
+    return tensor
 
 
 # =========================================================================
-# Run exploration when executing this file directly
+# Quick test — verify the Dataset + DataLoader work with dummy data
 # =========================================================================
 if __name__ == "__main__":
+    # 1. Explore the raw CSV
     df = explore_dataset()
 
     # Demonstrate Phase 1 filter: Lục Bát only
@@ -393,5 +567,30 @@ if __name__ == "__main__":
     contents = get_poem_content(df_lb.head(1))
     if contents:
         print("    " + contents[0][:200].replace('\n', '\n    ') + "...")
+
+    # 2. Test PoetryDataset + DataLoader with dummy token IDs
+    print("\n" + "=" * 65)
+    print("🧪  PoetryDataset + DataLoader dry-run (dummy data)")
+    print("=" * 65)
+
+    # Simulate: 100K token IDs (like what tokenize_corpus would produce)
+    dummy_data = torch.arange(100_000, dtype=torch.long)
+
+    train_loader, val_loader, test_loader = get_dataloaders(
+        dummy_data,
+        block_size=256,
+        batch_size=32,
+    )
+
+    # Inspect one batch
+    x, y = next(iter(train_loader))
+    print(f"\n    x shape:    {x.shape}  (batch={x.shape[0]}, seq={x.shape[1]})")
+    print(f"    y shape:    {y.shape}")
+    print(f"    x[0, :5]:   {x[0, :5].tolist()}")       # first 5 tokens
+    print(f"    y[0, :5]:   {y[0, :5].tolist()}")       # should be x shifted by 1
+    print(f"    x[0, -5:]:  {x[0, -5:].tolist()}")
+    print(f"    y[0, -5:]:  {y[0, -5:].tolist()}")
+    assert torch.equal(x[:, 1:], y[:, :-1]), "FAIL: y is NOT x shifted by 1!"
+    print(f"    ✅  Verified: y is x shifted by 1")
 
 
