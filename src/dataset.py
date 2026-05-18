@@ -442,7 +442,7 @@ def get_dataloaders(
     block_size: int = 256,
     batch_size: int = 64,
     val_fraction: float = 0.05,
-    num_workers: int = 2,
+    num_workers: int = 0,  # 0 = main process (faster for small datasets)
 ):
     """
     Split flat token data into train/val and return DataLoaders.

@@ -1,67 +1,82 @@
-# tokenizer/train_bpe.py
-# ======================
-# Purpose: Train a BPE tokenizer specifically for Vietnamese poetry.
-#
-# What is a tokenizer?
-#   A tokenizer converts raw text into numbers (token IDs) that the model
-#   can process. It also converts generated token IDs back into text.
-#
-# What is BPE (Byte-Pair Encoding)?
-#   BPE starts with individual characters, then repeatedly merges the most
-#   frequent adjacent pair of symbols. This creates subword units.
-#   Example: "người" might become ["ng", "ười"] or stay whole if common.
-#   Benefit: handles rare words by breaking them into known subwords.
-#
-# Why custom tokenizer instead of a pre-built one?
-#   - Vietnamese has unique diacritics (ton dấu) that generic tokenizers
-#     often split incorrectly
-#   - Poetry has domain-specific vocabulary
-#   - We need special control tokens: <|start|>, <|reply|>, <|end|>,
-#     [LUC_BAT], [TU_TUYET], [THAT_NGON_BAT_CU], <|pad|>
-#
-# Special tokens we need:
-#   0: <|pad|>           - padding (also acts as unknown token)
-#   1: <|start|>         - marks beginning of a training example
-#   2: <|reply|>         - separates prompt from reply
-#   3: <|end|>           - marks end of training example
-#   4: [LUC_BAT]         - genre tag: 6-8 syllable couplet
-#   5: [TU_TUYET]        - genre tag: 4x7 syllable poem
-#   6: [THAT_NGON_BAT_CU] - genre tag: 8x7 syllable poem
-#
-# What you'll learn:
-#   - How BPE algorithm works (frequency-based merging)
-#   - How to use HuggingFace `tokenizers` library
-#   - Pre-tokenization (byte-level), normalization (NFKC)
-#   - Post-processing templates for sequence packing
-#   - How vocab size affects model size (embedding = vocab_size × n_embd)
-#
-# Target: vocab_size = 12,000 tokens
-#
-# Implementation plan:
-#   1. Define special tokens list (must be first in vocab!)
-#   2. Initialize BPE tokenizer with unknown token = <|pad|>
-#   3. Set normalizer (NFKC unicode normalization)
-#   4. Set pre-tokenizer (ByteLevel, handles all Unicode)
-#   5. Configure BPE trainer (vocab_size, min_frequency, special_tokens)
-#   6. Train on the preprocessed corpus (from data/poetry_corpus.txt)
-#   7. Set post-processor template for sequence formatting
-#   8. Enable padding (to block_size=256) and truncation
-#   9. Save tokenizer to tokenizer/poetry_bpe.model
-#
-# API reference (HuggingFace tokenizers):
-#   from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
-#   Tokenizer(models.BPE(unk_token="<|pad|>"))
-#   trainer = trainers.BpeTrainer(vocab_size=12000, special_tokens=[...])
-#   tokenizer.train([corpus_path], trainer)
-#   tokenizer.save("tokenizer/poetry_bpe.model")
-#   tokenizer.post_processor = processors.TemplateProcessing(...)
-#   tokenizer.enable_padding(pad_id=0, pad_token="<|pad|>", length=256)
-#
-# After training, you can test it:
-#   from tokenizers import Tokenizer
-#   tok = Tokenizer.from_file("tokenizer/poetry_bpe.model")
-#   print(tok.encode("<|start|> [LUC_BAT] Trăm năm").ids)
-#   # → [1, 4, ...token IDs for "Trăm", "năm"...]
-#   print(tok.get_vocab_size())  # → 12000
+"""
+train_bpe.py — Train a Byte-Pair Encoding tokenizer for Vietnamese poetry.
 
-# --- YOUR CODE BELOW ---
+Produces tokenizer/poetry_bpe.model with vocab_size=12,000.
+Special tokens: <|pad|> <|start|> <|reply|> <|end|> [LUC_BAT] [TU_TUYET] [THAT_NGON_BAT_CU]
+"""
+
+import argparse
+from pathlib import Path
+from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders, processors
+
+ROOT = Path(__file__).parent.parent
+CORPUS_PATH = ROOT / "data" / "poetry_corpus.txt"
+OUTPUT_PATH = ROOT / "tokenizer" / "poetry_bpe.model"
+
+# Order matters: pad must be index 0
+SPECIAL_TOKENS = [
+    "<|pad|>",            # 0 — padding / unknown
+    "<|start|>",          # 1 — beginning of training example
+    "<|reply|>",          # 2 — separates prompt from reply
+    "<|end|>",            # 3 — end of training example
+    "[LUC_BAT]",          # 4 — genre: 6-8 couplet
+    "[TU_TUYET]",         # 5 — genre: 4×7 poem
+    "[THAT_NGON_BAT_CU]", # 6 — genre: 8×7 poem
+]
+
+
+def train_tokenizer(corpus_path=None, output_dir=None, vocab_size=12000):
+    """Train BPE tokenizer and save to disk."""
+    corpus_path = Path(corpus_path) if corpus_path else CORPUS_PATH
+    output_dir = Path(output_dir) if output_dir else OUTPUT_PATH.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "poetry_bpe.model"
+
+    print(f"Training BPE tokenizer (vocab_size={vocab_size:,})")
+    print(f"Corpus: {corpus_path}")
+    print(f"Output: {output_path}")
+
+    # BPE model with byte-level pre-tokenization
+    tokenizer = Tokenizer(models.BPE(unk_token="<|pad|>"))
+    tokenizer.normalizer = None  # Vietnamese diacritics must NOT be normalized away
+    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+    tokenizer.decoder = decoders.ByteLevel()
+
+    # Trainer
+    trainer = trainers.BpeTrainer(
+        vocab_size=vocab_size,
+        min_frequency=2,
+        special_tokens=SPECIAL_TOKENS,
+        show_progress=True,
+        initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+    )
+
+    # Train on corpus
+    tokenizer.train([str(corpus_path)], trainer)
+
+    # Save
+    tokenizer.save(str(output_path))
+    print(f"\n✅ Tokenizer saved: {output_path}")
+    print(f"   Vocab size: {tokenizer.get_vocab_size():,}")
+
+    # Verify special tokens are at correct indices
+    for i, tok in enumerate(SPECIAL_TOKENS):
+        actual_id = tokenizer.token_to_id(tok)
+        assert actual_id == i, f"{tok} should be index {i}, got {actual_id}"
+    print("   Special token indices verified ✅")
+
+    return tokenizer
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train BPE tokenizer for PoetryDuel-GPT")
+    parser.add_argument("--corpus", type=str, default=None, help="Path to poetry_corpus.txt")
+    parser.add_argument("--output_dir", type=str, default=None, help="Output directory")
+    parser.add_argument("--vocab_size", type=int, default=12000)
+    args = parser.parse_args()
+
+    train_tokenizer(
+        corpus_path=args.corpus,
+        output_dir=args.output_dir,
+        vocab_size=args.vocab_size,
+    )
