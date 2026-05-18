@@ -61,10 +61,10 @@ CONFIG = {
     # Train mode
     "train": {
         "max_steps": 5000,
-        "batch_size": 64,
+        "batch_size": 192,
         "val_fraction": 0.05,
-        "log_interval": 50,
-        "eval_interval": 500,
+        "log_interval": 20,
+        "eval_interval": 200,
         "save_interval": 1000,
     },
 
@@ -295,24 +295,21 @@ def train(max_lines=None):
         total_train_loss += loss.item()
         train_batches += 1
 
-        # ── Logging ─────────────────────────────────────────
-        if step % log_interval == 0:
-            avg_loss = total_train_loss / train_batches
-            elapsed = time.time() - t0
-            tokens_per_sec = (step * batch_size * CONFIG["block_size"]) / max(1, elapsed)
-            print(f"   Step {step:5d}/{max_steps} | "
-                  f"loss={avg_loss:.4f} | lr={lr:.2e} | "
-                  f"{tokens_per_sec:.0f} tok/s | "
-                  f"{elapsed/60:.1f}min")
-            total_train_loss = 0.0
-            train_batches = 0
-
-        # ── Evaluation ──────────────────────────────────────
+        # ── Evaluation (main display, like diffusion ── Step 500/5000 (45s) ──) ──
         if step % eval_interval == 0:
+            avg_train_loss = total_train_loss / max(1, train_batches)
             val_loss = evaluate(model, val_loader, device, num_batches=20)
             trend = "📉" if val_loss < best_val_loss else "➡️"
             best_val_loss = min(best_val_loss, val_loss)
-            print(f"   --- Eval  step={step} | val_loss={val_loss:.4f} {trend} | best={best_val_loss:.4f} ---")
+            dt = time.time() - t0
+            lr = optimizer.param_groups[0]["lr"]
+            print(f"── Step {step:5d}/{max_steps} "
+                  f"({dt:.0f}s) ── "
+                  f"loss={avg_train_loss:.4f} "
+                  f"val={val_loss:.4f} {trend} "
+                  f"lr={lr:.2e}")
+            total_train_loss = 0.0
+            train_batches = 0
 
         # ── Save checkpoint ─────────────────────────────────
         if step % save_interval == 0:
