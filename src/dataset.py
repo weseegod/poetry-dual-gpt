@@ -136,3 +136,17 @@
 # README targets 3 epochs → ~47,000 steps total.
 
 # --- YOUR CODE BELOW ---
+
+import os
+from typing import List, Tuple
+
+from torch.utils.data import Dataset, random_split, Subset, DataLoader
+from pathlib import Path
+from torchvision import transforms
+import torch
+from tqdm.auto import tqdm
+from PIL import Image
+
+path_dataset = Path.cwd() / 'data/nsfw_dataset_v1'
+
+class PoemtrySubset(Data)

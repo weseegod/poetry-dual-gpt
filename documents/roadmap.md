@@ -22,20 +22,27 @@
 
 ```
 poetry-dual-gpt/
-├── README.md                  ← Project pitch (already exists)
-├── roadmap.md                 ← YOU ARE HERE
-├── requirements.txt           ← Dependencies (add as you go)
-├── data/
-│   ├── preprocess.py          ← Phase 1B: raw poetry → training pairs
-│   ├── poetry_corpus.txt      ← Phase 1B output: one pair per line
-│   └── dataset.py             ← Phase 3B: PyTorch Dataset class
-├── tokenizer/
-│   ├── train_bpe.py           ← Phase 1C: train custom BPE tokenizer
-│   └── poetry_bpe.model       ← Phase 1C output: saved vocabulary
-├── model.py                   ← Phase 2: the Transformer (5 classes)
-├── train.py                   ← Phase 3: training loop + mixed precision
-├── sample.py                  ← Phase 4: generation + Vietnamese rule checks
-└── checkpoints/               ← Saved model weights
+├── README.md                       ← Project pitch (already exists)
+├── requirements.txt                ← Dependencies (add as you go)
+├── .gitignore                      ← Ignore venv/, checkpoints/, generated files
+│
+├── data/                           ← 📦 Data files (not code)
+│   └── poems_dataset.csv           ← Raw Vietnamese poetry corpus
+│
+├── src/                            ← 🧠 All source code
+│   ├── preprocess.py               ← Phase 1B: raw poetry → training pairs
+│   ├── train_bpe.py                ← Phase 1C: train custom BPE tokenizer
+│   ├── dataset.py                  ← Phase 3B: PyTorch Dataset class
+│   ├── model.py                    ← Phase 2: the Transformer (5 classes)
+│   ├── train.py                    ← Phase 3: training loop + mixed precision
+│   └── sample.py                   ← Phase 4: generation + Vietnamese rule checks
+│
+├── documents/                      ← 📖 Documentation
+│   └── roadmap.md                  ← YOU ARE HERE — learning guide
+│
+├── checkpoints/                    ← 💾 Saved model weights (gitignored)
+└── tokenizer/                      ← 🔤 Generated tokenizer files (gitignored)
+    └── poetry_bpe.model            ← Phase 1C output: saved vocabulary
 ```
 
 ---
@@ -53,13 +60,13 @@ Read the existing `README.md`. Pay attention to:
 
 ### 1B — `data/preprocess.py` (30-60 min)
 
-**File:** `data/preprocess.py` (open it — comments are your guide)
+**File:** `src/preprocess.py` (open it — comments are your guide)
 
 **What to implement:**
 1. Parse a raw file where poems are separated by blank lines
 2. Detect genre by counting syllables per line (6-8-6-8 = Lục Bát, 7-7-7-7 = Tứ Tuyệt, etc.)
 3. Create (prompt, reply) pairs with control token wrapping
-4. Write one pair per line to `data/poetry_corpus.txt`
+4. Write one pair per line to `data/poetry_corpus.txt` (gitignored, generated)
 
 **Concepts learned:**
 - Data structuring for causal language modeling
@@ -70,13 +77,13 @@ Read the existing `README.md`. Pay attention to:
 
 ### 1C — `tokenizer/train_bpe.py` (45-90 min)
 
-**File:** `tokenizer/train_bpe.py` (open it — full BPE walkthrough in comments)
+**File:** `src/train_bpe.py` (open it — full BPE walkthrough in comments)
 
 **What to implement:**
 1. Define 7 special tokens: `<|pad|>`, `<|start|>`, `<|reply|>`, `<|end|>`, `[LUC_BAT]`, `[TU_TUYET]`, `[THAT_NGON_BAT_CU]`
 2. Initialize a BPE tokenizer from HuggingFace `tokenizers`
 3. Train it on `data/poetry_corpus.txt` with vocab_size=12000
-4. Save to `tokenizer/poetry_bpe.model`
+4. Save to `tokenizer/poetry_bpe.model` (gitignored, generated)
 
 **Concepts learned:**
 - Byte-Pair Encoding (how subword tokenization works)
@@ -181,7 +188,7 @@ head -3 data/poetry_corpus.txt # inspect the format
 
 **Goal:** Build the entire model architecture from scratch. This is the core.
 
-**File:** `model.py` (open it — full concept explanations in comments)
+**File:** `src/model.py` (open it — full concept explanations in comments)
 
 ### What you're building (5 classes):
 
@@ -245,7 +252,7 @@ The full model:
 ### ✅ Phase 2 Checkpoint
 
 ```python
-from model import PoetryDuelGPT, count_parameters
+from src.model import PoetryDuelGPT, count_parameters
 
 model = PoetryDuelGPT(vocab_size=12000, n_embd=384, n_head=6, n_layer=6, block_size=256)
 total, _ = count_parameters(model)
@@ -265,7 +272,7 @@ print(f"Loss: {loss.item():.4f}")  # → ~9.4 (ln(12000) ≈ random)
 
 **Goal:** Make the model learn poetry through gradient descent.
 
-**File:** `train.py` (open it — all training concepts explained in comments)
+**File:** `src/train.py` (open it — all training concepts explained in comments)
 
 ### 3A — Understand the concepts (20-30 min)
 
@@ -390,7 +397,7 @@ for x, y in train_loader:
 ### ✅ Phase 3 Checkpoint
 
 ```bash
-python train.py --epochs 3 --batch_size 64 --device cuda
+python -m src.train --epochs 3 --batch_size 64 --device cuda
 ```
 
 Expected:
@@ -405,7 +412,7 @@ Expected:
 
 **Goal:** Generate poetry and verify it follows Vietnamese rules.
 
-**File:** `sample.py` (open it — full generation and tone-check explanations)
+**File:** `src/sample.py` (open it — full generation and tone-check explanations)
 
 ### 4A — Implement sampling strategies (30 min)
 
@@ -440,7 +447,7 @@ CLI loop: user types a line → model responds → evaluate.
 ### ✅ Phase 4 Checkpoint
 
 ```bash
-python sample.py --prompt "[LUC_BAT] Thân em như chẽn lúa đòng đòng," --temperature 0.75
+python -m src.sample --prompt "[LUC_BAT] Thân em như chẽn lúa đòng đòng," --temperature 0.75
 ```
 
 Expected output:

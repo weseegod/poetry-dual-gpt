@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environment
+venv/
+
+# Training artifacts
+checkpoints/
+
+# Data files (too large for GitHub, download/generate separately)
+data/poems_dataset.csv
+data/poetry_corpus.txt
+
+# Generated models (created by scripts)
+tokenizer/poetry_bpe.model
+
+# System files
+.DS_Store
