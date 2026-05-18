@@ -18,6 +18,33 @@
 
 ---
 
+## 🎯 Phased Training Strategy
+
+**Don't train on all 198K poems at once.** Start small, validate, then scale.
+
+```
+Phase 1: Lục Bát only (89,943 poems, 45% of data)
+  → 1 genre, 1 rule (6→8 syllables + B-T-B tone)
+  → Fastest iteration loop, easiest to debug
+  → Goal: model reliably generates 8-syllable responses to 6-syllable prompts
+
+Phase 2: Add bảy chữ / thất ngôn bát cú (46,586 poems, 23%)
+  → 2 genres now, model learns [GENRE] tag means different rules
+  → Goal: model switches between 8-syllable and 7-syllable output
+
+Phase 3: Add remaining genres (tám chữ, năm chữ, thơ tự do, etc.)
+  → Full 198K dataset
+  → Goal: model handles all Vietnamese poetic forms
+```
+
+**Why this order matters:**
+- Lục Bát has the most data AND the simplest rules — perfect for proving the pipeline works
+- If the model can't do Lục Bát, it definitely can't do more complex forms
+- Each phase adds exactly one new capability, so failures are easy to isolate
+- Training time scales linearly: Phase 1 is ~2hr on L4, Phase 3 is ~6hr
+
+---
+
 ## 📁 File Map
 
 ```
@@ -51,22 +78,33 @@ poetry-dual-gpt/
 
 **Goal:** Convert raw poetry into tokenized sequences the model can consume.
 
-### 1A — Understand the data format (10 min)
+### 1A — Explore the dataset (10 min)
+
+**First, see what you have:** Run `python src/dataset.py` to print genre distribution, author stats, sample poems, etc. This tells you the Lục Bát dominates (89K poems) and that 161K poems are missing author/period — still valid for training.
+
+### 1B — Understand the data format (10 min)
 
 Read the existing `README.md`. Pay attention to:
 - What the input/output looks like (the control token format)
 - The poetic genres: Lục Bát, Tứ Tuyệt, Thất Ngôn Bát Cú
 - Expected training format: `<|start|> [GENRE] line1, <|reply|> line2 <|end|>`
 
-### 1B — `data/preprocess.py` (30-60 min)
+### 1C — `src/preprocess.py` (30-60 min) — *Lục Bát first!*
 
 **File:** `src/preprocess.py` (open it — comments are your guide)
 
+**Phase 1 filter:** Only process `genre == 'lục bát'` rows. You can filter in pandas:
+```python
+df = pd.read_csv('data/poems_dataset.csv')
+df_luc_bat = df[df['genre'] == 'lục bát']  # 89,943 poems
+```
+
 **What to implement:**
-1. Parse a raw file where poems are separated by blank lines
-2. Detect genre by counting syllables per line (6-8-6-8 = Lục Bát, 7-7-7-7 = Tứ Tuyệt, etc.)
-3. Create (prompt, reply) pairs with control token wrapping
-4. Write one pair per line to `data/poetry_corpus.txt` (gitignored, generated)
+1. Read `poems_dataset.csv`, filter for `genre == 'lục bát'`
+2. Parse poem `content` column (lines separated by ` <\n> ` marker)
+3. Create (prompt, reply) pairs: each 6-syllable line → next 8-syllable line
+4. Wrap with control tokens: `<|start|> [LUC_BAT] prompt, <|reply|> reply <|end|>`
+5. Write one pair per line to `data/poetry_corpus.txt` (gitignored, generated)
 
 **Concepts learned:**
 - Data structuring for causal language modeling
@@ -75,7 +113,7 @@ Read the existing `README.md`. Pay attention to:
 
 **To test:** Create a small sample file with 2-3 poems manually and run the script.
 
-### 1C — `tokenizer/train_bpe.py` (45-90 min)
+### 1D — `src/train_bpe.py` (45-90 min)
 
 **File:** `src/train_bpe.py` (open it — full BPE walkthrough in comments)
 
@@ -92,7 +130,7 @@ Read the existing `README.md`. Pay attention to:
 
 **Dependencies to install:** `pip install tokenizers`
 
-### 1D — Where does the raw data come from? (15 min)
+### 1E — Where does the raw data come from? (already done — you have poems_dataset.csv)
 
 **Option A: Download from HuggingFace (recommended)**
 
@@ -124,7 +162,7 @@ Create `data/sample_raw.txt` with 20-30 Vietnamese poems (Lục Bát, Tứ Tuy�
 
 `preprocess.py` already includes a built-in sample generator function — add a CLI flag `--sample` to trigger it. This gives you ~30 Lục Bát and Tứ Tuyệt examples for testing.
 
-### 1E — Understand Dataset vs DataLoader (15 min) — *read now, implement in Phase 3*
+### 1F — Understand Dataset vs DataLoader (15 min) — *read now, implement in Phase 3*
 
 In PyTorch, data feeding follows a two-layer design:
 
@@ -507,14 +545,23 @@ Once the basic pipeline works:
 
 ## 📊 Success Criteria
 
+### Phase 1 (Lục Bát only)
 - [ ] `model.py` compiles and produces correct shape outputs
 - [ ] Parameter count is ~45M
 - [ ] Initial loss ≈ 9.4 (close to random guessing)
-- [ ] Training loss decreases steadily over 3 epochs
+- [ ] Training loss decreases steadily on 89K Lục Bát poems
 - [ ] Final validation loss < 2.0
-- [ ] Generation produces grammatically valid Vietnamese syllables
-- [ ] Syllable counts match expected poetic form (>50% of the time)
-- [ ] Some outputs show proper Bằng-Trắc alignment
+- [ ] Generation produces 8-syllable responses to 6-syllable prompts (>50% of the time)
+- [ ] Some outputs show proper B-T-B tone alignment (positions 2,4,6)
+
+### Phase 2 (+ bảy chữ)
+- [ ] Model switches output length based on `[LUC_BAT]` vs `[BẢY_CHỮ]` tag
+- [ ] 7-syllable output for bảy chữ prompts (>50% of the time)
+- [ ] Lục Bát quality does NOT degrade (no catastrophic forgetting)
+
+### Phase 3 (full dataset)
+- [ ] Generation works across all poetic forms
+- [ ] Vietnamese syllables are grammatically valid (>90% of the time)
 
 ---
 

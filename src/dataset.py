@@ -138,7 +138,7 @@
 # --- YOUR CODE BELOW ---
 
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from torch.utils.data import Dataset, random_split, Subset, DataLoader
 from pathlib import Path
@@ -146,7 +146,252 @@ from torchvision import transforms
 import torch
 from tqdm.auto import tqdm
 from PIL import Image
+import pandas as pd
 
-path_dataset = Path.cwd() / 'data/nsfw_dataset_v1'
+# =========================================================================
+# DATA EXPLORATION — understand your dataset before training
+# =========================================================================
 
-class PoemtrySubset(Data)
+PATH_DATASET = Path(__file__).parent.parent / 'data' / 'poems_dataset.csv'
+
+
+def load_dataframe(csv_path: str = None) -> pd.DataFrame:
+    """Load the poetry CSV into a pandas DataFrame."""
+    if csv_path is None:
+        csv_path = PATH_DATASET
+    return pd.read_csv(csv_path)
+
+
+def filter_by_genre(df: pd.DataFrame, genre: str) -> pd.DataFrame:
+    """
+    Filter DataFrame to a single genre.
+
+    Phase 1: filter_by_genre(df, 'lục bát') → 89,943 poems
+    Phase 2: filter_by_genre(df[df['genre'].isin(['lục bát', 'bảy chữ'])]) → 136K
+    Phase 3: use full df → 198K
+
+    Args:
+        df: full poetry DataFrame
+        genre: genre name to filter (e.g. 'lục bát', 'bảy chữ', 'tám chữ')
+    Returns:
+        Filtered DataFrame
+    """
+    filtered = df[df['genre'] == genre].copy()
+    print(f"Filtered '{genre}': {len(filtered):,} poems (from {len(df):,} total)")
+    return filtered
+
+
+def get_poem_content(df: pd.DataFrame) -> List[str]:
+    """
+    Extract clean poem content from DataFrame.
+
+    The content column has poems with lines separated by ' <\n> '.
+    This returns a list where each element is the full poem text
+    with actual newlines.
+    """
+    contents = []
+    for content in df['content']:
+        if pd.isna(content):
+            continue
+        # Replace ' <\n> ' with actual newlines
+        clean = content.replace(' <\n> ', '\n')
+        contents.append(clean)
+    return contents
+
+
+def explore_dataset(csv_path: str = None):
+    """
+    Load the poetry CSV and print summary statistics to console.
+
+    What this shows you:
+      - Total poems / rows
+      - Columns and their types
+      - Genre distribution: how many poems per genre, avg lines, avg words
+      - specific_genre distribution: the detailed poetic forms
+      - Author distribution: top authors by poem count
+      - Period distribution
+      - Missing values (if any)
+      - Sample poems
+
+    Run this once to understand what data you're working with.
+    """
+    if csv_path is None:
+        csv_path = PATH_DATASET
+
+    print("=" * 65)
+    print("📊  POETRY DATASET EXPLORATION")
+    print("=" * 65)
+
+    # 1. Load
+    print(f"\n📂  Loading: {csv_path}")
+    df = pd.read_csv(csv_path)
+    print(f"    Shape: {df.shape[0]:,} rows × {df.shape[1]} columns")
+
+    # 2. Column overview
+    print(f"\n📋  Columns: {list(df.columns)}")
+    print(f"    Memory usage: {df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
+
+    # 3. Missing values
+    missing = df.isnull().sum()
+    missing = missing[missing > 0]
+    if len(missing) > 0:
+        print(f"\n⚠️   Missing values:\n{missing.to_string()}")
+    else:
+        print(f"\n✅  No missing values")
+
+    # 4. Helper: count lines and words in a poem
+    def count_lines(text):
+        """Count lines in a poem (separated by <br> / <\n> markers)."""
+        if pd.isna(text):
+            return 0
+        return text.count(' <\n> ') + 1
+
+    def count_words(text):
+        """Count words (Vietnamese syllables) in the content."""
+        if pd.isna(text):
+            return 0
+        return len(text.split())
+
+    # Precompute line and word counts for every poem
+    df['num_lines'] = df['content'].apply(count_lines)
+    df['num_words'] = df['content'].apply(count_words)
+
+    # =====================================================================
+    # GENRE analysis
+    # =====================================================================
+    print("\n" + "=" * 65)
+    print("🎭  GENRE DISTRIBUTION")
+    print("=" * 65)
+
+    genre_stats = df.groupby('genre').agg(
+        poem_count=('content', 'count'),
+        avg_lines=('num_lines', 'mean'),
+        avg_words=('num_words', 'mean'),
+        total_words=('num_words', 'sum'),
+    ).sort_values('poem_count', ascending=False)
+
+    print(f"\n{'Genre':<20s} {'Poems':>8s} {'Avg Lines':>10s} {'Avg Words':>10s} {'Total Words':>13s}")
+    print("-" * 65)
+    for g, row in genre_stats.iterrows():
+        print(f"{g:<20s} {int(row.poem_count):>8,} {row.avg_lines:>10.1f} {row.avg_words:>10.1f} {int(row.total_words):>13,}")
+    print("-" * 65)
+    print(f"{'TOTAL':<20s} {int(genre_stats.poem_count.sum()):>8,}")
+
+    # =====================================================================
+    # SPECIFIC_GENRE analysis
+    # =====================================================================
+    print("\n" + "=" * 65)
+    print("📝  SPECIFIC GENRE (poetic form) DISTRIBUTION")
+    print("=" * 65)
+
+    spec_stats = df.groupby('specific_genre').agg(
+        poem_count=('content', 'count'),
+        avg_lines=('num_lines', 'mean'),
+        avg_words=('num_words', 'mean'),
+    ).sort_values('poem_count', ascending=False)
+
+    print(f"\n{'Specific Genre':<30s} {'Poems':>8s} {'Avg Lines':>10s} {'Avg Words':>10s}")
+    print("-" * 62)
+    for g, row in spec_stats.head(30).iterrows():
+        print(f"{g:<30s} {int(row.poem_count):>8,} {row.avg_lines:>10.1f} {row.avg_words:>10.1f}")
+    if len(spec_stats) > 30:
+        print(f"... and {len(spec_stats) - 30} more specific genres")
+    print(f"\nTotal unique specific_genres: {len(spec_stats)}")
+
+    # =====================================================================
+    # AUTHOR analysis
+    # =====================================================================
+    print("\n" + "=" * 65)
+    print("✍️   TOP AUTHORS")
+    print("=" * 65)
+
+    author_stats = df.groupby('author').agg(
+        poem_count=('content', 'count'),
+        avg_words=('num_words', 'mean'),
+    ).sort_values('poem_count', ascending=False)
+
+    print(f"\n{'Author':<30s} {'Poems':>8s} {'Avg Words':>10s}")
+    print("-" * 52)
+    for a, row in author_stats.head(20).iterrows():
+        print(f"{a:<30s} {int(row.poem_count):>8,} {row.avg_words:>10.1f}")
+    print(f"\nTotal unique authors: {len(author_stats)}")
+
+    # =====================================================================
+    # PERIOD analysis
+    # =====================================================================
+    print("\n" + "=" * 65)
+    print("🏛️   PERIOD DISTRIBUTION")
+    print("=" * 65)
+
+    period_stats = df.groupby('period').agg(
+        poem_count=('content', 'count'),
+    ).sort_values('poem_count', ascending=False)
+
+    print(f"\n{'Period':<25s} {'Poems':>8s}")
+    print("-" * 37)
+    for p, row in period_stats.iterrows():
+        print(f"{p:<25s} {int(row.poem_count):>8,}")
+
+    # =====================================================================
+    # SAMPLE POEMS
+    # =====================================================================
+    print("\n" + "=" * 65)
+    print("📖  SAMPLE POEMS (first 2)")
+    print("=" * 65)
+    for i in range(min(2, len(df))):
+        row = df.iloc[i]
+        content_preview = row['content'].replace(' <\n> ', '\n    ')[:350]
+        print(f"\n  [{i+1}] {row['title']}")
+        print(f"      Genre: {row['genre']} | Form: {row['specific_genre']}")
+        print(f"      Author: {row['author']} | Period: {row['period']}")
+        print(f"      {row['num_lines']} lines, {row['num_words']} words")
+        print(f"      ---")
+        print(f"      {content_preview}...")
+
+    print("\n" + "=" * 65)
+    print("💡  TRAINING STRATEGY")
+    print("=" * 65)
+    print(f"""
+    Phase 1 (NOW):     Train on lục bát only ({int(genre_stats.loc['lục bát', 'poem_count']):,} poems)
+                        → 1 genre, 1 rule (6→8 syllables)
+                        → Fastest iteration, easiest to debug
+
+    Phase 2 (LATER):   Add bảy chữ ({int(genre_stats.loc['bảy chữ', 'poem_count']):,} poems)
+                        → 2 genres, model learns to switch on [GENRE] tag
+
+    Phase 3 (FINAL):   Add all genres ({int(genre_stats.poem_count.sum()):,} total poems)
+    """)
+
+    print("\n" + "=" * 65)
+    print("✅  Exploration complete!")
+    print("=" * 65)
+
+    return df
+
+
+# =========================================================================
+# PyTorch Dataset — for training (implement later in Phase 3)
+# =========================================================================
+
+# class PoetryDataset(Dataset):
+#     ...
+
+
+# =========================================================================
+# Run exploration when executing this file directly
+# =========================================================================
+if __name__ == "__main__":
+    df = explore_dataset()
+
+    # Demonstrate Phase 1 filter: Lục Bát only
+    print("\n🧪  Demo: filter_by_genre(df, 'lục bát')")
+    df_lb = filter_by_genre(df, 'lục bát')
+    print(f"    Ready for Phase 1 training: {len(df_lb):,} poems")
+
+    # Preview what poem content looks like after cleaning
+    print("\n📖  Demo: get_poem_content() on first poem")
+    contents = get_poem_content(df_lb.head(1))
+    if contents:
+        print("    " + contents[0][:200].replace('\n', '\n    ') + "...")
+
+
