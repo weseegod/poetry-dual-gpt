@@ -26,9 +26,12 @@ poetry-dual-gpt/
 ├── roadmap.md                 ← YOU ARE HERE
 ├── requirements.txt           ← Dependencies (add as you go)
 ├── data/
-│   └── preprocess.py          ← Phase 1: raw poetry → training pairs
+│   ├── preprocess.py          ← Phase 1B: raw poetry → training pairs
+│   ├── poetry_corpus.txt      ← Phase 1B output: one pair per line
+│   └── dataset.py             ← Phase 3B: PyTorch Dataset class
 ├── tokenizer/
-│   └── train_bpe.py           ← Phase 1: train custom BPE tokenizer
+│   ├── train_bpe.py           ← Phase 1C: train custom BPE tokenizer
+│   └── poetry_bpe.model       ← Phase 1C output: saved vocabulary
 ├── model.py                   ← Phase 2: the Transformer (5 classes)
 ├── train.py                   ← Phase 3: training loop + mixed precision
 ├── sample.py                  ← Phase 4: generation + Vietnamese rule checks
@@ -82,6 +85,78 @@ Read the existing `README.md`. Pay attention to:
 
 **Dependencies to install:** `pip install tokenizers`
 
+### 1D — Where does the raw data come from? (15 min)
+
+**Option A: Download from HuggingFace (recommended)**
+
+The README mentions two real datasets:
+- `roots_vi_vietnamese_poetry`
+- `vietnamese-poetry-corpus`
+
+Use the `datasets` library to fetch them:
+```python
+# pip install datasets
+from datasets import load_dataset
+
+# This dataset has ~370K lines of Vietnamese poetry
+ds = load_dataset("onghocit/roots_vi_vietnamese_poetry", split="train")
+
+# Write poems to a raw text file for preprocess.py to consume
+with open("data/raw_poetry.txt", "w", encoding="utf-8") as f:
+    for row in ds:
+        # Each row typically has a 'text' or 'poem' field
+        poem = row.get("text") or row.get("poem") or ""
+        f.write(poem.strip() + "\n\n")  # blank line separates poems
+```
+
+**Option B: Build a sample dataset manually**
+
+Create `data/sample_raw.txt` with 20-30 Vietnamese poems (Lục Bát, Tứ Tuyệt) so you can test the pipeline end-to-end before scaling to the full dataset. See `data/preprocess.py` comments for the expected format.
+
+**Option C: Use the sample generator built into preprocess.py**
+
+`preprocess.py` already includes a built-in sample generator function — add a CLI flag `--sample` to trigger it. This gives you ~30 Lục Bát and Tứ Tuyệt examples for testing.
+
+### 1E — Understand Dataset vs DataLoader (15 min) — *read now, implement in Phase 3*
+
+In PyTorch, data feeding follows a two-layer design:
+
+```
+  Raw files  ──→  Dataset  ──→  DataLoader  ──→  Model
+                 (what data)     (how to serve)
+```
+
+**`torch.utils.data.Dataset`** — the "what"
+- A class you subclass. Must implement:
+  - `__len__()` → total number of samples
+  - `__getitem__(idx)` → return the idx-th (input, target) pair as tensors
+- Owns the data. Knows how to access it. Does NOT know about batching.
+
+**`torch.utils.data.DataLoader`** — the "how"
+- Wraps a Dataset. Handles:
+  - Batching (stack multiple samples into one tensor)
+  - Shuffling (randomize order each epoch)
+  - Parallel loading (`num_workers`) to keep GPU busy
+  - Pin memory (`pin_memory=True`) for faster CPU→GPU transfer
+
+**For causal language modeling**, there are two common Dataset patterns:
+
+*Pattern 1: Sequential chunks* (simpler — what Karpathy's nanoGPT uses)
+```
+Giant flat tensor: [tok1, tok2, tok3, ..., tokN]
+Each sample: a random contiguous window of length block_size+1
+  x = data[start : start+block_size]
+  y = data[start+1 : start+block_size+1]    # shifted by 1
+```
+
+*Pattern 2: Per-example Dataset* (more formal — what HuggingFace uses)
+```
+Each example is a separate line/sequence, tokenized individually.
+DataLoader pads them to equal length within each batch.
+```
+
+**We'll use Pattern 1** — it's simpler, more memory-efficient for our scale, and avoids wasting compute on padding tokens.
+
 ### ✅ Phase 1 Checkpoint
 
 Run this and get reasonable output:
@@ -92,6 +167,12 @@ print(tok.get_vocab_size())  # → 12000
 encoded = tok.encode("<|start|> [LUC_BAT] Trăm năm")
 print(encoded.ids)  # → list of token IDs
 print(tok.decode(encoded.ids))  # → back to text
+```
+
+And verify your preprocessed data:
+```bash
+wc -l data/poetry_corpus.txt   # should show many lines (one per pair)
+head -3 data/poetry_corpus.txt # inspect the format
 ```
 
 ---
@@ -196,10 +277,90 @@ Read the comment block at the top of `train.py`. Key topics:
 - Cosine LR schedule with warmup
 - Gradient clipping
 
-### 3B — Implement data loading (30 min)
+### 3B — Implement the Dataset & DataLoader (45-60 min)
 
-1. `load_and_tokenize()`: Read corpus → tokenize each line → concatenate into one big tensor
-2. `get_batch()`: Pick random contiguous chunks → split into x (input) and y (target, shifted by 1)
+This is where you bridge the gap between tokenized text and model-ready tensors.
+
+**Step 1: `load_and_tokenize()`** — convert corpus to one giant tensor
+
+```
+Input:  data/poetry_corpus.txt (one preprocessed pair per line)
+Output: torch.LongTensor of shape (total_tokens,)
+
+Process:
+  1. Load tokenizer from file
+  2. For each line in corpus:
+     - tokenizer.encode(line).ids → list of ints
+     - Extend accumulator list
+  3. Convert to torch.tensor
+```
+
+**Step 2: Split into train/val**
+
+Hold out ~10% of tokens for validation:
+```python
+split_idx = int(0.9 * len(data))
+train_data = data[:split_idx]
+val_data = data[split_idx:]
+```
+
+**Step 3: `get_batch(data, batch_size, block_size)`** — sample random windows
+
+```
+Input:  data tensor of shape (N,), batch_size, block_size
+Output: x (B, T), y (B, T) where y[:, i] = x[:, i+1]
+
+Algorithm:
+  1. Pick batch_size random start indices in range [0, N - block_size - 1]
+  2. For each start index i:
+       chunk = data[i : i+block_size+1]    # one extra token for target
+       x_row = chunk[:block_size]           # tokens 0..T-1
+       y_row = chunk[1:block_size+1]        # tokens 1..T  (shifted by 1)
+  3. Stack all rows into (B, T) tensors
+  4. Move to GPU
+```
+
+**Step 4 (optional but educational): Wrap in a proper PyTorch Dataset class**
+
+```python
+from torch.utils.data import Dataset, DataLoader
+
+class PoetryDataset(Dataset):
+    """
+    Wraps a flat token tensor into a Dataset.
+    Each __getitem__ returns one (x, y) window.
+    """
+    def __init__(self, data, block_size):
+        self.data = data
+        self.block_size = block_size
+
+    def __len__(self):
+        # number of possible windows
+        return len(self.data) - self.block_size
+
+    def __getitem__(self, idx):
+        chunk = self.data[idx : idx + self.block_size + 1]
+        x = chunk[:self.block_size]
+        y = chunk[1:]
+        return x, y
+
+# Usage:
+train_ds = PoetryDataset(train_data, block_size)
+train_loader = DataLoader(train_ds, batch_size=64, shuffle=True, pin_memory=True)
+
+# Then in training loop:
+for x, y in train_loader:
+    x, y = x.to(device), y.to(device)
+    logits, loss = model(x, y)
+    ...
+```
+
+**Key data loading concepts you're learning here:**
+- **Batching:** stacking multiple sequences together. The GPU processes them in parallel — that's why batch_size=64 is much faster than batch_size=1.
+- **Shuffling:** randomizing order each epoch. Prevents the model from memorizing sequence order instead of learning patterns.
+- **Pin memory:** allocates CPU memory in a way that speeds up the CPU→GPU copy (`pin_memory=True` + `non_blocking=True`).
+- **num_workers:** spawns subprocesses to load data in parallel while GPU is computing. Rule of thumb: `num_workers = 4` for most setups.
+- **Why shift by 1 (next-token prediction):** the model sees tokens [t0, t1, t2, t3] and must predict [t1, t2, t3, t4]. This is called "teacher forcing" — at each position, the model predicts the next token. Cross-entropy loss is computed at EVERY position simultaneously.
 
 ### 3C — Implement LR schedule (10 min)
 
