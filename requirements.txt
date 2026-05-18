@@ -1,0 +1,18 @@
+# requirements.txt
+# ---------------
+# Install with: pip install -r requirements.txt
+#
+# Core dependencies for this project.
+# Add packages as you progress through the roadmap.
+
+# --- Phase 1: Tokenization ---
+# tokenizers>=0.15.0      # HuggingFace BPE tokenizer (for train_bpe.py)
+
+# --- Phase 2: Model ---
+# torch>=2.0.0             # PyTorch - the only deep learning framework we use
+
+# --- Phase 3: Training ---
+# tqdm>=4.65.0             # Progress bars
+
+# --- Phase 4: Inference ---
+# (no additional packages needed)

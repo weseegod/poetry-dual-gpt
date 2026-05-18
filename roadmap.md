@@ -1,0 +1,353 @@
+# 🗺️ PoetryDuel-GPT Learning Roadmap
+
+> Build a ~45M-parameter Vietnamese poetry generator from scratch with raw PyTorch.
+> Zero HuggingFace model wrappers. Every matrix multiplication is yours.
+
+---
+
+## 📋 Project Overview
+
+| Aspect | Detail |
+|--------|--------|
+| **Goal** | Build a model that accepts a Vietnamese poetic line and generates a rule-compliant response |
+| **Model** | Decoder-only Transformer (GPT-style), autoregressive |
+| **Params** | ~45M (embed 384, 6 layers, 6 heads, vocab 12K) |
+| **Framework** | Raw PyTorch (`torch.nn`) — no `transformers`, no `trl`, no Keras |
+| **Data** | Vietnamese poetry corpus → turn-based dialogue pairs |
+| **Hardware** | Single GPU (NVIDIA L4 / T4 / any ~16GB VRAM) |
+
+---
+
+## 📁 File Map
+
+```
+poetry-dual-gpt/
+├── README.md                  ← Project pitch (already exists)
+├── roadmap.md                 ← YOU ARE HERE
+├── requirements.txt           ← Dependencies (add as you go)
+├── data/
+│   └── preprocess.py          ← Phase 1: raw poetry → training pairs
+├── tokenizer/
+│   └── train_bpe.py           ← Phase 1: train custom BPE tokenizer
+├── model.py                   ← Phase 2: the Transformer (5 classes)
+├── train.py                   ← Phase 3: training loop + mixed precision
+├── sample.py                  ← Phase 4: generation + Vietnamese rule checks
+└── checkpoints/               ← Saved model weights
+```
+
+---
+
+## 🔤 Phase 1: Data & Tokenization
+
+**Goal:** Convert raw poetry into tokenized sequences the model can consume.
+
+### 1A — Understand the data format (10 min)
+
+Read the existing `README.md`. Pay attention to:
+- What the input/output looks like (the control token format)
+- The poetic genres: Lục Bát, Tứ Tuyệt, Thất Ngôn Bát Cú
+- Expected training format: `<|start|> [GENRE] line1, <|reply|> line2 <|end|>`
+
+### 1B — `data/preprocess.py` (30-60 min)
+
+**File:** `data/preprocess.py` (open it — comments are your guide)
+
+**What to implement:**
+1. Parse a raw file where poems are separated by blank lines
+2. Detect genre by counting syllables per line (6-8-6-8 = Lục Bát, 7-7-7-7 = Tứ Tuyệt, etc.)
+3. Create (prompt, reply) pairs with control token wrapping
+4. Write one pair per line to `data/poetry_corpus.txt`
+
+**Concepts learned:**
+- Data structuring for causal language modeling
+- Control tokens as "instructions" to the model
+- Vietnamese syllable counting
+
+**To test:** Create a small sample file with 2-3 poems manually and run the script.
+
+### 1C — `tokenizer/train_bpe.py` (45-90 min)
+
+**File:** `tokenizer/train_bpe.py` (open it — full BPE walkthrough in comments)
+
+**What to implement:**
+1. Define 7 special tokens: `<|pad|>`, `<|start|>`, `<|reply|>`, `<|end|>`, `[LUC_BAT]`, `[TU_TUYET]`, `[THAT_NGON_BAT_CU]`
+2. Initialize a BPE tokenizer from HuggingFace `tokenizers`
+3. Train it on `data/poetry_corpus.txt` with vocab_size=12000
+4. Save to `tokenizer/poetry_bpe.model`
+
+**Concepts learned:**
+- Byte-Pair Encoding (how subword tokenization works)
+- Why custom tokenizers matter for non-English languages
+- Special tokens and their roles (pad, start, end, control)
+
+**Dependencies to install:** `pip install tokenizers`
+
+### ✅ Phase 1 Checkpoint
+
+Run this and get reasonable output:
+```python
+from tokenizers import Tokenizer
+tok = Tokenizer.from_file("tokenizer/poetry_bpe.model")
+print(tok.get_vocab_size())  # → 12000
+encoded = tok.encode("<|start|> [LUC_BAT] Trăm năm")
+print(encoded.ids)  # → list of token IDs
+print(tok.decode(encoded.ids))  # → back to text
+```
+
+---
+
+## 🧠 Phase 2: The Transformer Model
+
+**Goal:** Build the entire model architecture from scratch. This is the core.
+
+**File:** `model.py` (open it — full concept explanations in comments)
+
+### What you're building (5 classes):
+
+```
+Class 1: MultiHeadAttention      ← The "magic" of Transformers
+Class 2: FeedForward             ← Per-position processing (MLP)
+Class 3: TransformerBlock         ← Attention + FFN + norms + residuals
+Class 4: PoetryDuelGPT            ← The complete model
+Utility: count_parameters         ← Verify ~45M params
+```
+
+### 2A — Study the concepts first (30-60 min)
+
+Read the comment block at the top of `model.py` **thoroughly**. It explains:
+- What a language model is
+- The Transformer architecture diagram
+- How self-attention works (Q, K, V)
+- What a causal mask is
+- Why residual connections and LayerNorm matter
+- Weight tying
+
+Then watch/read these (optional but helpful):
+- [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) — Jay Alammar
+- [Let's build GPT from scratch](https://www.youtube.com/watch?v=kCc8FmEb1nY) — Andrej Karpathy (video)
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — the original paper (just the decoder part)
+
+### 2B — Implement `MultiHeadAttention` (60-90 min)
+
+The hardest single component. Take your time.
+
+**Steps:**
+1. `__init__`: Create Q, K, V linear projections + output projection
+2. Register a causal mask as a buffer (lower triangular matrix)
+3. `forward(x)`: 
+   - Project x → Q, K, V
+   - Reshape for multi-head: (B, T, C) → (B, n_head, T, head_dim)
+   - Compute attention: `softmax(QK^T / sqrt(d_k) + mask) × V`
+   - Combine heads back: (B, n_head, T, head_dim) → (B, T, C)
+   - Output projection
+
+**Debug tip:** Add `assert` statements to check shapes at each step.
+
+### 2C — Implement `FeedForward` (10 min)
+
+Simple: two linear layers with GELU activation. Expand 4×, contract back.
+
+### 2D — Implement `TransformerBlock` (15 min)
+
+Assemble: `x = x + attn(ln1(x))`, then `x = x + ffn(ln2(x))`.
+
+### 2E — Implement `PoetryDuelGPT` (30-45 min)
+
+The full model:
+1. Token embedding + Position embedding (add them together)
+2. Stack of N TransformerBlocks
+3. Final LayerNorm + LM head (linear → vocab_size)
+4. Weight tying: `lm_head.weight = token_embedding.weight`
+5. Weight initialization: normal(0, 0.02) for linears, zeros for biases
+6. `forward(idx, targets)`: returns `(logits, loss)`
+
+### ✅ Phase 2 Checkpoint
+
+```python
+from model import PoetryDuelGPT, count_parameters
+
+model = PoetryDuelGPT(vocab_size=12000, n_embd=384, n_head=6, n_layer=6, block_size=256)
+total, _ = count_parameters(model)
+print(f"Params: {total:.1f}M")  # Should be ~45M
+
+# Test forward pass
+import torch
+x = torch.randint(0, 12000, (2, 64))  # batch=2, seq=64
+logits, loss = model(x, targets=x)
+print(logits.shape)  # → (2, 64, 12000)
+print(f"Loss: {loss.item():.4f}")  # → ~9.4 (ln(12000) ≈ random)
+```
+
+---
+
+## 🏋️ Phase 3: Training
+
+**Goal:** Make the model learn poetry through gradient descent.
+
+**File:** `train.py` (open it — all training concepts explained in comments)
+
+### 3A — Understand the concepts (20-30 min)
+
+Read the comment block at the top of `train.py`. Key topics:
+- The training objective: predict next token
+- Cross-entropy loss (why initial loss ≈ ln(vocab_size) ≈ 9.4)
+- Mixed precision (bfloat16 vs float16)
+- AdamW optimizer and parameter grouping
+- Cosine LR schedule with warmup
+- Gradient clipping
+
+### 3B — Implement data loading (30 min)
+
+1. `load_and_tokenize()`: Read corpus → tokenize each line → concatenate into one big tensor
+2. `get_batch()`: Pick random contiguous chunks → split into x (input) and y (target, shifted by 1)
+
+### 3C — Implement LR schedule (10 min)
+
+`get_lr(step, warmup, max_steps, max_lr, min_lr)` — the cosine-with-warmup formula.
+
+### 3D — Implement the training loop (60-90 min)
+
+`train(config)`:
+1. Load tokenized data
+2. Initialize model, move to GPU
+3. Set up optimizer with parameter grouping (weight decay on weights, not biases/norms)
+4. Set up mixed precision context
+5. For each step:
+   - Get batch
+   - Forward pass under `autocast`
+   - Backward pass
+   - Clip gradients
+   - Optimizer step + scheduler step
+   - Log loss every N steps
+6. Periodically evaluate on validation set
+7. Save checkpoints
+
+### 3E — Implement checkpointing (15 min)
+
+`save_checkpoint()` / `load_checkpoint()`: Save model + optimizer + step so you can resume.
+
+### ✅ Phase 3 Checkpoint
+
+```bash
+python train.py --epochs 3 --batch_size 64 --device cuda
+```
+
+Expected:
+- Initial loss: ~9.4
+- Loss decreases steadily
+- After 3 epochs: validation loss should be ~1.4-2.0
+- Training time: ~2 hours on L4, ~4-6 hours on T4
+
+---
+
+## 🎨 Phase 4: Generation & Evaluation
+
+**Goal:** Generate poetry and verify it follows Vietnamese rules.
+
+**File:** `sample.py` (open it — full generation and tone-check explanations)
+
+### 4A — Implement sampling strategies (30 min)
+
+1. `sample_with_temperature()`: Scale logits by 1/temperature
+2. `sample_top_k()`: Keep only the k highest logits
+3. `sample_top_p()`: Nucleus sampling (keep tokens until cumulative prob ≥ p)
+
+### 4B — Implement the generation loop (45-60 min)
+
+`generate(model, tokenizer, prompt, ...)`:
+1. Tokenize prompt
+2. Loop max_new_tokens times:
+   - Crop context to last `block_size` tokens
+   - Forward pass → get logits at last position
+   - Temperature → top-k → top-p → softmax → multinomial sample
+   - Append new token
+   - Break if `<|end|>` token generated
+3. Decode the full sequence
+
+### 4C — Implement Vietnamese rule checking (30-45 min)
+
+1. `count_syllables()`: Split by spaces (each word = one Vietnamese syllable)
+2. `get_tone_type()`: Classify as Bằng or Trắc based on diacritics
+3. `check_syllable_count()`: Verify 6→8 for Lục Bát, 7→7 for Tứ Tuyệt
+4. `check_tone_alignment()`: Verify B-T-B pattern at positions 2,4,6 for Lục Bát
+5. `evaluate_generation()`: Parse output, run all checks, print results
+
+### 4D — Interactive mode (15 min)
+
+CLI loop: user types a line → model responds → evaluate.
+
+### ✅ Phase 4 Checkpoint
+
+```bash
+python sample.py --prompt "[LUC_BAT] Thân em như chẽn lúa đòng đòng," --temperature 0.75
+```
+
+Expected output:
+```
+[Input Prompt]: [LUC_BAT] Thân em như chẽn lúa đòng đòng,
+[Model Rebuttal]: Phất phơ dưới ngọn nắng hồng ban mai.
+==================================================
+* Metric Evaluation *
+Syllable Verification: PASS (6-word prompt -> 8-word response)
+Tone Map Alignment: Bằng - Trắc Match Confirmed.
+```
+
+---
+
+## 🔬 Phase 5 (Optional Advanced): Improvements
+
+Once the basic pipeline works:
+
+| Challenge | What to do | Learning value |
+|-----------|------------|----------------|
+| **Better tone checking** | Implement full B-T tables for all genres + rhyme detection | Vietnamese linguistics, regex |
+| **Flash Attention** | Replace naive attention with `F.scaled_dot_product_attention` | 2-3× faster training |
+| **Rotary Position Embeddings (RoPE)** | Replace learned position embeddings with rotary | Modern LLMs (Llama, Mistral) use this |
+| **KV Cache** | Cache K,V from previous steps during generation | Makes generation 10× faster |
+| **Dataset augmentation** | Download actual `roots_vi_vietnamese_poetry` from HuggingFace | Working with real datasets |
+| **WandB logging** | Add Weights & Biases for loss curves and sampling | ML experiment tracking |
+| **Gradient accumulation** | Simulate larger batches on small GPU memory | Common technique in LLM training |
+
+---
+
+## 📚 Key Learning Resources
+
+| Resource | Type | Topic |
+|----------|------|-------|
+| [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) | Blog | Attention mechanism visuals |
+| [Let's build GPT](https://www.youtube.com/watch?v=kCc8FmEb1nY) | Video (2h) | Karpathy builds nanoGPT from scratch |
+| [nanoGPT repo](https://github.com/karpathy/nanoGPT) | Code | Reference implementation (~300 lines) |
+| [Attention Is All You Need](https://arxiv.org/abs/1706.03762) | Paper | Original Transformer (focus on decoder) |
+| [The Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/) | Blog+Code | Line-by-line explanation |
+| [PyTorch docs: nn.MultiheadAttention](https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html) | Docs | See how PyTorch implements it (but build yours) |
+| [HuggingFace Tokenizers](https://huggingface.co/docs/tokenizers/quicktour) | Docs | BPE tokenizer training |
+| [Mixed Precision Training](https://pytorch.org/docs/stable/amp.html) | Docs | torch.cuda.amp guide |
+
+---
+
+## 🐛 Debugging Tips
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| Loss = NaN | Exploding gradients, LR too high | Lower LR, check gradient clipping, verify mask |
+| Loss doesn't decrease | Wrong masking, wrong data shapes | Verify `targets = input[:, 1:]`, check mask is causal |
+| All generated tokens are the same | Temperature too low, or model didn't train | T > 0.7, check loss actually decreased |
+| CUDA out of memory | Batch too big, block_size too large | Reduce batch_size to 32 or 16, use grad accumulation |
+| Shape mismatch errors | Transpose/view wrong | Print shapes at every step, add assert statements |
+
+---
+
+## 📊 Success Criteria
+
+- [ ] `model.py` compiles and produces correct shape outputs
+- [ ] Parameter count is ~45M
+- [ ] Initial loss ≈ 9.4 (close to random guessing)
+- [ ] Training loss decreases steadily over 3 epochs
+- [ ] Final validation loss < 2.0
+- [ ] Generation produces grammatically valid Vietnamese syllables
+- [ ] Syllable counts match expected poetic form (>50% of the time)
+- [ ] Some outputs show proper Bằng-Trắc alignment
+
+---
+
+**Start at Phase 1 and work through sequentially. Each file contains all the conceptual knowledge you need in its comments. Good luck!**
