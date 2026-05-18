@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
+from tqdm import tqdm
 
 from model import PoetryDuelGPT
 from dataset import PoetryDataset, tokenize_corpus, get_dataloaders
@@ -266,6 +267,9 @@ def train(max_lines=None):
 
     train_iter = iter(train_loader)
 
+    # Progress bar for current eval segment (like diffusion's per-epoch bar)
+    pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="step")
+
     while step < max_steps:
         # Refresh iterator if exhausted (new epoch)
         try:
@@ -295,27 +299,38 @@ def train(max_lines=None):
         total_train_loss += loss.item()
         train_batches += 1
 
-        # ── Evaluation (main display, like diffusion ── Step 500/5000 (45s) ──) ──
+        # Update progress bar (like diffusion: pbar.set_postfix)
+        pbar.update(1)
+        pbar.set_postfix({"loss": f"{loss.item():.4f}"})
+
+        # ── Evaluation (one summary line, like diffusion epoch display) ──
         if step % eval_interval == 0:
             avg_train_loss = total_train_loss / max(1, train_batches)
             val_loss = evaluate(model, val_loader, device, num_batches=20)
             trend = "📉" if val_loss < best_val_loss else "➡️"
             best_val_loss = min(best_val_loss, val_loss)
             dt = time.time() - t0
-            lr = optimizer.param_groups[0]["lr"]
+            lr_val = optimizer.param_groups[0]["lr"]
             print(f"── Step {step:5d}/{max_steps} "
                   f"({dt:.0f}s) ── "
                   f"loss={avg_train_loss:.4f} "
                   f"val={val_loss:.4f} {trend} "
-                  f"lr={lr:.2e}")
+                  f"lr={lr_val:.2e}")
             total_train_loss = 0.0
             train_batches = 0
+
+            # New progress bar for next segment
+            pbar.close()
+            next_end = min(step + eval_interval, max_steps)
+            pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{next_end}", unit="step")
 
         # ── Save checkpoint ─────────────────────────────────
         if step % save_interval == 0:
             path = save_checkpoint(model, optimizer, step, loss.item(),
                                    vocab_size, CONFIG, f"step_{step}.pt")
             print(f"   💾  Saved: {path.name}")
+
+    pbar.close()
 
     # ── Final save ──────────────────────────────────────────
     final_path = save_checkpoint(model, optimizer, step, loss.item(),
