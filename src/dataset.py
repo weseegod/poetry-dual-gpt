@@ -442,11 +442,16 @@ def get_dataloaders(
     block_size: int = 256,
     batch_size: int = 64,
     val_fraction: float = 0.05,
-    test_fraction: float = 0.05,
     num_workers: int = 2,
 ):
     """
-    Split flat token data into train/val/test and return DataLoaders.
+    Split flat token data into train/val and return DataLoaders.
+
+    Why only train + val (no test)?
+      - A classifier needs a test set to report "92.3% accuracy on unseen data"
+      - A generative model's real test is QUALITATIVE: does it produce good poetry?
+      - You evaluate by reading generated poems, checking syllable counts, B-T tones
+      - Validation loss tells you "is it still learning or overfitting?" — that's enough
 
     Pattern follows NSFWDataset.get_dataloaders():
       1. Compute split sizes
@@ -459,31 +464,26 @@ def get_dataloaders(
         block_size:    max context window (256)
         batch_size:    samples per batch (64)
         val_fraction:  fraction for validation (0.05 = 5%)
-        test_fraction: fraction for test (0.05 = 5%)
         num_workers:   parallel data-loading threads (2-4)
 
     Returns:
-        train_loader, val_loader, test_loader
+        train_loader, val_loader
     """
     total_tokens = len(data)
     val_size = int(total_tokens * val_fraction)
-    test_size = int(total_tokens * test_fraction)
-    train_size = total_tokens - val_size - test_size
+    train_size = total_tokens - val_size
 
-    # Split the flat tensor into three contiguous chunks
+    # Split the flat tensor: first 95% = train, last 5% = val
     train_data = data[:train_size]
-    val_data = data[train_size : train_size + val_size]
-    test_data = data[train_size + val_size :]
+    val_data = data[train_size:]
 
     # Create Dataset for each split
     train_ds = PoetryDataset(train_data, block_size)
     val_ds = PoetryDataset(val_data, block_size)
-    test_ds = PoetryDataset(test_data, block_size)
 
     print(f"\n📦  DataLoader created:")
     print(f"    Train: {train_size:,} tokens → {len(train_ds):,} samples")
     print(f"    Val:   {val_size:,} tokens → {len(val_ds):,} samples")
-    print(f"    Test:  {test_size:,} tokens → {len(test_ds):,} samples")
     print(f"    Batch size: {batch_size}, Block size: {block_size}")
     print(f"    ~{len(train_ds) // batch_size:,} batches/epoch")
 
@@ -494,7 +494,7 @@ def get_dataloaders(
         shuffle=True,            # train: randomize order each epoch
         pin_memory=True,          # faster CPU→GPU transfer
         num_workers=num_workers,
-        drop_last=True,           # drop incomplete last batch (no batch-norm issues)
+        drop_last=True,           # drop incomplete last batch
     )
     val_loader = DataLoader(
         val_ds,
@@ -503,15 +503,8 @@ def get_dataloaders(
         pin_memory=True,
         num_workers=num_workers,
     )
-    test_loader = DataLoader(
-        test_ds,
-        batch_size=batch_size,
-        shuffle=False,            # test: fixed order
-        pin_memory=True,
-        num_workers=num_workers,
-    )
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader
 
 
 # =========================================================================
@@ -576,7 +569,7 @@ if __name__ == "__main__":
     # Simulate: 100K token IDs (like what tokenize_corpus would produce)
     dummy_data = torch.arange(100_000, dtype=torch.long)
 
-    train_loader, val_loader, test_loader = get_dataloaders(
+    train_loader, val_loader = get_dataloaders(
         dummy_data,
         block_size=256,
         batch_size=32,
