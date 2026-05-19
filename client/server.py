@@ -157,7 +157,7 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64)
         new_tokens.append(next_id)
         idx = torch.cat((idx, torch.tensor([[next_id]], device=DEVICE)), dim=1)
 
-    return tokenizer.decode(ids + new_tokens)
+    return new_tokens
 
 
 # ── Routes ─────────────────────────────────────────
@@ -177,7 +177,7 @@ def chat(req: ChatRequest):
     if not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is empty")
 
-    full = generate(
+    new_ids = generate(
         req.prompt,
         req.temperature,
         req.top_k,
@@ -185,13 +185,10 @@ def chat(req: ChatRequest):
         req.max_tokens,
     )
 
-    # Extract just the response part (after <|reply|>)
-    if "<|reply|>" in full:
-        response = full.split("<|reply|>", 1)[1]
-    else:
-        response = full
-
+    # Decode only the NEW tokens, strip punctuation artifacts
+    response = tokenizer.decode(new_ids)
     response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
+    response = response.lstrip(", .;:-")
 
     return ChatResponse(response=response, prompt=req.prompt)
 
