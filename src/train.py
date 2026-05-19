@@ -30,7 +30,7 @@ CONFIG = {
     "mode": "train",
 
     # Model
-    "n_embd": 576, "n_head": 6, "n_layer": 8, "block_size": 256, "dropout": 0.1,
+    "n_embd": 512, "n_head": 8, "n_layer": 8, "block_size": 256, "dropout": 0.1,
 
     # Paths
     "corpus_path": "data/poetry_corpus.txt",
