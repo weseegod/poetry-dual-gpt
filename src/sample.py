@@ -247,7 +247,7 @@ def main():
                                    temperature=args.temperature,
                                    top_k=args.top_k,
                                    device=device)
-            response_only = output.replace(user_input, "").strip()
+            response_only = tokenizer.decode(ids).replace("<|end|>", "").strip()
             print(f"Bot: {response_only}\n")
     else:
         for i in range(args.num_samples):
@@ -261,8 +261,8 @@ def main():
                                    temperature=args.temperature,
                                    top_k=args.top_k,
                                    device=device)
-            # Strip prompt from output — only show what the model generated
-            response_only = output.replace(args.prompt, "").strip()
+            # Decode only the newly generated tokens (exclude prompt)
+            response_only = tokenizer.decode(ids).replace("<|end|>", "").strip()
             print(f"Response: {response_only}")
 
             # Evaluate if it's Lục Bát
@@ -271,18 +271,8 @@ def main():
                 print("📏  Lục Bát Rule Check")
                 print(f"{'─'*60}")
 
-                # Extract just the response part
-                if "<|reply|>" in output:
-                    response_part = output.split("<|reply|>")[-1].replace("<|end|>", "").strip()
-                else:
-                    # Try to find the comma-separated boundary
-                    parts = output.split(",")
-                    if len(parts) >= 2:
-                        response_part = parts[-1].strip().replace("<|end|>", "")
-                    else:
-                        response_part = output.replace(args.prompt, "").strip()
-
-                # Extract prompt part
+                # Use clean response (no prompt, no control tokens)
+                response_part = response_only.rstrip(",. ")
                 prompt_part = args.prompt.replace("[LUC_BAT]", "").strip().rstrip(",")
 
                 results = evaluate_luc_bat(prompt_part, response_part)
