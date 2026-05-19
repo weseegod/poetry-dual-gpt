@@ -121,10 +121,11 @@ def load_model(checkpoint_path, device="cpu"):
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     model = PoetryDuelGPT(
         vocab_size=ckpt["vocab_size"],
-        n_embd=ckpt["config"]["n_embd"],
-        n_head=ckpt["config"]["n_head"],
-        n_layer=ckpt["config"]["n_layer"],
-        block_size=ckpt["config"]["block_size"],
+        n_embd=ckpt["model_config"]["n_embd"],
+        n_head=ckpt["model_config"]["n_head"],
+        n_layer=ckpt["model_config"]["n_layer"],
+        block_size=ckpt["model_config"]["block_size"],
+        dropout=ckpt["model_config"].get("dropout", 0.1),
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
