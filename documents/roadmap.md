@@ -331,6 +331,83 @@ self.dropout = nn.Dropout(0.1)     # kills 10% of FFN outputs
 
 ---
 
+## 🧪 Final Exam Insights
+
+### 1. Cross-entropy loss values tell a story
+```
+Loss = -ln(P_correct)
+
+9.3 → random guessing among 10,581 tokens
+9.2 → model is 0.01% sure, right (still terrible)
+4.6 → model is 1% sure, right
+3.2 → model has an unfair advantage (weight tying, easy special tokens)
+2.7 → model learning grammar + structure
+2.65 → PLATEAU — model capacity exhausted at 14.8M
+1.0 → model is 37% confident (good for poetry, not for classification)
+0.0 → model is 100% sure, right (overfitting?)
+∞   → model is 0% sure (P=0), should never happen outside bugs
+```
+
+### 2. `ignore_index=-1` in cross_entropy
+Positions with `targets == -1` are skipped — no loss, no gradient.
+Used for padding: padded positions don't penalize the model.
+Currently unused (no padding in our flat-tensor approach) — safety net only.
+
+### 3. Bias is useless in attention, necessary in FFN
+Attention: bias adds same offset to ALL scores → softmax result unchanged.
+FFN: bias shifts the output curve → lets model fit data that doesn't pass through origin.
+
+### 4. AdamW betas: (0.9, 0.95) not (0.9, 0.999)
+```
+beta1=0.9:  momentum — smooth gradient direction
+beta2=0.95: variance — forget old gradient magnitudes in ~20 steps
+            (default 0.999 → forgets in ~1000 steps)
+
+Transformers need 0.95: loss landscape changes rapidly.
+NLP needs faster adaptation than images.
+```
+
+### 5. GELU vs ReLU — dead neurons
+```
+GELU(-2.0) = -0.045  → small negative, gradient flows, can recover
+ReLU(-2.0) = 0.0     → completely dead, gradient = 0 FOREVER
+
+In deep networks: dead ReLU neurons accumulate → 20-30% wasted params.
+GELU prevents this with smooth negative tail.
+```
+
+### 6. `@torch.no_grad()` — TWO effects
+1. Stops gradient computation (saves compute)
+2. Stops Autograd graph storage (saves memory, 3-5× less VRAM during eval)
+Does NOT affect dropout — still need `model.eval()`.
+
+### 7. Argmax vs Multinomial (why we sample)
+`argmax` always picks the most likely token → identical output every time.
+`multinomial` samples from the distribution → 3 runs → 3 different poems.
+Temperature controls how spread out that distribution is.
+
+### 8. Causal mask has a HARD limit
+Mask is fixed at `block_size × block_size`. If sequence exceeds block_size
+without cropping: positions beyond 256 attend to nothing → garbage output.
+Must `idx[:, -block_size:]` before every forward pass.
+
+### 9. Pad token loop during generation
+```
+If model samples token 0 (<|pad|>) and code does `continue`:
+  → same context → model picks pad AGAIN → infinite loop
+Fix: logits[:, pad_id] = -inf  (never sample pad)
+```
+
+### 10. CUDA OOM debugging order
+```
+1. Reduce batch_size     (192→128→64)   ← immediate relief
+2. Reduce block_size     (256→128)      ← cuts attention O(T²)
+3. Use gradient accumulation             ← simulate big batch without memory
+4. Reduce model size     (n_embd/n_layer)
+```
+
+---
+
 ## 🔤 Phase 1: Data & Tokenization
 
 **Goal:** Convert raw poetry into tokenized sequences the model can consume.
