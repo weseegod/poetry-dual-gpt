@@ -1,18 +1,11 @@
 """
-train.py — Training loop for PoetryDuelGPT with mixed precision.
-
-Phase 1: Lục Bát only. Single GPU. Banner + trend tracking + best model save.
+Training loop for PoetryDuelGPT — mixed precision, cosine LR, checkpointing.
 
 Modes:
-  "test"  — 200 steps, batch=8, quick smoke test
-  "train" — 5000 steps, batch=64, full training
-
-Run:
-    python src/train.py              # full training
-    python src/train.py --mode test  # quick test
+  test  → 200 steps, batch=8   (smoke test)
+  train → 5000 steps, batch=192 (full training)
 """
 
-import os
 import math
 import time
 import argparse
@@ -26,7 +19,6 @@ from tqdm import tqdm
 from model import PoetryDuelGPT
 from dataset import PoetryDataset, tokenize_corpus, get_dataloaders
 
-
 ROOT = Path(__file__).parent.parent
 
 
@@ -35,76 +27,42 @@ ROOT = Path(__file__).parent.parent
 # ═══════════════════════════════════════════════════════════════
 
 CONFIG = {
-    "mode": "train",  # "test" or "train"
+    "mode": "train",
 
-    # Model (dynamic vocab from tokenizer)
-    "n_embd": 384,
-    "n_head": 6,
-    "n_layer": 6,
-    "block_size": 256,
-    "dropout": 0.1,
+    # Model
+    "n_embd": 384, "n_head": 6, "n_layer": 6, "block_size": 256, "dropout": 0.1,
 
     # Paths
     "corpus_path": "data/poetry_corpus.txt",
     "tokenizer_path": "tokenizer/poetry_bpe.model",
     "checkpoint_dir": "checkpoints",
 
-    # Test mode
-    "test": {
-        "max_steps": 200,
-        "batch_size": 8,
-        "val_fraction": 0.05,
-        "log_interval": 10,
-        "eval_interval": 100,
-        "save_interval": 200,
-    },
-
-    # Train mode
-    "train": {
-        "max_steps": 5000,
-        "batch_size": 192,
-        "val_fraction": 0.05,
-        "log_interval": 20,
-        "eval_interval": 200,
-        "save_interval": 1000,
-    },
+    # Modes
+    "test":  {"max_steps": 200,  "batch_size": 8,   "eval_interval": 100},
+    "train": {"max_steps": 5000, "batch_size": 192, "eval_interval": 200},
 
     # Optimizer
-    "learning_rate": 3e-4,
-    "min_lr": 1e-5,
-    "weight_decay": 0.1,
-    "warmup_steps": 200,
-    "grad_clip": 1.0,
+    "learning_rate": 3e-4, "min_lr": 1e-5, "warmup_steps": 200,
+    "weight_decay": 0.1, "grad_clip": 1.0,
 
     # Mixed precision
     "dtype": "bfloat16",
-
-    # Device
     "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
-
-# Apply mode settings
-MODE = CONFIG["mode"]
-SETTINGS = CONFIG.get(MODE, CONFIG["train"])
-
-
-def _setting(key, default=None):
-    """Get setting: mode-specific override, or top-level CONFIG value."""
-    return SETTINGS.get(key, CONFIG.get(key, default))
 
 
 # ═══════════════════════════════════════════════════════════════
 #  LR SCHEDULE
 # ═══════════════════════════════════════════════════════════════
 
-def get_lr(step, warmup_steps, max_steps, max_lr, min_lr):
-    """Cosine learning rate schedule with linear warmup."""
-    if step < warmup_steps:
-        return max_lr * (step + 1) / warmup_steps
-    if step > max_steps:
+def get_lr(step, warmup, total, max_lr, min_lr):
+    """Cosine with linear warmup."""
+    if step < warmup:
+        return max_lr * (step + 1) / warmup
+    if step >= total:
         return min_lr
-    progress = (step - warmup_steps) / max(1, max_steps - warmup_steps)
-    return min_lr + 0.5 * (max_lr - min_lr) * (1.0 + math.cos(math.pi * progress))
+    p = (step - warmup) / (total - warmup)
+    return min_lr + 0.5 * (max_lr - min_lr) * (1 + math.cos(math.pi * p))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -112,48 +70,34 @@ def get_lr(step, warmup_steps, max_steps, max_lr, min_lr):
 # ═══════════════════════════════════════════════════════════════
 
 @torch.no_grad()
-def evaluate(model, val_loader, device, num_batches=None):
-    """Compute average loss on validation set."""
+def evaluate(model, loader, device, n_batches=20):
     model.eval()
-    total_loss = 0.0
-    batches = 0
-
-    for x, y in val_loader:
+    loss, cnt = 0.0, 0
+    for x, y in loader:
+        if cnt >= n_batches: break
         x, y = x.to(device), y.to(device)
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-            _, loss = model(x, y)
-        total_loss += loss.item()
-        batches += 1
-        if num_batches and batches >= num_batches:
-            break
-
+        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            _, l = model(x, y)
+        loss += l.item(); cnt += 1
     model.train()
-    return total_loss / max(1, batches)
+    return loss / cnt
 
 
 # ═══════════════════════════════════════════════════════════════
-#  CHECKPOINTING
+#  CHECKPOINT
 # ═══════════════════════════════════════════════════════════════
 
-def save_checkpoint(model, optimizer, step, loss, vocab_size, config, filename):
-    ckpt_dir = ROOT / config["checkpoint_dir"]
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
-    path = ckpt_dir / filename
+def save_ckpt(model, opt, step, loss, vocab, cfg, fname):
+    d = ROOT / cfg["checkpoint_dir"]; d.mkdir(exist_ok=True)
     torch.save({
         "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "step": step,
-        "loss": loss,
-        "vocab_size": vocab_size,
-        "model_config": {
-            "n_embd": config["n_embd"],
-            "n_head": config["n_head"],
-            "n_layer": config["n_layer"],
-            "block_size": config["block_size"],
-            "dropout": config["dropout"],
-        },
-    }, path)
-    return path
+        "optimizer_state_dict": opt.state_dict(),
+        "step": step, "loss": loss, "vocab_size": vocab,
+        "model_config": {"n_embd": cfg["n_embd"], "n_head": cfg["n_head"],
+                         "n_layer": cfg["n_layer"], "block_size": cfg["block_size"],
+                         "dropout": cfg["dropout"]},
+    }, d / fname)
+    return d / fname
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -161,210 +105,109 @@ def save_checkpoint(model, optimizer, step, loss, vocab_size, config, filename):
 # ═══════════════════════════════════════════════════════════════
 
 def train(max_lines=None):
-    """
-    Args:
-        max_lines: if set, only use first N lines from corpus (for quick testing)
-    """
-    device = CONFIG["device"]
-    max_steps = _setting("max_steps")
-    batch_size = _setting("batch_size")
-    log_interval = _setting("log_interval")
-    eval_interval = _setting("eval_interval")
-    save_interval = _setting("save_interval")
+    cfg, dev = CONFIG, CONFIG["device"]
+    mode = cfg["mode"]; S = cfg[mode]
+    max_steps, batch_size = S["max_steps"], S["batch_size"]
+    eval_interval = S["eval_interval"]
 
-    # ── Banner ──────────────────────────────────────────────
-    print(f"\n{'='*60}")
-    print(f"🎭  PoetryDuelGPT — Phase 1 Training (Lục Bát)")
-    print(f"{'='*60}")
-    print(f"   Mode:       {MODE.upper()}")
-    print(f"   Device:     {device}")
-    if device == "cuda":
-        print(f"   GPU:        {torch.cuda.get_device_name(0)}")
-    print(f"   Max steps:  {max_steps:,}")
-    print(f"   Batch size: {batch_size}")
-    print(f"   Block size: {CONFIG['block_size']}")
-    print(f"   Tokens/step: {batch_size * CONFIG['block_size']:,}")
-    print(f"   Peak LR:    {CONFIG['learning_rate']}")
-    print(f"   Warmup:     {CONFIG['warmup_steps']} steps")
-    print(f"   Mixed prec: {CONFIG['dtype']}")
-    print(f"   Model:      n_embd={CONFIG['n_embd']}, n_head={CONFIG['n_head']}, n_layer={CONFIG['n_layer']}")
+    # ── Banner ──
+    print(f"\n{'='*60}\n🎭  PoetryDuelGPT — {mode.upper()} (Lục Bát)\n{'='*60}")
+    print(f"   Device: {dev}  |  Steps: {max_steps:,}  |  Batch: {batch_size}  |  "
+          f"Tok/step: {batch_size*cfg['block_size']:,}")
+    print(f"   Peak LR: {cfg['learning_rate']}  |  Warmup: {cfg['warmup_steps']}  |  "
+          f"Model: emb={cfg['n_embd']} head={cfg['n_head']} layer={cfg['n_layer']}")
 
-    # ── Load tokenizer ──────────────────────────────────────
-    tok_path = ROOT / CONFIG["tokenizer_path"]
-    corpus = ROOT / CONFIG["corpus_path"]
+    # ── Load tokenizer + data ──
+    tok_path, corpus = ROOT / cfg["tokenizer_path"], ROOT / cfg["corpus_path"]
+    # Check files exist
+    for p, name in [(tok_path, "Tokenizer"), (corpus, "Corpus")]:
+        if not p.exists():
+            print(f"\n❌  {name} not found: {p}")
+            print("   Run: python src/preprocess.py && python src/train_bpe.py")
+            return
 
-    # Verify required files exist
-    missing = []
-    if not tok_path.exists():
-        missing.append(f"  Tokenizer: {tok_path}")
-    if not corpus.exists():
-        missing.append(f"  Corpus:    {corpus}")
-    if missing:
-        print(f"\n❌  Missing required files:")
-        for m in missing:
-            print(m)
-        print(f"\n   Run these first:")
-        print(f"     python src/preprocess.py")
-        print(f"     python src/train_bpe.py")
-        return
+    print(f"\n📖  Tokenizer: {tok_path}")
+    tok = Tokenizer.from_file(str(tok_path))
+    V = tok.get_vocab_size()
+    print(f"    Vocab: {V:,}  |  Pad=0  |  End=3")
 
-    print(f"\n📖  Loading tokenizer: {tok_path}")
-    tokenizer = Tokenizer.from_file(str(tok_path))
-    vocab_size = tokenizer.get_vocab_size()
-    pad_id = tokenizer.token_to_id("<|pad|>")
-    end_id = tokenizer.token_to_id("<|end|>")
-    print(f"    Vocab: {vocab_size:,} | Pad={pad_id} | End={end_id}")
-
-    # ── Load & tokenize data ────────────────────────────────
-    print(f"\n📦  Loading corpus: {corpus}")
-    with open(corpus, "r", encoding="utf-8") as f:
-        lines = [line.strip() for line in f if line.strip()]
+    print(f"\n📦  Corpus: {corpus}")
+    with open(corpus, encoding="utf-8") as f:
+        lines = [l.strip() for l in f if l.strip()]
+    if max_lines: lines = lines[:max_lines]
     print(f"    Lines: {len(lines):,}")
+    data = tokenize_corpus(lines, tok)
 
-    if max_lines and len(lines) > max_lines:
-        lines = lines[:max_lines]
-        print(f"    Limited to {max_lines:,} lines for quick test")
+    # ── DataLoaders ──
+    train_loader, val_loader = get_dataloaders(data, cfg["block_size"], batch_size,
+                                                val_fraction=0.05,
+                                                num_workers=2 if dev == "cuda" else 0)
 
-    print("    Tokenizing...")
-    data = tokenize_corpus(lines, tokenizer)
+    # ── Model ──
+    model = PoetryDuelGPT(V, cfg["n_embd"], cfg["n_head"], cfg["n_layer"],
+                          cfg["block_size"], cfg["dropout"]).to(dev)
 
-    # ── DataLoaders ─────────────────────────────────────────
-    train_loader, val_loader = get_dataloaders(
-        data,
-        block_size=CONFIG["block_size"],
-        batch_size=batch_size,
-        val_fraction=_setting("val_fraction", 0.05),
-        num_workers=2 if device == "cuda" else 0,
-    )
-    batches_per_epoch = len(train_loader)
-    print(f"    ~{batches_per_epoch:,} batches/epoch")
+    # ── Optimizer (weight decay on weights, not biases/norms) ──
+    decay = [p for n, p in model.named_parameters() if p.dim() >= 2]
+    no_decay = [p for n, p in model.named_parameters() if p.dim() < 2]
+    opt = torch.optim.AdamW([{"params": decay, "weight_decay": cfg["weight_decay"]},
+                              {"params": no_decay, "weight_decay": 0.0}],
+                             lr=cfg["learning_rate"], betas=(0.9, 0.95))
 
-    # ── Model ───────────────────────────────────────────────
-    print(f"\n🧠  Creating model...")
-    model = PoetryDuelGPT(
-        vocab_size=vocab_size,
-        n_embd=CONFIG["n_embd"],
-        n_head=CONFIG["n_head"],
-        n_layer=CONFIG["n_layer"],
-        block_size=CONFIG["block_size"],
-        dropout=CONFIG["dropout"],
-    )
-    model.to(device)
-
-    # ── Optimizer ───────────────────────────────────────────
-    decay_params = []
-    no_decay_params = []
-    for name, param in model.named_parameters():
-        if param.dim() >= 2:
-            decay_params.append(param)
-        else:
-            no_decay_params.append(param)
-
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": decay_params, "weight_decay": CONFIG["weight_decay"]},
-            {"params": no_decay_params, "weight_decay": 0.0},
-        ],
-        lr=CONFIG["learning_rate"],
-        betas=(0.9, 0.95),
-    )
-
-    # ── Training ────────────────────────────────────────────
-    print(f"\n{'='*60}")
-    print(f"🚀  TRAINING START")
-    print(f"{'='*60}\n")
-
+    # ── Training ──
+    print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
     model.train()
-    step = 0
-    best_val_loss = float("inf")
-    total_train_loss = 0.0
-    train_batches = 0
+    step, best_val, loss_sum, loss_cnt = 0, float("inf"), 0.0, 0
     t0 = time.time()
-
-    train_iter = iter(train_loader)
-
-    # Progress bar for current eval segment (like diffusion's per-epoch bar)
-    pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="step",
-               leave=False)
+    it = iter(train_loader)
+    pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
 
     while step < max_steps:
-        # Refresh iterator if exhausted (new epoch)
+        # Next batch (new epoch if exhausted)
         try:
-            x, y = next(train_iter)
+            x, y = next(it)
         except StopIteration:
-            train_iter = iter(train_loader)
-            x, y = next(train_iter)
+            it = iter(train_loader); x, y = next(it)
+        x, y = x.to(dev), y.to(dev)
 
-        x, y = x.to(device), y.to(device)
-
-        # Learning rate
-        lr = get_lr(step, CONFIG["warmup_steps"], max_steps,
-                    CONFIG["learning_rate"], CONFIG["min_lr"])
-        for pg in optimizer.param_groups:
-            pg["lr"] = lr
+        # LR schedule
+        lr = get_lr(step, cfg["warmup_steps"], max_steps, cfg["learning_rate"], cfg["min_lr"])
+        for pg in opt.param_groups: pg["lr"] = lr
 
         # Forward + backward
-        with torch.autocast(device_type=device, dtype=torch.bfloat16):
-            logits, loss = model(x, y)
-
-        optimizer.zero_grad()
+        with torch.autocast(device_type=dev, dtype=torch.bfloat16):
+            _, loss = model(x, y)
+        opt.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), CONFIG["grad_clip"])
-        optimizer.step()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), cfg["grad_clip"])
+        opt.step()
 
-        step += 1
-        total_train_loss += loss.item()
-        train_batches += 1
+        step += 1; loss_sum += loss.item(); loss_cnt += 1
+        pbar.update(1); pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
-        # Update progress bar (like diffusion: pbar.set_postfix)
-        pbar.update(1)
-        pbar.set_postfix({"loss": f"{loss.item():.4f}"})
-
-        # ── Evaluation (one summary line, like diffusion epoch display) ──
+        # ── Eval (summary line, like diffusion epoch display) ──
         if step % eval_interval == 0:
-            avg_train_loss = total_train_loss / max(1, train_batches)
-            val_loss = evaluate(model, val_loader, device, num_batches=20)
-            trend = "📉" if val_loss < best_val_loss else "➡️"
-            best_val_loss = min(best_val_loss, val_loss)
-            dt = time.time() - t0
-            lr_val = optimizer.param_groups[0]["lr"]
-            # Close bar cleanly (no duplicate line)
+            train_loss = loss_sum / loss_cnt
+            val_loss = evaluate(model, val_loader, dev)
+            trend = "📉" if val_loss < best_val else "➡️"
+            best_val = min(best_val, val_loss)
             pbar.close()
-            print(f"── Step {step:5d}/{max_steps} "
-                  f"({dt:.0f}s) ── "
-                  f"loss={avg_train_loss:.4f} "
-                  f"val={val_loss:.4f} {trend} "
-                  f"lr={lr_val:.2e}")
-            total_train_loss = 0.0
-            train_batches = 0
+            print(f"── Step {step:5d}/{max_steps} ({time.time()-t0:.0f}s) ── "
+                  f"loss={train_loss:.4f} val={val_loss:.4f} {trend} lr={lr:.2e}")
+            loss_sum = 0.0; loss_cnt = 0
 
-            # New progress bar for next segment (skip if done)
             if step < max_steps:
-                next_end = min(step + eval_interval, max_steps)
-                pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{next_end}", unit="step",
-                           leave=False)
+                nxt = min(step + eval_interval, max_steps)
+                pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{nxt}", unit="s", leave=False)
 
-        # ── Save checkpoint ─────────────────────────────────
-        if step % save_interval == 0:
-            path = save_checkpoint(model, optimizer, step, loss.item(),
-                                   vocab_size, CONFIG, f"step_{step}.pt")
-            print(f"   💾  Saved: {path.name}")
+        # ── Save checkpoint ──
+        if step % 1000 == 0:
+            p = save_ckpt(model, opt, step, loss.item(), V, cfg, f"step_{step}.pt")
+            print(f"   💾  {p.name}")
 
     pbar.close()
-
-    # ── Final save ──────────────────────────────────────────
-    final_path = save_checkpoint(model, optimizer, step, loss.item(),
-                                 vocab_size, CONFIG, "final.pt")
-    elapsed = time.time() - t0
-
-    print(f"\n{'='*60}")
-    print(f"✅  TRAINING COMPLETE!")
-    print(f"   Total time:  {elapsed/60:.1f} min")
-    print(f"   Total steps: {step:,}")
-    print(f"   Best val:    {best_val_loss:.4f}")
-    print(f"   Final model: {final_path}")
-    print(f"   To generate: python src/sample.py")
-    print(f"{'='*60}\n")
+    final = save_ckpt(model, opt, step, loss.item(), V, cfg, "final.pt")
+    print(f"\n{'='*60}\n✅  Done! {time.time()-t0:.0f}s | Best val: {best_val:.4f} | {final}\n{'='*60}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -372,26 +215,17 @@ def train(max_lines=None):
 # ═══════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train PoetryDuelGPT")
-    parser.add_argument("--mode", type=str, default="train",
-                       choices=["test", "train"],
-                       help="test = 200 steps | train = 5000 steps")
-    parser.add_argument("--steps", type=int, default=None, help="Override max steps")
-    parser.add_argument("--batch_size", type=int, default=None)
-    parser.add_argument("--device", type=str, default=None)
-    parser.add_argument("--max_lines", type=int, default=None, help="Limit corpus lines (for quick testing)")
-    args = parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("--mode", choices=["test", "train"], default="train")
+    p.add_argument("--steps", type=int, default=None)
+    p.add_argument("--batch_size", type=int, default=None)
+    p.add_argument("--device", type=str, default=None)
+    p.add_argument("--max_lines", type=int, default=None)
+    args = p.parse_args()
 
-    if args.mode:
-        CONFIG["mode"] = args.mode
-        MODE = args.mode
-        SETTINGS = CONFIG.get(MODE, CONFIG["train"])
+    if args.mode:       CONFIG["mode"] = args.mode
+    if args.steps:      CONFIG[CONFIG["mode"]]["max_steps"] = args.steps
+    if args.batch_size: CONFIG[CONFIG["mode"]]["batch_size"] = args.batch_size
+    if args.device:     CONFIG["device"] = args.device
 
-    if args.steps:
-        SETTINGS["max_steps"] = args.steps
-    if args.batch_size:
-        SETTINGS["batch_size"] = args.batch_size
-    if args.device:
-        CONFIG["device"] = args.device
-
-    train(max_lines=args.max_lines)
+    train(args.max_lines)
