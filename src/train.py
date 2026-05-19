@@ -39,10 +39,10 @@ CONFIG = {
 
     # Modes
     "test":  {"max_steps": 200,  "batch_size": 8,   "eval_interval": 100},
-    "train": {"max_steps": 15000, "batch_size": 192, "eval_interval": 500},
+    "train": {"max_steps": 10000, "batch_size": 192, "eval_interval": 200},
 
     # Optimizer
-    "learning_rate": 3e-4, "min_lr": 1e-5, "warmup_steps": 200,
+    "learning_rate": 3e-4, "min_lr": 1e-5, "warmup_steps": 500,
     "weight_decay": 0.1, "grad_clip": 1.0,
 
     # Mixed precision

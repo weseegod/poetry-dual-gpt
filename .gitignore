@@ -18,3 +18,6 @@ tokenizer/poetry_bpe.model
 
 # System files
 .DS_Store
+
+# Frontend
+client/frontend/node_modules/
