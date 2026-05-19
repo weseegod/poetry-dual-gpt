@@ -247,7 +247,8 @@ def main():
                                    temperature=args.temperature,
                                    top_k=args.top_k,
                                    device=device)
-            print(f"Bot: {output}\n")
+            response_only = output.replace(user_input, "").strip()
+            print(f"Bot: {response_only}\n")
     else:
         for i in range(args.num_samples):
             print(f"\n{'='*60}")
@@ -260,7 +261,9 @@ def main():
                                    temperature=args.temperature,
                                    top_k=args.top_k,
                                    device=device)
-            print(f"Response: {output}")
+            # Strip prompt from output — only show what the model generated
+            response_only = output.replace(args.prompt, "").strip()
+            print(f"Response: {response_only}")
 
             # Evaluate if it's Lục Bát
             if "[LUC_BAT]" in args.prompt:
