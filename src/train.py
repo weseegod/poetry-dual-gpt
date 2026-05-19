@@ -284,7 +284,8 @@ def train(max_lines=None):
     train_iter = iter(train_loader)
 
     # Progress bar for current eval segment (like diffusion's per-epoch bar)
-    pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="step")
+    pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="step",
+               leave=False)
 
     while step < max_steps:
         # Refresh iterator if exhausted (new epoch)
@@ -327,6 +328,8 @@ def train(max_lines=None):
             best_val_loss = min(best_val_loss, val_loss)
             dt = time.time() - t0
             lr_val = optimizer.param_groups[0]["lr"]
+            # Close bar cleanly (no duplicate line)
+            pbar.close()
             print(f"── Step {step:5d}/{max_steps} "
                   f"({dt:.0f}s) ── "
                   f"loss={avg_train_loss:.4f} "
@@ -335,10 +338,11 @@ def train(max_lines=None):
             total_train_loss = 0.0
             train_batches = 0
 
-            # New progress bar for next segment
-            pbar.close()
-            next_end = min(step + eval_interval, max_steps)
-            pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{next_end}", unit="step")
+            # New progress bar for next segment (skip if done)
+            if step < max_steps:
+                next_end = min(step + eval_interval, max_steps)
+                pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{next_end}", unit="step",
+                           leave=False)
 
         # ── Save checkpoint ─────────────────────────────────
         if step % save_interval == 0:
