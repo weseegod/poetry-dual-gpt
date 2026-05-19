@@ -55,6 +55,32 @@ def load():
         raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
 
     ckpt = torch.load(ckpt_path, map_location=DEVICE, weights_only=False)
+
+    # Remap old checkpoint keys → current model attribute names
+    key_map = {
+        "token_embedding.weight": "tok_emb.weight",
+        "position_embedding.weight": "pos_emb.weight",
+        "ln_final.weight": "ln_f.weight",
+        "ln_final.bias": "ln_f.bias",
+        "lm_head.weight": "head.weight",
+    }
+    old_state = ckpt["model_state_dict"]
+    new_state = {}
+    for key, val in old_state.items():
+        # Block-level remapping
+        # old: blocks.N.attn.qkv_proj.weight  →  blocks.N.attn.qkv.weight
+        # old: blocks.N.attn.out_proj.weight  →  blocks.N.attn.out.weight
+        # old: blocks.N.ffn.fc1.weight        →  blocks.N.ffn.net.0.weight
+        # old: blocks.N.ffn.fc2.weight        →  blocks.N.ffn.net.2.weight
+        k = key.replace("qkv_proj", "qkv") \
+               .replace("out_proj", "out") \
+               .replace("causal_mask", "mask") \
+               .replace(".ffn.fc1.", ".ffn.net.0.") \
+               .replace(".ffn.fc2.", ".ffn.net.2.")
+        # Top-level remapping
+        k = key_map.get(k, k)
+        new_state[k] = val
+
     model = PoetryDuelGPT(
         vocab_size=ckpt["vocab_size"],
         n_embd=ckpt["model_config"]["n_embd"],
@@ -63,7 +89,7 @@ def load():
         block_size=ckpt["model_config"]["block_size"],
         dropout=ckpt["model_config"].get("dropout", 0.1),
     )
-    model.load_state_dict(ckpt["model_state_dict"])
+    model.load_state_dict(new_state, strict=False)
     model.to(DEVICE).eval()
 
     model_info = {
