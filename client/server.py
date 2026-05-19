@@ -149,7 +149,7 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64)
             mask = cumsum > top_p
             mask[..., 1:] = mask[..., :-1].clone()
             mask[..., 0] = False
-            logits[sorted_idx[mask]] = float("-inf")
+            logits[:, sorted_idx[mask]] = float("-inf")
 
         next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
         if next_id == end_id:

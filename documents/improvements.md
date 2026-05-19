@@ -77,7 +77,7 @@ def top_p_filter(logits, p=0.92):
     mask = cumsum > p
     mask[..., 1:] = mask[..., :-1].clone()  # shift: keep first token past threshold
     mask[..., 0] = False                     # always keep top token
-    logits[sorted_idx[mask]] = float("-inf")
+    logits[:, sorted_idx[mask]] = float("-inf")
     return logits
 ```
 

@@ -137,7 +137,7 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
             mask = cumsum > top_p
             mask[..., 1:] = mask[..., :-1].clone()
             mask[..., 0] = False
-            logits[sorted_idx[mask]] = float("-inf")
+            logits[:, sorted_idx[mask]] = float("-inf")
 
         # Sample from softmax
         next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
