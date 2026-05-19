@@ -234,6 +234,103 @@ Fix: set `logits[:, pad_id] = -inf` so it's never picked.
 
 ---
 
+## 🏋️ Training Insights (from Q&A)
+
+### 1. bfloat16 vs float16 (mixed precision)
+`bfloat16` has the same exponent range as float32 → no overflow, no NaN.
+`float16` has only 5 exponent bits → values > 65,504 overflow to `inf`.
+`bfloat16` needs no GradScaler; `float16` requires constant rescaling to survive.
+
+### 2. model.train() vs model.eval() — only affects Dropout
+`.eval()` does NOT stop gradients. It only tells `nn.Dropout` to sleep.
+Without `.eval()` during validation: 10% neurons randomly dead → val loss looks
+worse than it is → you might stop training too early.
+
+### 3. Gradient clipping = survival mechanism
+Without clipping: one bad batch with gradient=50.0 sends a weight from 0.7 to 50.7.
+Next softmax overflows → NaN → every weight becomes NaN → model is dead.
+With clipping (max=1.0): 50.0 scaled to 1.0 → weight goes 0.7→1.7 → survives.
+All gradients are scaled proportionally, so direction is preserved.
+
+### 4. Optimizer state in checkpoints = momentum memory
+AdamW keeps running averages of past gradients (momentum). Without saving
+optimizer state, resuming training loses all momentum — first few steps are wasted
+rebuilding direction from scratch.
+
+### 5. Cosine LR decay
+Warmup (steps 0-200): ramp up slowly → prevents early instability.
+Decay (steps 200-5000): cosine curve down to 1e-5 → settles into minimum.
+Constant LR would bounce around the minimum, never settling.
+
+### 6. drop_last=True on DataLoader
+If 100 samples and batch_size=64: two batches (64 + 36).
+The 36-sample batch has noisier gradients (fewer samples → worse loss estimate).
+`drop_last=True` drops the incomplete batch → every batch is exactly 64 samples.
+
+### 7. Plateau = model capacity limit
+Val loss flatlines at ~2.65 for 14.8M model on this data.
+Not a bug — the model is saying "I've learned everything I can at this size."
+To go lower: bigger model or cleaner data.
+
+---
+
+## 💧 Dropout: How it works
+
+`nn.Dropout(p=0.1)` randomly sets 10% of values to ZERO on every forward pass.
+
+### Concrete example
+
+```
+Input vector (8 numbers):
+  [ 0.5, -0.3,  1.2,  0.8, -0.1,  0.4, -0.9,  0.7 ]
+
+Dropout(p=0.1) randomly picks ~10% to kill:
+  [ 0.5, -0.3,    0,  0.8, -0.1,  0.4, -0.9,    0 ]  ← 2 of 8 zeroed
+  
+Then scales survivors up by 1/(1-p) = 1/0.9 = 1.111:
+  [ 0.56, -0.33,   0,  0.89, -0.11, 0.44, -1.0,   0 ]
+  
+Why scale? The sum stays roughly the same:
+  Before: sum = 2.3
+  After:  sum ≈ 2.3  (compensates for missing 10%)
+```
+
+### Why it works
+
+Without dropout: the model relies on specific neurons becoming "experts."
+Neuron #47 always activates for "thân em" → model overfits to that neuron.
+
+With dropout: neuron #47 sometimes disappears. Other neurons MUST learn to help.
+Result: knowledge is spread across many neurons → no single point of failure →
+model generalizes instead of memorizing.
+
+### During training vs inference
+
+```
+Training:   Dropout kills 10% → forces redundancy → learns robust patterns
+Inference:  Dropout disabled → all neurons active → uses full knowledge
+
+Think of it like: during practice, the athlete wears weights on their ankles.
+During the race, weights come off — they're faster.
+```
+
+### Where dropout lives in this model
+
+```python
+# In MultiHeadAttention.__init__:
+self.drop_attn = nn.Dropout(0.1)   # kills 10% of attention weights
+self.drop_out  = nn.Dropout(0.1)   # kills 10% of attention outputs
+
+# In FeedForward:
+self.dropout = nn.Dropout(0.1)     # kills 10% of FFN outputs
+
+# Total: 3 dropout layers × 2 positions per block × 6 blocks = 36 dropout points
+# During training: ~3-4 neurons zeroed at each point
+# During eval/generation: all zero → full model
+```
+
+---
+
 ## 🔤 Phase 1: Data & Tokenization
 
 **Goal:** Convert raw poetry into tokenized sequences the model can consume.
