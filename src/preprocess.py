@@ -51,12 +51,12 @@ def make_pairs(lines: list[str]) -> list[str]:
     Accepts ±1 syllable tolerance for noisy data.
     """
     pairs = []
-    for i in range(len(lines) - 1):
+    for i in range(0, len(lines) - 1, 2):
         prompt, reply = lines[i], lines[i + 1]
         p_ok = 5 <= count_syllables(prompt) <= 7
         r_ok = 7 <= count_syllables(reply) <= 9
         if p_ok and r_ok and prompt and reply:
-            pairs.append(f"{START} {TAG} {prompt}, {REPLY} {reply} {END}")
+            pairs.append(f"{START} {TAG} {prompt} {REPLY} {reply} {END}")
     return pairs
 
 

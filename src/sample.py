@@ -101,7 +101,8 @@ def load_model(ckpt_path, device="cpu"):
 # ═══════════════════════════════════════════════════════════════
 
 @torch.no_grad()
-def generate(model, tokenizer, prompt, max_new=64, temperature=0.75, top_k=50, device="cpu"):
+def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
+              top_k=50, top_p=None, device="cpu"):
     """
     1. Encode prompt → 2. Loop: forward → sample next token → append
     3. Stop on <|end|> or max tokens → 4. Decode new tokens only
@@ -127,6 +128,17 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75, top_k=50, d
             v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
             logits[logits < v[:, -1:]] = float("-inf")
 
+        # Top-p (nucleus) filtering — apply after top-k
+        if top_p is not None:
+            probs = F.softmax(logits, dim=-1)
+            sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+            cumsum = torch.cumsum(sorted_probs, dim=-1)
+            # Keep first token past the threshold
+            mask = cumsum > top_p
+            mask[..., 1:] = mask[..., :-1].clone()
+            mask[..., 0] = False
+            logits[sorted_idx[mask]] = float("-inf")
+
         # Sample from softmax
         next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
 
@@ -146,9 +158,10 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--checkpoint", default="checkpoints/final.pt")
     p.add_argument("--tokenizer", default="tokenizer/poetry_bpe.model")
-    p.add_argument("--prompt", default="[LUC_BAT] Thân em như chẽn lúa đòng đòng,")
+    p.add_argument("--prompt", default="[LUC_BAT] Thân em như chẽn lúa đòng đòng")
     p.add_argument("--temperature", type=float, default=0.75)
     p.add_argument("--top_k", type=int, default=50)
+    p.add_argument("--top_p", type=float, default=None)
     p.add_argument("--max_tokens", type=int, default=64)
     p.add_argument("--num_samples", type=int, default=3)
     p.add_argument("--interactive", action="store_true")
@@ -177,7 +190,7 @@ if __name__ == "__main__":
             if u.lower() == "quit": break
             if not u: continue
             if not u.startswith("[LUC_BAT]"): u = f"[LUC_BAT] {u}"
-            _, ids = generate(model, tok, u, args.max_tokens, args.temperature, args.top_k, dev)
+            _, ids = generate(model, tok, u, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
             print(f"Bot: {tok.decode(ids).replace('<|end|>','').strip()}\n")
 
     # Batch generation
@@ -187,7 +200,7 @@ if __name__ == "__main__":
             print(f"Prompt:   {args.prompt}")
 
             _, ids = generate(model, tok, args.prompt, args.max_tokens,
-                              args.temperature, args.top_k, dev)
+                              args.temperature, args.top_k, args.top_p, dev)
             response_only = tok.decode(ids).replace("<|end|>", "").strip()
             print(f"Response: {response_only}")
 

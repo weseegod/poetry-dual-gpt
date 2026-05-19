@@ -30,7 +30,7 @@ CONFIG = {
     "mode": "train",
 
     # Model
-    "n_embd": 384, "n_head": 6, "n_layer": 6, "block_size": 256, "dropout": 0.1,
+    "n_embd": 576, "n_head": 6, "n_layer": 8, "block_size": 256, "dropout": 0.1,
 
     # Paths
     "corpus_path": "data/poetry_corpus.txt",
@@ -39,7 +39,7 @@ CONFIG = {
 
     # Modes
     "test":  {"max_steps": 200,  "batch_size": 8,   "eval_interval": 100},
-    "train": {"max_steps": 5000, "batch_size": 192, "eval_interval": 200},
+    "train": {"max_steps": 15000, "batch_size": 192, "eval_interval": 500},
 
     # Optimizer
     "learning_rate": 3e-4, "min_lr": 1e-5, "warmup_steps": 200,
