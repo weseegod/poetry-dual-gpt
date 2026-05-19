@@ -25,32 +25,7 @@ This bug also exists in `model.py`'s `generate()` method (used only in `__main__
 
 **How to reproduce:** Run `sample.py` 3-4 times. Occasionally the response is empty — that's the model hitting the pad loop until `max_new_tokens` is exhausted.
 
-### 2. No checkpoint resume (Colab-friendly)
-
-**File:** `src/train.py`, `train()` function
-
-Current: always starts from scratch. Colab disconnects = lost progress.
-
-Add:
-- `--resume` CLI argument pointing to a `.pt` file
-- Load `model_state_dict`, `optimizer_state_dict`, and `step` from checkpoint
-- Continue training from that step
-
-Key snippet to add after model creation:
-```python
-if args.resume:
-    ckpt = torch.load(args.resume, map_location=dev, weights_only=False)
-    model.load_state_dict(ckpt["model_state_dict"])
-    opt.load_state_dict(ckpt["optimizer_state_dict"])
-    step = ckpt["step"]
-    print(f"Resumed from step {step}")
-```
-
----
-
-## 🟡 High Impact / Low Effort
-
-### 3. Train longer — 15K-20K steps
+### 2. Train longer — 15K-20K steps
 
 **File:** `src/train.py`, `CONFIG["train"]["max_steps"]`
 
@@ -62,7 +37,7 @@ Val loss plateaued at step 3000 but cosine LR hadn't fully decayed. More steps a
 
 Also increase `warmup_steps` proportionally (200→500 for 15K steps, ~3%).
 
-### 4. True semantic couplets, not sliding windows
+### 3. True semantic couplets, not sliding windows
 
 **File:** `src/preprocess.py`, `make_pairs()`
 
@@ -82,7 +57,7 @@ for i in range(0, len(lines) - 1, 2):
 
 This halves training data from 688K → ~344K pairs, but every pair is a true 6→8 Lục Bát couplet. Quality > quantity.
 
-### 5. Add top-p (nucleus) sampling
+### 4. Add top-p (nucleus) sampling
 
 **File:** `src/sample.py`, `generate()` function
 
@@ -108,7 +83,7 @@ def top_p_filter(logits, p=0.92):
 
 Add `--top_p` CLI arg. When `top_p` is set, skip `top_k`. Allow both to coexist (apply top-p after top-k).
 
-### 6. Tune generation temperature + top-k
+### 5. Tune generation temperature + top-k
 
 **File:** `src/sample.py`, `--temperature` arg
 
@@ -128,7 +103,7 @@ Also try `--top_k 30` and `--top_k 80` to find the sweet spot.
 
 ## 🟢 Medium Impact / Medium Effort
 
-### 7. Clean training data — strict syllable filter
+### 6. Clean training data — strict syllable filter
 
 **File:** `src/preprocess.py`, `make_pairs()`
 
@@ -146,7 +121,7 @@ r_ok = count_syllables(reply) == 8
 
 Fewer but cleaner pairs. Combine with #4 (true couplets) for maximum data quality.
 
-### 8. Scale the model up
+### 7. Scale the model up
 
 **File:** `src/train.py`, `CONFIG` dict
 
@@ -159,7 +134,7 @@ Fewer but cleaner pairs. Combine with #4 (true couplets) for maximum data qualit
 
 Start with `n_embd=512, n_layer=8` — it fits on Colab's T4 (16GB) and L4 (24GB).
 
-### 9. Clean training pairs — remove comma from prompt
+### 8. Clean training pairs — remove comma from prompt
 
 **File:** `src/preprocess.py`, `make_pairs()`
 
@@ -180,7 +155,7 @@ Update `sample.py` default prompt to match (remove trailing comma).
 
 ## 🔵 Higher Effort / Long Term
 
-### 10. Rhyme conditioning
+### 9. Rhyme conditioning
 
 Lục Bát rhyme rule: syllable 6 of the prompt must rhyme with syllable 6 of the reply (vần lưng).
 
@@ -197,7 +172,7 @@ Steps:
 
 This is a genuine quality booster — rhyme is the defining feature of Lục Bát.
 
-### 11. Two-stage training
+### 10. Two-stage training
 
 Stage 1: Train on ALL 198K poems (all genres) — model learns Vietnamese grammar, vocabulary, and general poetic structure.
 
@@ -209,7 +184,7 @@ Implementation:
 3. Save checkpoint
 4. Fine-tune on Lục Bát pairs only (~5K steps with lower LR: 1e-4)
 
-### 12. Data cleaning pipeline
+### 11. Data cleaning pipeline
 
 The CSV has noise: HTML artifacts, broken lines, wrong genre labels. Build:
 
@@ -223,7 +198,7 @@ data/poems_dataset.csv
   → save clean version
 ```
 
-### 13. Multi-genre support
+### 12. Multi-genre support
 
 Currently only `[LUC_BAT]` tag is used. The code already reserves `[TU_TUYET]` (id=5) and `[THAT_NGON_BAT_CU]` (id=6).
 
@@ -239,25 +214,24 @@ Model can then respond in multiple poetic forms when given different genre tags.
 
 ```
 Phase 1 — Stability (do now)
-  □ 1. Fix pad token loop in sample.py
-  □ 2. Add checkpoint resume to train.py
+  ☑ 1. Fix pad token loop in sample.py (+ model.py)
 
 Phase 2 — Better Poetry (next)
-  □ 3. Train longer (15K steps)
-  □ 4. True couplets (step=2 in preprocess.py)
-  □ 5. Add top-p sampling
-  □ 6. Sweep temperature + top-k
+  □ 2. Train longer (15K steps)
+  □ 3. True couplets (step=2 in preprocess.py)
+  □ 4. Add top-p sampling
+  □ 5. Sweep temperature + top-k
 
 Phase 3 — Cleaner Data
-  □ 7. Strict syllable filter (6 and 8 exactly)
-  □ 8. Scale model up (n_embd=512, n_layer=8)
-  □ 9. Remove comma from prompt format
+  □ 6. Strict syllable filter (6 and 8 exactly)
+  □ 7. Scale model up (n_embd=512, n_layer=8)
+  □ 8. Remove comma from prompt format
 
 Phase 4 — Advanced
-  □ 10. Rhyme conditioning
-  □ 11. Two-stage training (all genres → Lục Bát fine-tune)
-  □ 12. Data cleaning pipeline
-  □ 13. Multi-genre support
+  □ 9. Rhyme conditioning
+  □ 10. Two-stage training (all genres → Lục Bát fine-tune)
+  □ 11. Data cleaning pipeline
+  □ 12. Multi-genre support
 ```
 
 ---

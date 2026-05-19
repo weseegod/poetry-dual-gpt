@@ -171,7 +171,7 @@ class PoetryDuelGPT(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, pad_id=0):
         """Autoregressive generation: sample one token at a time."""
         for _ in range(max_new_tokens):
             # Crop to window size
@@ -180,6 +180,9 @@ class PoetryDuelGPT(nn.Module):
             # Forward → logits at last position
             logits, _ = self(cond)
             logits = logits[:, -1, :] / temperature
+
+            # Suppress <|pad|> — never sample it
+            logits[:, pad_id] = float("-inf")
 
             # Top-k filtering
             if top_k is not None:
@@ -212,5 +215,5 @@ if __name__ == "__main__":
     logits, loss = m(x, targets=x)
     print(f"Logits: {logits.shape} | Loss: {loss.item():.2f} (expected ~{math.log(V):.1f})")
 
-    gen = m.generate(torch.randint(0, V, (1, 10)), max_new_tokens=20, temperature=0.8, top_k=50)
+    gen = m.generate(torch.randint(0, V, (1, 10)), max_new_tokens=20, temperature=0.8, top_k=50, pad_id=0)
     print(f"Generate: input=10 → output={gen.shape[1]} tokens ✓")

@@ -119,6 +119,9 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75, top_k=50, d
         logits, _ = model(idx[:, -model.block_size:])
         logits = logits[:, -1, :] / temperature
 
+        # Suppress <|pad|> — never sample it
+        logits[:, pad_id] = float("-inf")
+
         # Top-k filtering
         if top_k:
             v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
@@ -128,7 +131,6 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75, top_k=50, d
         next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
 
         if next_id == end_id: break        # stop token
-        if next_id == pad_id: continue      # skip padding
 
         new_tokens.append(next_id)
         idx = torch.cat((idx, torch.tensor([[next_id]], device=device)), dim=1)
