@@ -191,6 +191,23 @@ def train(max_lines=None):
 
     # ── Load tokenizer ──────────────────────────────────────
     tok_path = ROOT / CONFIG["tokenizer_path"]
+    corpus = ROOT / CONFIG["corpus_path"]
+
+    # Verify required files exist
+    missing = []
+    if not tok_path.exists():
+        missing.append(f"  Tokenizer: {tok_path}")
+    if not corpus.exists():
+        missing.append(f"  Corpus:    {corpus}")
+    if missing:
+        print(f"\n❌  Missing required files:")
+        for m in missing:
+            print(m)
+        print(f"\n   Run these first:")
+        print(f"     python src/preprocess.py")
+        print(f"     python src/train_bpe.py")
+        return
+
     print(f"\n📖  Loading tokenizer: {tok_path}")
     tokenizer = Tokenizer.from_file(str(tok_path))
     vocab_size = tokenizer.get_vocab_size()
@@ -199,7 +216,6 @@ def train(max_lines=None):
     print(f"    Vocab: {vocab_size:,} | Pad={pad_id} | End={end_id}")
 
     # ── Load & tokenize data ────────────────────────────────
-    corpus = ROOT / CONFIG["corpus_path"]
     print(f"\n📦  Loading corpus: {corpus}")
     with open(corpus, "r", encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip()]
