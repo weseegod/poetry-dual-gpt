@@ -194,6 +194,46 @@ Same information, different scale. The attention + FFN layers expect clean, cent
 
 ---
 
+## 🧠 Model Insights (from Q&A)
+
+### 1. Token Embedding = learned word space
+After training, similar words cluster together in the 384-dim space.
+`"thương"` and `"yêu"` both appear near `"em"`, `"anh"`, `"lòng"` → vectors drift together.
+The model learns relationships purely from context — no dictionary needed.
+
+### 2. Attention = 6 parallel "lenses" (n_head=6)
+Each head sees 64 dims of the 384. Multiple heads let the model learn
+DIFFERENT types of relationships (syllable count, tone, rhyme, punctuation).
+One big 384-dim head would average everything into one blurry relationship.
+
+### 3. FeedForward = the "thinker" (48% of all params)
+Attention finds connections. FFN interprets what those connections MEAN.
+The GELU non-linearity is critical — without it, stacking more attention layers
+just collapses to ONE big linear transform. GELU lets the model learn curves.
+
+### 4. LayerNorm = clean input before every sublayer
+Forces mean≈0, std≈1 so weight matrices get the values they were initialized for.
+Pre-norm (normalize BEFORE attention/FFN) keeps the residual path un-normalized
+→ gradient highway to early layers. Post-norm kills this signal.
+
+### 5. Causal mask prevents CHEATING, not bad meaning
+Without mask during training: token 0 can see token 5 (the answer) → loss=0 instantly,
+model learns nothing. During generation: there IS no future to look at → model panics.
+
+### 6. Shifted target (y = x shifted by 1) makes training T× faster
+Every position produces a loss. With only the last token as target, positions 0..T-1
+never get gradients → training is T× slower.
+
+### 7. Shape invariant: (B, T, C) throughout
+T stays T throughout all blocks. Only C changes at the final head (384 → vocab_size).
+Position embedding is a separate (T, C) tensor broadcast-added — token IDs never change.
+
+### 8. Pad token (id=0) must be suppressed during generation
+If model samples `<|pad|>` and code does `continue`, it loops forever sampling pad.
+Fix: set `logits[:, pad_id] = -inf` so it's never picked.
+
+---
+
 ## 🔤 Phase 1: Data & Tokenization
 
 **Goal:** Convert raw poetry into tokenized sequences the model can consume.
