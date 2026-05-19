@@ -74,6 +74,126 @@ poetry-dual-gpt/
 
 ---
 
+## 🏗️ Architecture Deep Dive
+
+### Layer-by-layer diagram (14.8M params)
+
+```
+INPUT: token IDs (B, T)  e.g. (192, 256)
+┌──────────────────────────────────────────────┐
+│ EMBEDDINGS                                   │
+│   Token Embedding   10581×384 = 4,063,104    │
+│   Position Embedding  256×384 =    98,304    │
+│   → tok + pos = (B, T, 384)                  │
+└──────────────────────────────────────────────┘
+    │
+    ├── BLOCK 0 ─────────────────── 1,773,600
+    │   ├── LayerNorm           (768)
+    │   ├── MultiHeadAttention
+    │   │   QKV proj  384×1152 = 442,368
+    │   │   Out proj   384×384 = 147,456
+    │   │   Total attn         = 589,824
+    │   │   + residual (0 params)
+    │   ├── LayerNorm           (768)
+    │   ├── FeedForward
+    │   │   fc1       384×1536 = 589,824 + 1,536 bias
+    │   │   fc2      1536×384  = 589,824 + 384 bias
+    │   │   Total FFN          = 1,181,568
+    │   │   + residual (0 params)
+    │   └── Total block        = 1,773,600
+    │
+    ├── BLOCK 1 ─────────────────── 1,773,600
+    ├── BLOCK 2 ─────────────────── 1,773,600
+    ├── BLOCK 3 ─────────────────── 1,773,600
+    ├── BLOCK 4 ─────────────────── 1,773,600
+    ├── BLOCK 5 ─────────────────── 1,773,600
+    │
+    ▼  (B, T, 384) — same shape throughout!
+┌──────────────────────────────────────────────┐
+│ OUTPUT                                        │
+│   Final LayerNorm                     (768)  │
+│   LM Head (tied to token embedding)      (0) │
+│   → logits: (B, T, 10581)                    │
+└──────────────────────────────────────────────┘
+```
+
+### Parameter breakdown
+
+```
+FeedForward     ████████████████████████████  7.09M  (47.9%)
+Token Embedding ██████████████████████        4.06M  (27.5%)
+Attention       ████████████████              3.54M  (23.9%)
+Position Embed  █                              0.10M  ( 0.7%)
+LayerNorms      █                              0.01M  ( 0.1%)
+                ─────────────────────────────
+Total                                        14.80M
+```
+
+**Key insights:**
+- FeedForward is the heaviest (48%) — expanding 384→1536→384 costs `384×1536×2` per block
+- Attention is surprisingly light (24%) — the combined QKV projection saves params vs 3 separate matrices
+- Embeddings cost 27% because vocab_size directly controls size
+- Residuals, GELU, and Dropout cost ZERO params — they're pure operations
+- Weight tying makes LM Head free — saves ~4M params
+- Same tensor shape (B,T,384) flows through every block — this is why stacking works
+
+---
+
+## 🧪 Why LayerNorm?
+
+### The problem: values drift out of control
+
+Without LayerNorm, each layer multiplies its input by weight matrices:
+
+```
+Input:   [0.5, -0.3, 1.2, ...]     (reasonable range)
+  ↓ × W (random normal, std=0.02)
+Block 1: [2.1, -4.7, 8.3, ...]     (drifting wider)
+  ↓ × W
+Block 2: [15.2, -32.1, 47.8, ...]   (exploding!)
+  ↓ × W  
+Block 6: [1421.3, -893.2, ...]      (Gradient = NaN → training dies)
+```
+
+Each matrix multiply amplifies the values. After 6 layers, the numbers are so large that softmax saturates (outputs 0 or 1 only) and gradients become NaN.
+
+### The fix: force mean=0, std≈1 after each block
+
+```python
+# LayerNorm(x) = γ * (x - mean) / std + β
+#                ↑ scale      ↑ normalize    ↑ shift
+
+mean = x.mean(dim=-1, keepdim=True)    # average across 384 features
+std  = x.std(dim=-1, keepdim=True)     # spread across 384 features
+x_norm = (x - mean) / (std + 1e-5)    # → mean=0, std=1
+return γ * x_norm + β                  # learnable scale + shift
+```
+
+`γ` (gamma) and `β` (beta) are 384 learned numbers each — the model can undo the normalization if it wants, but in practice it keeps values stable.
+
+### Why pre-norm (before attention) not post-norm (after)
+
+```
+Pre-Norm (modern, used here):
+  x = x + Attention( LayerNorm(x) )   ← normalize FIRST, then process
+
+Post-Norm (old, less stable):
+  x = LayerNorm( x + Attention(x) )   ← process FIRST, then normalize
+```
+
+Pre-norm gives a "clean" input to each sublayer. The residual path (`+ x`) stays un-normalized, providing a gradient highway. Post-norm normalizes the residual too, which can kill the gradient signal.
+
+### Visual: what LayerNorm does to a 384-dim vector
+
+```
+Before LN:  [-12.3,  0.5,  45.2,  -8.1,  3.7, ...]  scattered all over
+After LN:   [ -0.8,  0.3,   1.2,  -0.5,  0.1, ...]  centered around 0
+```
+
+Same information, different scale. The attention + FFN layers expect clean, centered inputs.
+
+---
+
 ## 🔤 Phase 1: Data & Tokenization
 
 **Goal:** Convert raw poetry into tokenized sequences the model can consume.
