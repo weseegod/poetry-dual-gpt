@@ -104,14 +104,16 @@ def save_ckpt(model, opt, step, loss, vocab, cfg, fname):
 #  TRAINING LOOP
 # ═══════════════════════════════════════════════════════════════
 
-def train(max_lines=None):
+def train(max_lines=None, resume_from=None):
     cfg, dev = CONFIG, CONFIG["device"]
     mode = cfg["mode"]; S = cfg[mode]
     max_steps, batch_size = S["max_steps"], S["batch_size"]
     eval_interval = S["eval_interval"]
 
     # ── Banner ──
-    print(f"\n{'='*60}\n🎭  PoetryDuelGPT — {mode.upper()} (Lục Bát)\n{'='*60}")
+    is_ft = resume_from is not None
+    tag = "FINE-TUNE" if is_ft else mode.upper()
+    print(f"\n{'='*60}\n🎭  PoetryDuelGPT — {tag}\n{'='*60}")
     print(f"   Device: {dev}  |  Steps: {max_steps:,}  |  Batch: {batch_size}  |  "
           f"Tok/step: {batch_size*cfg['block_size']:,}")
     print(f"   Peak LR: {cfg['learning_rate']}  |  Warmup: {cfg['warmup_steps']}  |  "
@@ -154,10 +156,42 @@ def train(max_lines=None):
                               {"params": no_decay, "weight_decay": 0.0}],
                              lr=cfg["learning_rate"], betas=(0.9, 0.95))
 
+    # ── Resume from checkpoint (for Stage 2 fine-tuning) ──
+    start_step = 0
+    if resume_from:
+        resume_path = Path(resume_from)
+        if not resume_path.exists():
+            resume_path = ROOT / resume_from
+        print(f"\n📂  Resuming from: {resume_path}")
+        ckpt = torch.load(str(resume_path), map_location=dev, weights_only=False)
+
+        # Load model weights (with key remapping for old checkpoints)
+        old_state = ckpt["model_state_dict"]
+        new_state = {}
+        for k, v in old_state.items():
+            nk = k.replace("qkv_proj", "qkv").replace("out_proj", "out") \
+                  .replace("causal_mask", "mask") \
+                  .replace(".ffn.fc1.", ".ffn.net.0.") \
+                  .replace(".ffn.fc2.", ".ffn.net.2.")
+            nk = {"token_embedding.weight": "tok_emb.weight",
+                  "position_embedding.weight": "pos_emb.weight",
+                  "ln_final.weight": "ln_f.weight",
+                  "ln_final.bias": "ln_f.bias",
+                  "lm_head.weight": "head.weight"}.get(nk, nk)
+            new_state[nk] = v
+        model.load_state_dict(new_state, strict=False)
+        opt.load_state_dict(ckpt["optimizer_state_dict"])
+        start_step = ckpt.get("step", 0)
+
+        # Lower LR for fine-tuning
+        cfg["learning_rate"] = 1e-4
+        cfg["warmup_steps"] = 100
+        print(f"   Step: {start_step}  |  LR: {cfg['learning_rate']} (fine-tune)")
+
     # ── Training ──
     print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
     model.train()
-    step, best_val, loss_sum, loss_cnt = 0, float("inf"), 0.0, 0
+    step, best_val, loss_sum, loss_cnt = start_step, float("inf"), 0.0, 0
     t0 = time.time()
     it = iter(train_loader)
     pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
@@ -227,11 +261,14 @@ if __name__ == "__main__":
     p.add_argument("--batch_size", type=int, default=None)
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--max_lines", type=int, default=None)
+    p.add_argument("--resume", type=str, default=None, help="Resume from checkpoint (for fine-tuning)")
+    p.add_argument("--corpus", type=str, default=None, help="Override corpus file (e.g. data/corpus_luc_bat.txt)")
     args = p.parse_args()
 
     if args.mode:       CONFIG["mode"] = args.mode
     if args.steps:      CONFIG[CONFIG["mode"]]["max_steps"] = args.steps
     if args.batch_size: CONFIG[CONFIG["mode"]]["batch_size"] = args.batch_size
     if args.device:     CONFIG["device"] = args.device
+    if args.corpus:     CONFIG["corpus_path"] = args.corpus
 
-    train(args.max_lines)
+    train(args.max_lines, resume_from=args.resume)
