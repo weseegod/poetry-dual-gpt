@@ -100,6 +100,18 @@ def load_model(ckpt_path, device="cpu"):
 #  GENERATION LOOP
 # ═══════════════════════════════════════════════════════════════
 
+def auto_tag(prompt):
+    """Auto-wrap genre tag based on syllable count. 6→[LUC_BAT], 7→[THAT_NGON]."""
+    p = prompt.strip()
+    # Already tagged
+    if p.startswith("["):
+        return p
+    syl = len(p.split())
+    if syl == 7:
+        return f"[THAT_NGON] {p}"
+    return f"[LUC_BAT] {p}"  # default (6-syl or anything else)
+
+
 @torch.no_grad()
 def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
               top_k=50, top_p=None, device="cpu"):
@@ -190,7 +202,7 @@ if __name__ == "__main__":
             u = input("You: ").strip()
             if u.lower() == "quit": break
             if not u: continue
-            if not u.startswith("[LUC_BAT]"): u = f"[LUC_BAT] {u}"
+            if not u.startswith("["): u = auto_tag(u)
             _, ids = generate(model, tok, u, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
             print(f"Bot: {tok.decode(ids).replace('<|end|>','').strip()}\n")
 

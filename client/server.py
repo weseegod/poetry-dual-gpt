@@ -125,9 +125,11 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64)
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
 
-    # Auto-wrap genre tag for lazy users
-    if not prompt.startswith("[") and "[LUC_BAT]" not in prompt:
-        prompt = f"[LUC_BAT] {prompt}"
+    # Auto-wrap genre tag based on syllable count
+    if not prompt.startswith("["):
+        syl = len(prompt.split())
+        tag = "[THAT_NGON]" if syl == 7 else "[LUC_BAT]"
+        prompt = f"{tag} {prompt}"
 
     ids = tokenizer.encode(prompt).ids
     idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)
