@@ -132,8 +132,9 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64)
     if not prompt.startswith("["):
         syl = len(prompt.split())
         if syl == 7:
-            link2 = get_that_ngon_tags(prompt)
-            tag = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+            link2, doi_am = get_that_ngon_tags(prompt)
+            extras_parts = [t for t in [link2, doi_am] if t]
+            tag = f"[THAT_NGON] {' '.join(extras_parts)}" if extras_parts else "[THAT_NGON]"
         else:
             rhyme, tone = get_luc_bat_tags(prompt)
             extras = f"{rhyme} {tone}".strip()

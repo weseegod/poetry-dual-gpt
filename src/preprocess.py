@@ -77,9 +77,9 @@ def make_pairs(lines: list[str], genre: str) -> list[str]:
                 rhyme, tone = get_luc_bat_tags(prompt)
                 extras = f"{rhyme} {tone}".strip()
             elif genre == "bảy chữ":
-                link2 = get_that_ngon_tags(prompt)
-                if link2:
-                    extras = link2
+                link2, doi_am = get_that_ngon_tags(prompt)
+                extras_parts = [t for t in [link2, doi_am] if t]
+                extras = " ".join(extras_parts)
             tag_part = f"{tag} {extras}".strip() if extras else tag
             pairs.append(f"{START} {tag_part} {prompt} {REPLY} {reply} {END}")
     return pairs
@@ -96,8 +96,9 @@ def make_pairs_song_that(lines: list[str]) -> list[str]:
         # Lines i and i+1 should be 7-syllable each (thất ngôn couplet)
         l1, l2 = lines[i], lines[i + 1]
         if count_syllables(l1) == 7 and count_syllables(l2) == 7:
-            link2 = get_that_ngon_tags(l1)
-            tag_part = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+            link2, doi_am = get_that_ngon_tags(l1)
+            extras_parts = [t for t in [link2, doi_am] if t]
+            tag_part = f"[THAT_NGON] {' '.join(extras_parts)}".strip() if extras_parts else "[THAT_NGON]"
             pairs.append(f"{START} {tag_part} {l1} {REPLY} {l2} {END}")
 
         # Lines i+2 and i+3 should be 6→8 (lục bát couplet)

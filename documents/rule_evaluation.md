@@ -10,7 +10,8 @@
 |------|-----|---------|---------|-----------------|------------|
 | **R1: Internal Rhyme** (vần lưng) | `[RHYME:X]` | 17.3% | 18.5% | 0.6% | ✅ Yes |
 | **R2: Tone Pattern** (B-T-B-B) | `[TONE:XXXXXX]` | 61.2% | 66.6% | 6.2% | ✅ Yes |
-| **R3: Syllable Count** (8 syl) | (form) | 20.2% | 22.0% | 6.7% | ✅ Yes |
+| **R3: Syllable Count** (8 syl) | (form) | 20.2% | 22.0% | 6.7% | ⚠️ Weak |
+| **R4: Đối Âm** (7-pos contrast) | `[DOIAM:X]` | 58% | — | 50% | ⚠️ Partial |
 | **Combined: All rules pass** | — | 5.2% | 4.6% | — | — |
 
 | Metric | Stage 1 | Stage 2 |
@@ -131,32 +132,55 @@
 | 13 | 1 | 0.6%  |
 | 14 | 1 | 0.6%  |
 
-## 🛠️ Fix Recommendations
+## 🛠️ Fix Implementation Status
 
-### R1: Rhyme (current: 18% — needs improvement)
+### ✅ IMPLEMENTED (2026-05-20)
 
-**Root cause**: `[RHYME:ong]` is 5 BPE tokens. The rhyme signal is fragmented.
-**Fix**: Make rhyme groups special tokens (single IDs like `[LUC_BAT]`).
-**Expected**: 40-60% rhyme accuracy (based on genre tag effectiveness).
-**Effort**: Retrain tokenizer + corpus + model (~4h Colab).
+All 4 rules now use **single special tokens** instead of BPE subwords:
 
-### R2: Tone Pattern (current: 67% — needs improvement)
+| Rule | Token | Before | After |
+|------|-------|--------|-------|
+| R1: Rhyme | `[RHYME:X]` | 5 BPE subwords | 1 special token |
+| R2: Tone (6-pos) | `[TONE:XXXXXX]` | 5 BPE subwords | 1 special token |
+| R3: Syllable | Post-gen truncation | — | `max_syllables` param |
+| R4: Đối Âm | `[DOIAM:XXXXXXX]` | Only `[LINK2:X]` | Full 7-pos tag + `[LINK2:X]` |
 
-**Root cause**: Same fragmentation as R1. `[TONE:BBBTTB]` is 5 BPE tokens.
-**Fix**: Same as R1 — make tone patterns special tokens.
-**Expected**: 50-70% tone accuracy.
+**New special tokens added**: 335 total
+- 141 rhyme groups: `[RHYME:a]` ... `[RHYME:...]`
+- 64 tone patterns: `[TONE:BBBBBB]` ... `[TONE:TTTTTT]`
+- 128 đối âm patterns: `[DOIAM:BBBBBBB]` ... `[DOIAM:TTTTTTT]`
+- 2 link2 tokens: `[LINK2:B]`, `[LINK2:T]`
 
-### R3: Syllable Count (current: 22% — needs fix)
+**Expected impact after retraining**:
+- R1 Rhyme: 18% → 40-60%
+- R2 Tone: 67% → 75-85%
+- R3 Syllable: 22% → 100% (truncation)
+- R4 Đối Âm: 58% → 70-80%
 
-**Root cause**: Model uses position-based stopping, not syllable counting.
-**Fix 1 (immediate)**: Post-generation truncation to 8 syllables. 3 lines of code.
-**Fix 2 (architectural)**: Syllable-count control token `[SYL:8]` as special token.
-**Fix 3 (structural)**: Syllable-aware pre-tokenizer before BPE.
+### 🔄 To Retrain
 
-### Priority
+```bash
+# On Colab, run cells in order:
+# 1. Clone + Install
+# 2. Preprocess + Tokenize (now includes 335 special tokens)
+# 3. Stage 1 (all genres, 10K steps)
+# 4. Stage 2 (Lục Bát, 5K steps)
+# 5. Generate + Evaluate
+```
 
-| Priority | Fix | Impact | Effort |
-|----------|-----|--------|--------|
-| 1 | R3 Fix 1 — Truncation | 100% syllable accuracy | 3 lines |
-| 2 | R1+R2 Fix — Special tokens | 2-3× rhyme/tone improvement | 1 day |
-| 3 | Qwen2.5-1.5B QLoRA | Overall quality + better rule following | 1 day |
+### 🧪 Verify After Training
+
+```bash
+# Check special tokens are single IDs:
+python3 -c "
+from tokenizers import Tokenizer
+tok = Tokenizer.from_file('tokenizer/poetry_bpe.model')
+for t in ['[RHYME:ong]', '[TONE:BBBTTB]', '[DOIAM:TTBBTTB]']:
+    ids = tok.encode(t).ids
+    print(f'{t:25s} → {len(ids)} token(s)')
+"
+# Expected: each should be exactly 1 token
+
+# Run evaluation:
+PYTHONPATH=. python3 src/eval_rules.py
+```

@@ -114,17 +114,19 @@ def auto_tag(prompt):
             extras = f"{rhyme} {tone}".strip()
             if extras:
                 p = p.replace("[LUC_BAT]", f"[LUC_BAT] {extras}")
-        if "[THAT_NGON]" in p and "[LINK2:" not in p:
+        if "[THAT_NGON]" in p and "[DOIAM:" not in p:
             line = p.replace("[THAT_NGON]", "").strip()
-            link2 = get_that_ngon_tags(line)
-            if link2:
-                p = p.replace("[THAT_NGON]", f"[THAT_NGON] {link2}")
+            link2, doi_am = get_that_ngon_tags(line)
+            extras_parts = [t for t in [link2, doi_am] if t]
+            if extras_parts:
+                p = p.replace("[THAT_NGON]", f"[THAT_NGON] {' '.join(extras_parts)}")
         return p
 
     syl = len(p.split())
     if syl == 7:
-        link2 = get_that_ngon_tags(p)
-        tag = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+        link2, doi_am = get_that_ngon_tags(p)
+        extras_parts = [t for t in [link2, doi_am] if t]
+        tag = f"[THAT_NGON] {' '.join(extras_parts)}" if extras_parts else "[THAT_NGON]"
         return f"{tag} {p}"
 
     # Default: Lục Bát
@@ -189,6 +191,15 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
         new_tokens.append(next_id)
         idx = torch.cat((idx, torch.tensor([[next_id]], device=device)), dim=1)
 
+    # Truncate to target syllable count if specified (R3 fix)
+    if max_syllables:
+        decoded = tokenizer.decode(ids + new_tokens)
+        words = decoded.split()
+        if len(words) > max_syllables:
+            decoded = ' '.join(words[:max_syllables])
+        # Re-encode truncated text back to token ids for return
+        return decoded, new_tokens[:max_syllables] if len(new_tokens) > max_syllables else new_tokens
+    
     return tokenizer.decode(ids + new_tokens), new_tokens
 
 
@@ -246,7 +257,7 @@ if __name__ == "__main__":
             # Has genre tag but missing rhyme/tone — re-tag
             inner = prompt.replace('[LUC_BAT]', '').strip()
             prompt = auto_tag(inner)
-        elif '[THAT_NGON]' in prompt and '[LINK2:' not in prompt:
+        elif '[THAT_NGON]' in prompt and '[DOIAM:' not in prompt:
             inner = prompt.replace('[THAT_NGON]', '').strip()
             prompt = auto_tag(inner)
 

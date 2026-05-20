@@ -114,12 +114,24 @@ def get_luc_bat_tags(prompt: str) -> tuple:
     return rhyme_tag, tone_tag
 
 
-def get_that_ngon_tags(prompt: str) -> str:
+def get_that_ngon_tags(prompt: str) -> tuple:
     """
-    Extract [LINK2:X] tag for a 7-syllable Thất Ngôn prompt.
-    X = tone (B/T) of the 2nd syllable.
+    Extract [LINK2:X] and [DOIAM:XXXXXXX] tags for a 7-syllable Thất Ngôn prompt.
+    LINK2: tone (B/T) of 2nd syllable.
+    DOIAM: expected response tone pattern (opposite of prompt).
+    Returns (link2_tag, doi_am_tag).
     """
     syls = prompt.strip().split()
+    link2_tag = ""
+    doi_am_tag = ""
+    
     if len(syls) >= 2:
-        return f"[LINK2:{get_tone(syls[1])}]"
-    return ""
+        link2_tag = f"[LINK2:{get_tone(syls[1])}]"
+    
+    if len(syls) >= 7:
+        p_tones = get_tone_sequence(prompt)[:7]
+        # Đối âm: response tones = opposite of prompt tones
+        r_tones = ''.join('T' if t == 'B' else 'B' for t in p_tones)
+        doi_am_tag = f"[DOIAM:{r_tones}]"
+    
+    return link2_tag, doi_am_tag
