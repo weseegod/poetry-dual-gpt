@@ -184,7 +184,8 @@ if __name__ == "__main__":
     # Interactive mode
     if args.interactive:
         print("\n🎭  Interactive Poetry Duel")
-        print("    Type a Lục Bát line. 'quit' to exit.\n")
+        print("    Type [LUC_BAT] ... or [THAT_NGON] ... or just a line.")
+        print("    'quit' to exit.\n")
         while True:
             u = input("You: ").strip()
             if u.lower() == "quit": break
@@ -204,11 +205,16 @@ if __name__ == "__main__":
             response_only = tok.decode(ids).replace("<|end|>", "").strip()
             print(f"Response: {response_only}")
 
-            # Rule check for Lục Bát
-            if "[LUC_BAT]" in args.prompt:
-                prompt_part = args.prompt.replace("[LUC_BAT]", "").strip().rstrip(",")
-                r = evaluate(prompt_part, response_only.rstrip(",. "))
-                print(f"\n{'─'*60}\n📏  Lục Bát Rule Check\n{'─'*60}")
+            # Rule check
+            prompt_part = args.prompt.replace("[LUC_BAT]", "").replace("[THAT_NGON]", "").strip().rstrip(",")
+            resp_clean = response_only.rstrip(",. ")
+            is_luc_bat = "[LUC_BAT]" in args.prompt
+            is_that_ngon = "[THAT_NGON]" in args.prompt
+
+            if is_luc_bat or is_that_ngon:
+                tag = "Lục Bát (6→8)" if is_luc_bat else "Thất Ngôn (7→7)"
+                r = evaluate(prompt_part, resp_clean)
+                print(f"\n{'─'*60}\n📏  {tag} Rule Check\n{'─'*60}")
                 print(f"  Syllables: {r['syl'][1]} → {'PASS' if r['syl'][0] else 'FAIL'}")
                 print(f"  Prompt tone:  {r['tone_p'][1]}")
                 print(f"  Response tone: {r['tone_r'][1]}")

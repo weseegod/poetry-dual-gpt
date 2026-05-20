@@ -21,3 +21,4 @@ tokenizer/poetry_bpe.model
 
 # Frontend
 client/frontend/node_modules/
+data/poems_copy.csv

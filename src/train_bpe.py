@@ -26,6 +26,7 @@ SPECIAL_TOKENS = [
     "[LUC_BAT]",
     "[TU_TUYET]",
     "[THAT_NGON_BAT_CU]",
+    "[THAT_NGON]",          # thất ngôn (7-syllable, any line count)
 ]
 
 
