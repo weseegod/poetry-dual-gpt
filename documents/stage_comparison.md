@@ -48,3 +48,30 @@
 - Tone: prompt pos 2,4,6 = B-T-B; response pos 2,4,6,8 = B-T-B-B
 - Rhyme: response syllable 6 rhyme group matches prompt syllable 6
 - Note: model often generates >8 syllables (multi-line). Analysis focuses on first 8.
+
+## 🔬 Root Cause: Why 6-syllable input → 9-10 syllable output
+
+The model was probed token-by-token. `<|end|>` probability is **exactly 0.0000** for all
+response positions up to 8 syllables, then jumps to **1.0000** at position 11-12:
+
+```
+Stage 1: <|end|> fires at response token #11 (100% confidence)
+Stage 2: <|end|> fires at response token #12 (100% confidence)
+```
+
+**The model doesn't count syllables — it counts POSITION.** It learned from training data
+that "after `<|reply|>`, wait ~11 tokens, then emit `<|end|>`." Since BPE tokens don't
+map 1:1 to Vietnamese syllables (some syllables split into 2-3 tokens), ~11 tokens
+≈ 7-13 syllables depending on the text.
+
+**Why Stage 2 is worse:** The Lục Bát-only corpus likely has more compound words that
+BPE splits into multiple tokens, pushing the average `<|end|>` position from 11 (Stage 1)
+to 12 (Stage 2). Stage 1's mixed-genre corpus had shorter-average responses (Thất Ngôn
+= 7 syllables ≈ fewer tokens), giving a tighter position signal.
+
+**This is a fundamental token-level limitation.** A 30M-param model cannot learn explicit
+syllable counting from subword tokens. Potential fixes:
+- Post-generation truncation to 8 syllables
+- Syllable-count control token (e.g., `[SYL:8]`) as a special token
+- Larger model (more capacity to learn token→syllable mapping)
+- Syllable-aware pre-tokenizer (split on syllable boundaries before BPE)
