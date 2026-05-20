@@ -75,6 +75,34 @@ def make_pairs(lines: list[str], genre: str) -> list[str]:
     return pairs
 
 
+def make_pairs_song_that(lines: list[str]) -> list[str]:
+    """
+    Song thất lục bát pattern: 7-7-6-8 repeating.
+    Extract 7→7 as [THAT_NGON], 6→8 as [LUC_BAT].
+    """
+    pairs = []
+    i = 0
+    while i + 3 < len(lines):
+        # Lines i and i+1 should be 7-syllable each (thất ngôn couplet)
+        l1, l2 = lines[i], lines[i + 1]
+        if count_syllables(l1) == 7 and count_syllables(l2) == 7:
+            pairs.append(f"{START} [THAT_NGON] {l1} {REPLY} {l2} {END}")
+
+        # Lines i+2 and i+3 should be 6→8 (lục bát couplet)
+        l3, l4 = lines[i + 2], lines[i + 3]
+        if count_syllables(l3) == 6 and count_syllables(l4) == 8:
+            pairs.append(f"{START} [LUC_BAT] {l3} {REPLY} {l4} {END}")
+
+        i += 4  # jump to next stanza
+    return pairs
+
+
+def is_song_that(row) -> bool:
+    """Check if poem is song thất lục bát (from specific_genre column)."""
+    sg = str(row.get("specific_genre", ""))
+    return "song thất" in sg.lower()
+
+
 def preprocess(csv_path=None, output_path=None, max_poems=None):
     """Main: read clean CSV → create pairs for all genres."""
     csv_path = Path(csv_path or CSV_PATH)
@@ -84,14 +112,16 @@ def preprocess(csv_path=None, output_path=None, max_poems=None):
     print(f"Loaded: {len(df):,} poems")
     print(f"  Lục bát: {df['genre'].eq('lục bát').sum():,}")
     print(f"  Bảy chữ: {df['genre'].eq('bảy chữ').sum():,}")
+    st_count = df.apply(is_song_that, axis=1).sum()
+    if st_count:
+        print(f"    → song thất lục bát: {st_count} (split 7-7→[THAT_NGON] + 6-8→[LUC_BAT])")
 
     if max_poems:
         df = df.head(max_poems)
 
     # Process each poem into training pairs
-    all_pairs, skipped, empty = [], 0, 0
+    all_pairs, skipped, empty, st_pairs = [], 0, 0, 0
     for _, row in df.iterrows():
-        genre = row["genre"]
         content = row["content"]
 
         if pd.isna(content) or not content.strip():
@@ -103,7 +133,12 @@ def preprocess(csv_path=None, output_path=None, max_poems=None):
             skipped += 1
             continue
 
-        all_pairs.extend(make_pairs(lines, genre))
+        if is_song_that(row):
+            all_pairs.extend(make_pairs_song_that(lines))
+            st_pairs += 1
+        else:
+            genre = row["genre"]
+            all_pairs.extend(make_pairs(lines, genre))
 
     # Save
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -111,7 +146,11 @@ def preprocess(csv_path=None, output_path=None, max_poems=None):
         for pair in all_pairs:
             f.write(pair + "\n")
 
-    print(f"  Empty: {empty} | Too short: {skipped} | Pairs: {len(all_pairs):,}")
+    # Count by genre tag
+    lb = sum(1 for p in all_pairs if "[LUC_BAT]" in p)
+    tn = sum(1 for p in all_pairs if "[THAT_NGON]" in p)
+    print(f"  [LUC_BAT]: {lb:,} pairs  |  [THAT_NGON]: {tn:,}  |  Total: {len(all_pairs):,}")
+    print(f"  Empty: {empty} | Too short: {skipped} | Song thất poems: {st_pairs}")
     print(f"  Saved → {output_path}")
     return all_pairs
 

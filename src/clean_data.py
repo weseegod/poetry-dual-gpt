@@ -35,21 +35,7 @@ def filter_genres(df):
 
 
 # ═══════════════════════════════════════════════════════════════
-# STAGE 2: Remove song thất lục bát (7-7-6-8 pattern, not pure 7-syl)
-# ═══════════════════════════════════════════════════════════════
-
-def remove_song_that(df):
-    """Song thất lục bát has mixed syllables — remove from bảy chữ group."""
-    mask = df["specific_genre"].astype(str).str.contains("song thất", case=False, na=False)
-    n = mask.sum()
-    if n:
-        df = df[~mask].copy()
-        print(f"  Song thất lục bát: {n} poems dropped (mixed syllables)")
-    return df
-
-
-# ═══════════════════════════════════════════════════════════════
-# STAGE 3: Clean HTML + normalize Unicode
+# STAGE 2: Clean HTML + normalize Unicode
 # ═══════════════════════════════════════════════════════════════
 
 def clean_text(text: str) -> str:
@@ -89,7 +75,7 @@ def clean_content(df):
 
 
 # ═══════════════════════════════════════════════════════════════
-# STAGE 4: Filter short poems
+# STAGE 3: Filter short poems
 # ═══════════════════════════════════════════════════════════════
 
 def filter_short(df, min_lines=2):
@@ -103,7 +89,7 @@ def filter_short(df, min_lines=2):
 
 
 # ═══════════════════════════════════════════════════════════════
-# STAGE 5: Remove duplicates
+# STAGE 4: Remove duplicates
 # ═══════════════════════════════════════════════════════════════
 
 def content_hash(text: str) -> str:
@@ -142,10 +128,7 @@ def clean(csv_path=None, output_path=None):
     print(f"    After genre filter: {len(df):,} (lục bát: {df['genre'].eq('lục bát').sum():,}, "
           f"bảy chữ: {df['genre'].eq('bảy chữ').sum():,})")
 
-    # Stage 2: Remove song thất lục bát
-    df = remove_song_that(df)
-
-    # Stage 3: Clean text
+    # Stage 2: Clean text
     df = clean_content(df)
 
     # Stage 4: Filter short poems
@@ -159,9 +142,12 @@ def clean(csv_path=None, output_path=None):
     for genre in ["lục bát", "bảy chữ"]:
         gdf = df[df["genre"] == genre]
         n_lines = gdf["content"].apply(lambda t: str(t).count("<\n>") + 1)
+        # Count song thất within bảy chữ
+        st_mask = gdf["specific_genre"].astype(str).str.contains("song thất", case=False, na=False)
         print(f"    {genre:<12s}: {len(gdf):>6,} poems  "
               f"avg {n_lines.mean():.0f} lines  "
-              f"max {n_lines.max()} lines")
+              f"max {n_lines.max()} lines"
+              f"{'  (song thất: ' + str(st_mask.sum()) + ')' if st_mask.sum() > 0 else ''}")
 
     # Save
     output_path.parent.mkdir(parents=True, exist_ok=True)
