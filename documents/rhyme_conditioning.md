@@ -115,38 +115,34 @@ Lục bát typically uses 2/2/2 or 4/2 rhythm. Breaking at the wrong boundary so
 
 ## Thất Ngôn Rules
 
-Thất ngôn is a 7-syllable form with **parallel couplets** (đối). The two lines mirror each other.
+Thất ngôn is a 7-syllable form with **parallel couplets** (đối). The two lines mirror and contrast each other.
 
-### Rule 1: Tone Parallelism — HIGH PRIORITY
+### Rule 1: Tonal Parallelism (Đối Âm) — HIGH PRIORITY
 
-```
-Corresponding syllables MUST share the same tone:
-
-  Lom khom dưới núi tiều vài chú,
-  Lác đác bên sông chợ mấy nhà.
-
-  Pos:  LOM   KHOM   DƯỚI  NÚI   TIỀU  VÀI  CHÚ
-  Tone: Bằng  Bằng  Trắc Trắc  Bằng  Bằng Trắc
-        ───────────────────────────────────────────────
-  Pos:  LÁC   ĐÁC   BÊN   SÔNG  CHỢ   MẤY  NHÀ
-  Tone: Trắc Trắc  Bằng Bằng  Trắc Trắc Bằng
-         ✗    ✗     ✗    ✗     ✗    ✗    ✗
-```
-
-Wait — the example shows they DON'T match 1:1! The real rule is more nuanced:
-
-**Actual tone parallelism rule:** The 2nd, 4th, and 6th syllables of both lines must contrast (if line 1=B, line 2=T; if line 1=T, line 2=B). This is the "nhị tứ lục phân minh" (2-4-6 clarity) rule.
+**Đối âm** means corresponding positions in the two lines must have **opposite** tones (Bằng ↔ Trắc). This creates the musical contrast that defines a good parallel couplet.
 
 ```
-Line 1:  Lom  KHOM  dưới  NÚI   tiều  VÀI  chú
-         (-)   B     (-)   T     (-)   B    (-)
-Line 2:  Lác  ĐÁC  bên   SÔNG  chợ   MẤY  nhà
-         (-)   T     (-)   B     (-)   T    (-)
+Line 1:  Lom  khom  dưới  núi   tiều  vài  chú
+         (-)  B     (-)   T     (-)   B    (-)
+Line 2:  Lác  đác  bên   sông  chợ   mấy  nhà
+         (-)  T     (-)   B     (-)   T    (-)
 
 Positions 2,4,6: Line1 = B-T-B, Line2 = T-B-T  ← CONTRAST ✓
+In this excellent couplet, ALL positions (not just 2,4,6) contrast.
 ```
 
-### Rule 2: Tone Linking (2nd Syllable) — HIGH PRIORITY
+**Important distinction:**
+
+| Concept | What it controls | Rule |
+|---------|-----------------|------|
+| **Đối âm** (tonal parallelism) | Contrast **between** two lines | Corresponding positions should have opposite tones (B ↔ T) |
+| **Nhị tứ lục phân minh** | Tone pattern **inside** each line | Positions 2, 4, 6 must strictly follow B-T-B or T-B-T |
+
+In a strong parallel couplet, the two lines contrast at positions 2, 4, and 6 naturally — because one line follows B-T-B while the other follows T-B-T. But đối âm (contrast) is the rule between lines; nhị tứ lục is the rule within each line.
+
+**How we implement this:** We don't directly enforce per-position contrast (that's too rigid). Instead, we give the model `[LINK2:X]` to condition the 2nd syllable tone, which is the strongest signal. The model learns the contrast pattern from training data.
+
+### Rule 2: 2nd Syllable Tone Linking — HIGH PRIORITY
 
 ```
 Đã bấy lâu nay bác tới nhà,
@@ -158,7 +154,7 @@ Line 2, pos 2: "thì" → BẰNG  ← MUST match
 
 The 2nd syllable of the output line must share the same tone as the 2nd syllable of the input line.
 
-### Rule 3: End Rhyme — RECOMMENDED
+### Rule 3: End Rhyme — RECOMMENDED (not implemented)
 
 ```
 Tiếng suối trong như tiếng hát xa,
@@ -190,12 +186,12 @@ We'll implement rules we CAN automate (tone, rhyme, syllable count) and leave se
 
 | Rule | Lục Bát | Thất Ngôn | How |
 |------|---------|-----------|-----|
-| Internal rhyme (vần lưng) | ✅ | N/A | Extract from position 6 of prompt |
-| Tone pattern (B-T-B / B-T-B-B) | ✅ | N/A | Check each position's tone |
-| Rhythm pattern | ✅ | N/A | Heuristic: split positions |
-| Tone parallelism (2-4-6 contrast) | N/A | ✅ | Check positions 2,4,6 |
-| Tone linking (2nd syllable) | N/A | ✅ | Extract from position 2 of prompt |
-| End rhyme | N/A | ✅ | Extract from position 7 of prompt |
+| Internal rhyme (vần lưng) | ✅ | N/A | `[RHYME:X]` from position 6 of prompt |
+| Tone pattern (B-T-B / B-T-B-B) | ✅ | N/A | `[TONE:XXXXXX]` from prompt's tones |
+| Tone linking (2nd syllable) | N/A | ✅ | `[LINK2:X]` from position 2 of prompt |
+| Đối âm (tonal contrast between lines) | N/A | Learned | Model learns from L1=B-T-B, L2=T-B-T patterns in data |
+| Rhythm pattern | ✅ | N/A | Not implemented (needs word segmentation) |
+| End rhyme | N/A | Not implemented | Single-syllable constraint, low impact |
 | Grammatical parallelism | ❌ | ❌ | Needs POS tagger |
 | Semantic parallelism | ❌ | ❌ | Needs semantic model |
 
@@ -206,7 +202,7 @@ For Lục Bát:
   [LUC_BAT] [RHYME:en] [TONE:BTB]    → rhyme group + prompt tone pattern
 
 For Thất Ngôn:
-  [THAT_NGON] [LINK2:B] [ENDTONE:B]  → 2nd-syl tone + end-syl tone
+  [THAT_NGON] [LINK2:B]            → 2nd-syl tone for tonal contrast (đối âm)
 ```
 
 The model sees these tags and learns: *"When generating after `[RHYME:en]`, my response's 6th syllable should sound like 'en'."*
@@ -400,7 +396,7 @@ Modify `src/preprocess.py` to inject control tokens into training pairs.
 
 **Thất Ngôn:**
 ```
-<|start|> [THAT_NGON] [LINK2:T] [ENDTONE:B] seven_syl_prompt <|reply|> seven_syl_reply <|end|>
+<|start|> [THAT_NGON] [LINK2:T] seven_syl_prompt <|reply|> seven_syl_reply <|end|>
 ```
 
 ### 3.2 Modified `make_pairs()` for Lục Bát
@@ -433,15 +429,11 @@ def make_pairs(lines, genre):
             extras = f" {rhyme} {tone_tag}".strip()
 
         elif genre == "bảy chữ":
-            # Tone of 2nd syllable (for linking rule)
+            # Tone of 2nd syllable (for tonal contrast)
             syls = prompt.split()
             if len(syls) >= 2:
                 link2 = get_tone(syls[1])
                 extras += f" [LINK2:{link2}]"
-            # Tone of last syllable (for end rhyme)
-            if len(syls) >= 7:
-                endtone = get_tone(syls[6])
-                extras += f" [ENDTONE:{endtone}]"
 
         pairs.append(f"{START} {tag}{f' {extras}' if extras else ''} {prompt} {REPLY} {reply} {END}")
     return pairs
@@ -463,8 +455,6 @@ def make_pairs_song_that(lines):
             s1 = l1.split()
             if len(s1) >= 2:
                 extras += f" [LINK2:{get_tone(s1[1])}]"
-            if len(s1) >= 7:
-                extras += f" [ENDTONE:{get_tone(s1[6])}]"
             pairs.append(f"{START} [THAT_NGON]{extras} {l1} {REPLY} {l2} {END}")
 
         # 6-8 pair → [LUC_BAT] with rhyme
@@ -483,8 +473,8 @@ def make_pairs_song_that(lines):
 ```
 <|start|> [LUC_BAT] [RHYME:en] [TONE:BBTTBB] Thân em như thể bông sen <|reply|> Trong đầm mà chẳng hôi tanh mùi bùn <|end|>
 <|start|> [LUC_BAT] [RHYME:im] [TONE:BBTBTB] Đói lòng ăn nửa trái sim <|reply|> Uống lưng bát nước đi tìm người thương <|end|>
-<|start|> [THAT_NGON] [LINK2:B] [ENDTONE:B] Tiếng suối trong như tiếng hát xa <|reply|> Trăng lồng cổ thụ bóng lồng hoa <|end|>
-<|start|> [THAT_NGON] [LINK2:T] [ENDTONE:B] Lom khom dưới núi tiều vài chú <|reply|> Lác đác bên sông chợ mấy nhà <|end|>
+<|start|> [THAT_NGON] [LINK2:B] Tiếng suối trong như tiếng hát xa <|reply|> Trăng lồng cổ thụ bóng lồng hoa <|end|>
+<|start|> [THAT_NGON] [LINK2:T] Lom khom dưới núi tiều vài chú <|reply|> Lác đác bên sông chợ mấy nhà <|end|>
 ```
 
 ---
@@ -519,8 +509,6 @@ if "[THAT_NGON]" in prompt and "[LINK2:" not in prompt:
     extras = ""
     if len(syls) >= 2:
         extras += f" [LINK2:{get_tone(syls[1])}]"
-    if len(syls) >= 7:
-        extras += f" [ENDTONE:{get_tone(syls[6])}]"
     if extras:
         prompt = prompt.replace("[THAT_NGON]", f"[THAT_NGON]{extras}")
 ```
@@ -664,8 +652,7 @@ LỤC BÁT:
   [TONE:XXXXXX] → positions 2,4,6 should be B-T-B
 
 THẤT NGÔN:
-  [LINK2:X]  → position 2 of response must share tone X
-  [ENDTONE:X] → position 7 of response should share tone X
+  [LINK2:X]  → position 2 of response shares tone X (for đối âm — tonal contrast)
 
 Tones: B = Bằng (ngang, huyền)  |  T = Trắc (sắc, nặng, hỏi, ngã)
 Rhyme:  everything from last vowel onward after stripping tone marks
