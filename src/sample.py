@@ -134,9 +134,17 @@ def auto_tag(prompt):
     return f"{tag} {p}"
 
 
+def truncate_syllables(text, max_syl):
+    """Truncate text to exactly max_syl syllables (words)."""
+    syls = text.split()
+    if len(syls) <= max_syl:
+        return text
+    return ' '.join(syls[:max_syl])
+
+
 @torch.no_grad()
 def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
-              top_k=50, top_p=None, device="cpu"):
+              top_k=50, top_p=None, device="cpu", max_syllables=None):
     """
     1. Encode prompt → 2. Loop: forward → sample next token → append
     3. Stop on <|end|> or max tokens → 4. Decode new tokens only

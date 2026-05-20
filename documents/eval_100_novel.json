@@ -1,0 +1,579 @@
+{
+  "aggregate": {
+    "n": 92,
+    "syl_exact_8": 18.478260869565215,
+    "syl_close_6_10": 79.34782608695652,
+    "avg_len": 7.684782608695652,
+    "prompt_tone": 90.57971014492753,
+    "resp_tone": 58.789625360230545,
+    "rhyme": 19.565217391304348
+  },
+  "length_distribution": {
+    "9": 21,
+    "3": 2,
+    "8": 17,
+    "6": 3,
+    "7": 26,
+    "11": 8,
+    "1": 1,
+    "5": 1,
+    "14": 1,
+    "10": 6,
+    "0": 4,
+    "4": 2
+  },
+  "samples": [
+    {
+      "p": "Thân em như tấm lụa đào",
+      "r": "mà em anh chỉ biết phơi ra mà xem",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Trèo lên cây khế nửa ngày",
+      "r": "mai đơm bông",
+      "len": 3,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ai làm cho bướm xa hoa",
+      "r": "tàn phai hương sắc tình xa mãi chờ",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Đêm khuya thắp ngọn đèn dầu",
+      "r": "trăng khuya lơ lửng bên thềm",
+      "len": 6,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Gió mùa thu mẹ ru con",
+      "r": "lá vàng rơi xuống bên thềm mưa bay",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Chim khôn đậu nóc nhà quan",
+      "r": "đường lối đường ra để gặp đường dễ đi",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Cây khô chưa dễ mọc chồi",
+      "r": "mưa to nước ngập khắp mọi nơi",
+      "len": 7,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Mẹ già như chuối ba hương",
+      "r": "chuối tiêu năng suất trợ tăng cường",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ru con con ngủ cho lâu",
+      "r": "để con ăn học mai sau thành người",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Công cha như núi thái sơn",
+      "r": "khê  vẫn còn như ngày của mẹ như xưa",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Rủ nhau xuống biển mò cua",
+      "r": "lên rừng xuống biển cũng như nhau",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đố ai đếm được lá rừng",
+      "r": "bao giờ mới hết lừng khừng ngóng trông",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Cày đồng đang buổi ban trưa",
+      "r": "lúa xanh mơn mởn mượt mà xanh",
+      "len": 7,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Mồ hôi thánh thót như mưa",
+      "r": "lộp bộp như vừa mới tạnh ngay",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Dẻo thơm một hạt đắng cay",
+      "r": "hạt nào gieo cấy hạt này gặt nấy lo",
+      "len": 9,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Ai về tôi gửi buồng cau",
+      "r": "anh trao em một buồng cau biếc xanh màu",
+      "len": 9,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Buồng cau non mẹ để già",
+      "r": "ngày mất đi  mẹ mất luôn rồi biết làm sao đây",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Cau già khéo bổ thì non",
+      "r": "cao",
+      "len": 1,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Cây đa bến nước sân đình",
+      "r": "làm theo lối sống thanh niên bền",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Qua đình ngả nón trông đình",
+      "r": "em đi lễ chùa cầu duyên dáng em xinh",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Hòn đá đóng rêu vì ngâu",
+      "r": "người xưa rồi có người nay có biết",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đứng bên ni đồng ngó bên tê",
+      "r": "nghe tiếng thở dài trong",
+      "len": 5,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Thuyền ơi có nhớ bến không",
+      "r": "chồng nhớ lắm phải đợi trông  ai về một bước cuối mùa đông sang",
+      "len": 14,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Bến thì một dạ khăng khăng",
+      "r": "khăng khăng khăng  quyết chẳng ngại ngần ngại khó khăn",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mưa từ xa tới mưa mau",
+      "r": "",
+      "len": 0,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Trời mưa trời gió đùng đùng",
+      "r": "mưa rơi nước mắt tuôn dòng sông tuôn trào",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Lúa mùa vàng óng đồng quê",
+      "r": "vụ đông xuân mới đi về với con đê",
+      "len": 9,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Trâu ơi ta bảo trâu này",
+      "r": "trâu phải cày sâu",
+      "len": 4,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Bao giờ cho đến tháng ba",
+      "r": "ngày tết quê  có hoa gạo đỏ nở rộ trên đồng",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ếch kêu dưới vũng ao nhà",
+      "r": "đất rộng bao la biển đông",
+      "len": 6,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Tháng năm chưa đến đã mưa",
+      "r": "rào  mà sao vẫn cứ nhớ đến người năm nao",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ve kêu ra rả suốt mùa",
+      "r": "nắng mưa sương muối mặn nồng nàng ơi",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Sen tàn cúc lại nở hoa",
+      "r": "để cho hương nhụy đậm đà vấn vương",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Sầu dài ngày ngắn sang đông",
+      "r": "hạ sang nóng nực lòng người vẫn không",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Gió đông về lạnh lòng ai",
+      "r": "thương nỗi nhớ rã rời lòng ai",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Tóc mây một mái còn dài",
+      "r": "mây trời trôi nhẹ mây trắng nhẹ trôi êm đềm",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mắt em là cả trời xanh",
+      "r": "thu hoạch hợp thành em sẽ đến thăm anh",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Môi em là nắng long lanh",
+      "r": "có phải em là nắng ấm anh",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Núi cao bởi có đất bồi",
+      "r": "hồi  nên mới gặp buổi chợ ngồi ngắm hoa",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Sông sâu bởi có nước nguồn",
+      "r": "có đủ mọi thứ biết giữ gìn",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Uống nước nhớ kẻ đào sông",
+      "r": "sâu  để cho bến bồi đất mẹ mưa sa",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ăn quả nhớ kẻ trồng cây",
+      "r": "có người trồng cải người trồng khoai",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đất lành chim đậu về đây",
+      "r": "anh hùng em tới nơi đâu",
+      "len": 6,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Người hiền thì lại gặp may",
+      "r": "một ngày trong đêm dậy sóng gió dâng trào",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Lời nói chẳng mất tiền mua",
+      "r": "mua một giá tiền cho kẻ làm cho tươi",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Lựa lời mà nói cho vừa",
+      "r": "làm cho đất nước sớm trưa nhọc nhằn",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Đèn nhà ai nấy sáng trưng",
+      "r": "không còn có việc coi thường ai",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Chớ thấy đèn sáng mà mừng",
+      "r": "công ty con trẻ bước vào ra ngoài đường",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Sông sâu còn có kẻ đò",
+      "r": "ngang sông vẫn thấy lòng nao nao lòng",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Đường xa còn có người qua",
+      "r": "có người lại gặp để tâm tình",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Bầu ơi thương lấy bí cùng",
+      "r": "chung một dòng  con người chung sống một lòng nuôi tâm",
+      "len": 11,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Tuy rằng khác giống nhưng chung",
+      "r": "cảnh khốn cùng  cùng cảnh lầm than khốn cùng với nhau",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Một cây làm chẳng nên non",
+      "r": "cao  có nắng mưa bão chẳng thèm lên ngôi",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Ba cây chụm lại nên hòn",
+      "r": "bi khóc dưới gốc cây già măng rơi",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Gần mực thì đen gần đèn",
+      "r": "con cái nhỏ con khen con người",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Gần người hiền trí thì nên",
+      "r": "cũng đành chấp nhận bình yên suốt đời",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Nước lã làm sao khuấy nên",
+      "r": "có đâu cũng sợ một ai phiền",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Chữ rằng bán tự vi sư",
+      "r": "một chuyến xe sang năm này về thăm",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Nhất tự vi sư bán tự",
+      "r": "nhiên  tự nhiên mua bán mua sắm đồ hàng",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mồng một tết cha mồng hai",
+      "r": "con về quê lại nhớ mẹ cha",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Tháng giêng ăn tết ở nhà",
+      "r": "xuân nồng nàn anh xin về sắm đào hoa",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Tháng hai cờ bạc tháng ba",
+      "r": "đã theo chồng con",
+      "len": 4,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Trên trời có đám mây vàng",
+      "r": "trên cao  có tiếng gió động lá bay đầy trời",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Bên sông có chị hái dâu",
+      "r": "hiền dịu hiền  chở đầy tình cảm đẹp duyên đôi mình",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đồng đăng có phố kỳ lừa",
+      "r": "cho nên phải đi đường tu mạng",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Có nàng tô thị có chùa",
+      "r": "chùa thiêng chùa phật sớm bốn mùa đông",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đường vô xứ nghệ quanh quanh",
+      "r": "đến mùa quả chín trĩu cành vàng",
+      "len": 7,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Non xanh nước biếc như tranh",
+      "r": "đẹp như tranh  như tranh tạo hóa kết thành bài thơ",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Anh về câu cá bờ sông",
+      "r": "để cho lúa trỗ bông vàng đồng",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Em về cấy lúa trên đồng",
+      "r": "",
+      "len": 0,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Nắng sớm mưa chiều đồng không",
+      "r": "có đôi ta nên vợ nên chồng",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mong cho lúa tốt bông vàng",
+      "r": "thóc lúa ra đồng bội thu hoạch vừa xong",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Bàn tay ta làm nên tất",
+      "r": "cả  em sẽ quên đi mọi vật cuộc đời anh",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Có sức người sỏi đá cũng",
+      "r": "vượt tới nơi  vượt qua tất cả ta cùng vượt qua",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Chim bay về núi tối rồi",
+      "r": "gặp lại nổi niềm thống nhất núi đôi nơi",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mau lên kẻo nắng tắt rồi",
+      "r": "em vội ra đứng bên trời cao",
+      "len": 7,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Trăng lên đỉnh núi trăng mờ",
+      "r": "ảo mà như tỏ mà giăng giăng",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Đêm nay sao sáng hơn đêm",
+      "r": "anh ơi có biết em buồn không",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Xa xa có tiếng chuông chùa",
+      "r": "có tiếng chuông chùa thiên mụ xa",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Gió đưa hương lúa thơm mùa",
+      "r": "vàng sen quê  lúa vàng trĩu hạt trĩu bông mai",
+      "len": 10,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Sáng trăng suông sáng cả đồng",
+      "r": "",
+      "len": 0,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Em đi gặt lúa trên đồng",
+      "r": "lúa non mơn mởn trĩu nặng bông",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Mưa xuân lất phất vườn đào",
+      "r": "bắc mưa rào  gió lùa hương ướp ngọt ngào hương xuân",
+      "len": 11,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Nụ tầm xuân nở ra chào",
+      "r": "hoa kia cánh nở đẹp sao xa",
+      "len": 7,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Hoa thơm ong bướm tìm về",
+      "r": "trời tìm gặp hoa khoe hương thầm",
+      "len": 7,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Người khôn thiên hạ tìm theo",
+      "r": "chồng đất sống thấp trời cao  trời cao",
+      "len": 8,
+      "rhyme_ok": true
+    },
+    {
+      "p": "Tốt gỗ hơn là tốt nước",
+      "r": "ngoài  là cây vàng lá xanh lá màu vàng",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Xấu người đẹp nết còn hơn",
+      "r": "",
+      "len": 0,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Chim không ăn muối chim ươn",
+      "r": "như anh lính nhà thủ mất hồn quê",
+      "len": 8,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Con không nghe mẹ con hư",
+      "r": "chẳng còn gì",
+      "len": 3,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Cá không ăn muối cá ươn",
+      "r": "làm thuê làm mướn sớm thì luôn tay cày",
+      "len": 9,
+      "rhyme_ok": false
+    },
+    {
+      "p": "Con cãi cha mẹ trăm đường",
+      "r": "con cũng đau lòng cha mẹ chịu cực",
+      "len": 8,
+      "rhyme_ok": false
+    }
+  ]
+}

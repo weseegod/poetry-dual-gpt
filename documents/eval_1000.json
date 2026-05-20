@@ -1,0 +1,417 @@
+{
+  "aggregate": {
+    "n": 1000,
+    "syl_exact_8": 99.8,
+    "syl_close_6_10": 100.0,
+    "avg_len": 7.998,
+    "prompt_tone": 99.3,
+    "resp_tone": 99.225,
+    "rhyme": 90.60000000000001
+  },
+  "length_distribution": {
+    "8": 998,
+    "7": 2
+  },
+  "samples": [
+    {
+      "p": "kể từ bạn với trước mai",
+      "r": "nghe tin bạn đã nói hoài chẳng nghe",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "cóc kêu dưới vũng tre ngâm",
+      "r": "nhớ nhung da diết âm thầm tháng năm",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "âm",
+      "r_rhyme": "âm"
+    },
+    {
+      "p": "nằm bên tủ thuốc than dài",
+      "r": "vợ thời có nhớ đến mai chồng về",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "rèn lòng vàng đá tri tri",
+      "r": "chung xây hạnh phúc xuân thì nở hoa",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "trăm năm ai chớ bỏ ai",
+      "r": "yêu thương còn lại chẳng sai chút nào",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "tay cầm cái kéo cây kim",
+      "r": "tay xoa gió vuốt ngực chim ra tòa",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "im",
+      "r_rhyme": "im"
+    },
+    {
+      "p": "bốn mùa hoa cúc nở xây",
+      "r": "bốn mùa thơm ngát tràn đầy sắc hương",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "y",
+      "r_rhyme": "y"
+    },
+    {
+      "p": "giả đò mua khế bán chanh",
+      "r": "mua chua bán mặn dụm dành dành nhau",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "anh",
+      "r_rhyme": "anh"
+    },
+    {
+      "p": "trắng da vì bởi phấn giồi",
+      "r": "đen da vì bởi cái đời thị phi",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "trắng da là đĩ anh ôi",
+      "r": "nhìn lên thấy ngứa nhưng rồi biết tay",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "có trăng nên mới phụ đèn",
+      "r": "hay là tôi phải kéo đèn làm thơ",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "en",
+      "r_rhyme": "en"
+    },
+    {
+      "p": "còn duyên kẻ đón người đưa",
+      "r": "còn nợ nhau nữa mà chưa thỏa lòng",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "a",
+      "r_rhyme": "a"
+    },
+    {
+      "p": "bao giờ cho mỏ xa đình",
+      "r": "cho em được ngắm cho mình thành đôi",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "inh",
+      "r_rhyme": "inh"
+    },
+    {
+      "p": "no nao gặp chốn sĩ hiền",
+      "r": "say sưa quên cả thói hiền thơ ngây",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ên",
+      "r_rhyme": "ên"
+    },
+    {
+      "p": "đi đâu bỏ quạt loan châu",
+      "r": "cho nàng rửa sạch cho mau khỏi phiền",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "u",
+      "r_rhyme": "u"
+    },
+    {
+      "p": "ở đời chi tốt bằng sen",
+      "r": "ở đời có phật mới nên thành người",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "en",
+      "r_rhyme": "ên"
+    },
+    {
+      "p": "thân em như thể trái chanh",
+      "r": "thân em lại thấy màu xanh trong ngần",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "anh",
+      "r_rhyme": "anh"
+    },
+    {
+      "p": "anh ngồi thuyền ngự cao cờ",
+      "r": "em ngồi anh dệt vần thơ trải lòng",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ơ",
+      "r_rhyme": "ơ"
+    },
+    {
+      "p": "thân em như lọn nhang trần",
+      "r": "mắt đưa xuống gối ân cần hỏi han",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ân",
+      "r_rhyme": "ân"
+    },
+    {
+      "p": "ví dầu chi thoẳng tơ mành",
+      "r": "đã quên một ngày xanh tươi lại nồng",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "anh",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "ngó ra ngoài biển minh mông",
+      "r": "nhìn vào biển có biết không con tàu",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ông",
+      "r_rhyme": "ông"
+    },
+    {
+      "p": "riêng than đất rộng trời dài",
+      "r": "có em có cả bờ vai của mình",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "cam sành dã dượi bờ ao",
+      "r": "nước ròng nước lớn làm sao bây giờ",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "o",
+      "r_rhyme": "o"
+    },
+    {
+      "p": "cam sành chê đắng chê hôi",
+      "r": "chanh chua sung chát chua bùi có hay",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "cục đá lăn nghiêng lăn ngửa",
+      "r": "ai biết lòng anh có còn nhớ không",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "a",
+      "r_rhyme": "on"
+    },
+    {
+      "p": "ví dầu tình chẳng đoái tình",
+      "r": "tình trong một nén dạ đinh vẫn bền",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "inh",
+      "r_rhyme": "inh"
+    },
+    {
+      "p": "cố hương chàng đã phản hồi",
+      "r": "biết thì nàng chẳng đứng ngồi không yên",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "i",
+      "r_rhyme": "i"
+    },
+    {
+      "p": "anh ngồi phấn thủ trống treo",
+      "r": "tay em mười ngón khua chèo em qua",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "o",
+      "r_rhyme": "o"
+    },
+    {
+      "p": "trách ai vội tháo suối vàng",
+      "r": "đem thuyền bỏ bến sang ngang theo chồng",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ang",
+      "r_rhyme": "ang"
+    },
+    {
+      "p": "lu ly nửa nước nửa dầu",
+      "r": "sóng thần nổi dậy còn đâu đường về",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "u",
+      "r_rhyme": "u"
+    },
+    {
+      "p": "đã nguyền hai chữ đồng tâm",
+      "r": "đã yêu nhau đến mấy lần không xa",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "âm",
+      "r_rhyme": "ân"
+    },
+    {
+      "p": "chuối cậy mình chuối đồng trinh",
+      "r": "quả cà chuối trứng thả mình xuống sông",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "inh",
+      "r_rhyme": "inh"
+    },
+    {
+      "p": "ngó lân mây trắng trăng tròn",
+      "r": "ngắm con đò nhỏ vẫn còn đưa duyên",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "on",
+      "r_rhyme": "on"
+    },
+    {
+      "p": "ba phen lên ngựa mà về",
+      "r": "ba lần xuống ngựa bốn bề binh đao",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ê",
+      "r_rhyme": "ê"
+    },
+    {
+      "p": "câu thơ có bốn câu thơ",
+      "r": "thơ tình tôi viết bây giờ tặng em",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ơ",
+      "r_rhyme": "ơ"
+    },
+    {
+      "p": "tới đây bợ ngợ giữa đường",
+      "r": "là khi mỏi gối chán chường chưa qua",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ơng",
+      "r_rhyme": "ơng"
+    },
+    {
+      "p": "thương cha thương mẹ có phần",
+      "r": "tuổi già sức yếu tuổi xuân hao mòn",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ân",
+      "r_rhyme": "ân"
+    },
+    {
+      "p": "còn duyên nón cụ quai tơ",
+      "r": "người thì váy ngắn nón thơ đi về",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ơ",
+      "r_rhyme": "ơ"
+    },
+    {
+      "p": "còn duyên đóng cửa kén chồng",
+      "r": "còn duyên chẳng nợ tơ hồng cũng không",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ông",
+      "r_rhyme": "ông"
+    },
+    {
+      "p": "sáng trăng trải chiếu hai hàng",
+      "r": "lung linh huyền ảo ngỡ ngàng tình thân",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ang",
+      "r_rhyme": "ang"
+    },
+    {
+      "p": "quây tơ thì giữ mối tơ",
+      "r": "dệt nên chiếc yếm bài thơ cho đời",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ơ",
+      "r_rhyme": "ơ"
+    },
+    {
+      "p": "trời sinh cây cứng lá dai",
+      "r": "có cây có lá có cây có bầu",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "i",
+      "r_rhyme": "y"
+    },
+    {
+      "p": "chim kêu vượn hú đá đoan",
+      "r": "chim kêu vượn hú gọi đàn rụng rơi",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "an",
+      "r_rhyme": "an"
+    },
+    {
+      "p": "mảng coi ong bướm vườn đào",
+      "r": "ai dè gió lạnh mưa rào đêm thu",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "o",
+      "r_rhyme": "o"
+    },
+    {
+      "p": "bao giờ đá nổi vông chìm",
+      "r": "thì ta vẫn đứng lặng im giữa đời",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "im",
+      "r_rhyme": "im"
+    },
+    {
+      "p": "làm trai giữ trọn ba giêng",
+      "r": "giữ tình vẹn nghĩa vẹn nguyên lời thề",
+      "len": 8,
+      "rhyme_ok": false,
+      "p_rhyme": "êng",
+      "r_rhyme": "ên"
+    },
+    {
+      "p": "chịu oan một tiếng có chồng",
+      "r": "cũng vì cái số má hồng truân chuyên",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ông",
+      "r_rhyme": "ông"
+    },
+    {
+      "p": "chim quyên ăn trái nhãn lồng",
+      "r": "chim kêu ríu rít trên đồng quê tôi",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "ông",
+      "r_rhyme": "ông"
+    },
+    {
+      "p": "tưởng là yếm đỏ còn son",
+      "r": "nào đâu áo yếm eo thon dịu dàng",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "on",
+      "r_rhyme": "on"
+    },
+    {
+      "p": "ví dầu bậu đó qua đây",
+      "r": "để bậu nương náu bên nầy thảnh thơi",
+      "len": 8,
+      "rhyme_ok": true,
+      "p_rhyme": "y",
+      "r_rhyme": "y"
+    }
+  ]
+}
