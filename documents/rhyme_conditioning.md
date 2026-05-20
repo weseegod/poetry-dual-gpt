@@ -1,6 +1,34 @@
 # 🎵 Phase 9: Rhyme & Tone Conditioning
 
-> ✅ Steps 1-4 implemented. Steps 5-8 for evaluation after training.
+## 📊 Implementation Status
+
+### Lục Bát (6→8)
+
+| # | Rule | Priority | Status | How |
+|---|------|----------|--------|-----|
+| 1 | **Internal rhyme** (vần lưng) | HIGH | ✅ Implemented | `[RHYME:X]` — extracted from position 6 of prompt |
+| 2 | **Tone pattern** (B-T-B / B-T-B-B) | RECOMMENDED | ✅ Implemented | `[TONE:XXXXXX]` — tone sequence of prompt |
+| 3 | **Rhythm** (2/2/2, 4/2) | RECOMMENDED | ❌ Skipped | Needs word segmentation, subjective |
+
+### Thất Ngôn (7→7)
+
+| # | Rule | Priority | Status | How |
+|---|------|----------|--------|-----|
+| 4 | **Đối âm** (tonal contrast between lines) | HIGH | ✅ Learned | Model learns from B-T-B ↔ T-B-T patterns in data |
+| 5 | **2nd syllable tone** | HIGH | ✅ Implemented | `[LINK2:X]` — tone of position 2, conditions contrast |
+| 6 | **End rhyme** (position 7) | RECOMMENDED | ❌ Skipped | Single-syllable constraint, low impact |
+| 7 | **Grammatical parallelism** | HIGH | ❌ Skipped | Needs POS tagger (underthesea/pyvi) |
+| 8 | **Semantic parallelism** | HIGH | ❌ Skipped | Needs semantic model, research-level |
+
+### What the model sees during training
+
+```
+[LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng <|reply|> ...
+[THAT_NGON] [LINK2:B] Lom khom dưới núi tiều vài chú <|reply|> ...
+```
+
+The model learns: "When I see `[RHYME:ong]`, my 6th syllable should rhyme with 'ong'."
+Same mechanism as `[LUC_BAT]` → "generate 8-syllable response" — proven to work.
 
 ---
 
@@ -190,7 +218,7 @@ We'll implement rules we CAN automate (tone, rhyme, syllable count) and leave se
 | Tone pattern (B-T-B / B-T-B-B) | ✅ | N/A | `[TONE:XXXXXX]` from prompt's tones |
 | Tone linking (2nd syllable) | N/A | ✅ | `[LINK2:X]` from position 2 of prompt |
 | Đối âm (tonal contrast between lines) | N/A | Learned | Model learns from L1=B-T-B, L2=T-B-T patterns in data |
-| Rhythm pattern | ✅ | N/A | Not implemented (needs word segmentation) |
+| Rhythm pattern | ❌ | N/A | Needs word segmentation |
 | End rhyme | N/A | Not implemented | Single-syllable constraint, low impact |
 | Grammatical parallelism | ❌ | ❌ | Needs POS tagger |
 | Semantic parallelism | ❌ | ❌ | Needs semantic model |
@@ -660,28 +688,22 @@ Rhyme:  everything from last vowel onward after stripping tone marks
 
 ---
 
-## ✅ Implementation Status
+## 🔧 Build Status
 
-| Step | What | Status | File |
-|------|------|--------|------|
-| 1 | Tone classification (get_tone, get_tone_sequence) | ✅ | `src/tones.py` |
-| 2 | Rhyme extraction (strip_tone, get_rhyme_group) | ✅ | `src/tones.py` |
-| 3 | Training data injection (make_pairs, make_pairs_song_that) | ✅ | `src/preprocess.py` |
-| 4 | Generation-time injection (auto_tag in sample.py, server.py) | ✅ | `src/sample.py`, `client/server.py` |
-| 5 | Retrained tokenizer (10,922 vocab) | ✅ | `tokenizer/poetry_bpe.model` |
-| 6 | Regenerated corpus with rhyme/tone tokens | ✅ | `data/poetry_corpus.txt` |
-| 7 | Unit tests (27 new tests, 74 total) | ✅ | `tests/test_tones.py` |
-| 8 | Train model + evaluate | ⏳ | Run Colab cells 6a-6c |
-
-### Training data format (current)
-
-```
-[LUC_BAT] [RHYME:en] [TONE:BBBTTB] Thân em như thể bông sen <|reply|> ...
-[THAT_NGON] [LINK2:B] đẩy hoa dun lá khỏi tay trời <|reply|> ...
-```
+| Step | What | File |
+|------|------|------|
+| 1 | Tone classification | `src/tones.py` ✅ |
+| 2 | Rhyme extraction | `src/tones.py` ✅ |
+| 3 | Training data injection | `src/preprocess.py` ✅ |
+| 4 | Generation auto-inject | `src/sample.py`, `client/server.py` ✅ |
+| 5 | Tokenizer (10,922 vocab) | `tokenizer/poetry_bpe.model` ✅ |
+| 6 | Corpus with tags (942K pairs) | `data/poetry_corpus.txt` ✅ |
+| 7 | Tests (74) | `tests/test_tones.py` ✅ |
+| 8 | Train + evaluate | ⏳ Run Colab |
 
 ### Known limitations
 
-- Compound vowel nuclei (uô, ươ, iê) not detected by heuristic — affects ~5-10% of syllables
-- `[ENDTONE]` not implemented (single-syllable constraint, low expected impact)
-- Grammatical/semantic parallelism needs POS tagger (future work)
+- Compound vowel nuclei (uô, ươ, iê) — heuristic gets ~90% correct, misses ~10%
+- `[ENDTONE]` skipped — single-syllable constraint, low expected impact
+- Grammatical/semantic parallelism — needs POS tagger (future work)
+- Đối âm (tonal contrast) — not enforced via token, model learns from data patterns
