@@ -155,58 +155,20 @@ Update `sample.py` default prompt to match (remove trailing comma).
 
 ## 🔵 Higher Effort / Long Term
 
-### 9. Rhyme conditioning
+> 📖 Full implementation guide: **[documents/phase4_roadmap.md](phase4_roadmap.md)**
+>
+> Read that document. It's a student roadmap — each step explained, you implement, I verify.
 
-Lục Bát rhyme rule: syllable 6 of the prompt must rhyme with syllable 6 of the reply (vần lưng).
-
-Add rhyme group tags to training data:
-```
-<|start|> [LUC_BAT] [VAN:ong] Trăm năm trong cõi người ta, <|reply|> Chữ tài chữ mệnh khéo là ghét nhau. <|end|>
-```
-
-Steps:
-1. Extract last syllable of prompt → get its rhyme group (e.g., "ta" → "a")
-2. Inject `[VAN:{rhyme}]` after the genre tag
-3. During generation, the model sees `[VAN:ong]` and is conditioned to output rhyming responses
-4. Add `[VAN:...]` tokens to `SPECIAL_TOKENS` in `train_bpe.py` (or let BPE learn them)
-
-This is a genuine quality booster — rhyme is the defining feature of Lục Bát.
-
-### 10. Two-stage training
-
-Stage 1: Train on ALL 198K poems (all genres) — model learns Vietnamese grammar, vocabulary, and general poetic structure.
-
-Stage 2: Fine-tune on Lục Bát only — model specializes in the 6→8 format.
-
-Implementation:
-1. Modify `preprocess.py` to generate pairs for all genres, not just Lục Bát
-2. Train stage 1 model (~15K steps)
-3. Save checkpoint
-4. Fine-tune on Lục Bát pairs only (~5K steps with lower LR: 1e-4)
-
-### 11. Data cleaning pipeline
-
-The CSV has noise: HTML artifacts, broken lines, wrong genre labels. Build:
+Order (and why):
 
 ```
-data/poems_dataset.csv
-  → remove HTML/empty <|> tags
-  → validate line count vs genre
-  → normalize Unicode (NFC vs NFD)
-  → remove duplicate poems
-  → filter poems < 4 lines
-  → save clean version
+11. Data cleaning pipeline     ← Fix garbage data FIRST
+12. Multi-genre support         ← Add all genres on clean foundation
+ 9. Rhyme conditioning          ← Enhance quality on diverse data
+10. Two-stage training          ← Final: pretrain all → fine-tune Lục Bát
 ```
 
-### 12. Multi-genre support
-
-Currently only `[LUC_BAT]` tag is used. The code already reserves `[TU_TUYET]` (id=5) and `[THAT_NGON_BAT_CU]` (id=6).
-
-Add pairs for these genres in `preprocess.py`:
-- Thất ngôn tứ tuyệt: 7-syllable × 4 lines
-- Thất ngôn bát cú: 7-syllable × 8 lines
-
-Model can then respond in multiple poetic forms when given different genre tags.
+Each step depends on the previous one. See the roadmap for full implementation.
 
 ---
 
@@ -228,10 +190,10 @@ Phase 3 — Cleaner Data
   □ 8. Remove comma from prompt format
 
 Phase 4 — Advanced
-  □ 9. Rhyme conditioning
-  □ 10. Two-stage training (all genres → Lục Bát fine-tune)
   □ 11. Data cleaning pipeline
   □ 12. Multi-genre support
+  □ 9.  Rhyme conditioning
+  □ 10. Two-stage training (all genres → Lục Bát fine-tune)
 ```
 
 ---
