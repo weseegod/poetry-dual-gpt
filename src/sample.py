@@ -2,7 +2,7 @@
 Autoregressive generation + Vietnamese Lục Bát rule checking.
 
 Usage:
-  python src/sample.py --checkpoint checkpoints/final.pt
+  python src/sample.py --checkpoint checkpoints/best.pt
   python src/sample.py --interactive
 """
 

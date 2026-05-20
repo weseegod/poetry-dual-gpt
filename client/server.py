@@ -22,7 +22,9 @@ from model import PoetryDuelGPT
 
 # ── Config ──────────────────────────────────────────
 ROOT = Path(__file__).parent.parent
-CHECKPOINT = ROOT / "checkpoints" / "final.pt"
+CHECKPOINT = ROOT / "checkpoints" / "best.pt"
+if not CHECKPOINT.exists():
+    CHECKPOINT = ROOT / "checkpoints" / "final.pt"
 TOKENIZER_PATH = ROOT / "tokenizer" / "poetry_bpe.model"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # ────────────────────────────────────────────────────

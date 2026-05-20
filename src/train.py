@@ -189,19 +189,25 @@ def train(max_lines=None):
         if step % eval_interval == 0:
             train_loss = loss_sum / loss_cnt
             val_loss = evaluate(model, val_loader, dev)
-            trend = "📉" if val_loss < best_val else "➡️"
+            is_best = val_loss < best_val
+            trend = "📉" if is_best else "➡️"
             best_val = min(best_val, val_loss)
             pbar.close()
             print(f"── Step {step:5d}/{max_steps} ({time.time()-t0:.0f}s) ── "
                   f"loss={train_loss:.4f} val={val_loss:.4f} {trend} lr={lr:.2e}")
             loss_sum = 0.0; loss_cnt = 0
 
+            # Save best model
+            if is_best:
+                p = save_ckpt(model, opt, step, val_loss, V, cfg, "best.pt")
+                print(f"   🏆  Best! val={val_loss:.4f} → {p.name}")
+
             if step < max_steps:
                 nxt = min(step + eval_interval, max_steps)
                 pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{nxt}", unit="s", leave=False)
 
-        # ── Save checkpoint ──
-        if step % 1000 == 0:
+        # ── Save periodic checkpoint ──
+        if step % 5000 == 0:
             p = save_ckpt(model, opt, step, loss.item(), V, cfg, f"step_{step}.pt")
             print(f"   💾  {p.name}")
 
