@@ -190,9 +190,9 @@ Phase 3 — Cleaner Data
   □ 8. Remove comma from prompt format
 
 Phase 4 — Advanced
-  □ 11. Data cleaning pipeline
-  □ 12. Multi-genre support
-  □ 9.  Rhyme conditioning
+  □ 11. Data cleaning pipeline ✅
+  □ 12. Multi-genre support ✅
+  □ 9.  Rhyme conditioning (→ documents/phase9_rhyme_conditioning.md)
   □ 10. Two-stage training (all genres → Lục Bát fine-tune)
 ```
 
