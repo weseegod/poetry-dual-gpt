@@ -1,213 +1,81 @@
-# 🚀 Improvement Strategies for PoetryDuelGPT
+# 🚀 Remaining Work
 
-> Your model generates 8 syllables with correct B-T-B-B tones. The *form* is right — now we improve the *content* and fix bugs.
-
----
-
-## 🔴 Critical Bugs (fix these first)
-
-### 1. Pad token infinite loop in generation (`sample.py`)
-
-**File:** `src/sample.py`, inside `generate()`
-
-Current bug:
-```python
-if next_id == pad_id: continue   # same context → model picks pad AGAIN → loops forever
-```
-
-Fix: suppress pad token BEFORE softmax so it's never sampled:
-```python
-# In generate(), right after /temperature and before top-k:
-logits[:, pad_id] = float("-inf")
-```
-
-This bug also exists in `model.py`'s `generate()` method (used only in `__main__` test).
-
-**How to reproduce:** Run `sample.py` 3-4 times. Occasionally the response is empty — that's the model hitting the pad loop until `max_new_tokens` is exhausted.
-
-### 2. Train longer — 15K-20K steps
-
-**File:** `src/train.py`, `CONFIG["train"]["max_steps"]`
-
-Val loss plateaued at step 3000 but cosine LR hadn't fully decayed. More steps at very low LR (near 1e-5) allow final fine-grained weight adjustments.
-
-```python
-"train": {"max_steps": 15000, "batch_size": 192, "eval_interval": 500}
-```
-
-Also increase `warmup_steps` proportionally (200→500 for 15K steps, ~3%).
-
-### 3. True semantic couplets, not sliding windows
-
-**File:** `src/preprocess.py`, `make_pairs()`
-
-Current code pairs EVERY adjacent line (`range(len(lines)-1)`). For Lục Bát with 6-8-6-8 pattern, this creates:
-
-```
-Pair 0: line(6-syl) → line(8-syl)  ✅ genuine couplet
-Pair 1: line(8-syl) → line(6-syl)  ❌ response as prompt, wrong semantics
-Pair 2: line(6-syl) → line(8-syl)  ✅ genuine couplet
-Pair 3: line(8-syl) → line(6-syl)  ❌ wrong again
-```
-
-Fix: change to step-by-2:
-```python
-for i in range(0, len(lines) - 1, 2):
-```
-
-This halves training data from 688K → ~344K pairs, but every pair is a true 6→8 Lục Bát couplet. Quality > quantity.
-
-### 4. Add top-p (nucleus) sampling
-
-**File:** `src/sample.py`, `generate()` function
-
-Current: top-k=50 is a blunt cutoff — always keeps exactly 50 tokens regardless of confidence.
-
-Top-p adapts: keeps enough tokens to reach cumulative probability p.
-- Confident model (one token at 0.9): keeps ~1 token → sharp output
-- Uncertain model (flat distribution): keeps many tokens → varied output
-
-Implementation sketch:
-```python
-def top_p_filter(logits, p=0.92):
-    """Set logits to -inf for tokens outside the nucleus."""
-    probs = F.softmax(logits, dim=-1)
-    sorted_probs, sorted_idx = torch.sort(probs, descending=True)
-    cumsum = torch.cumsum(sorted_probs, dim=-1)
-    mask = cumsum > p
-    mask[..., 1:] = mask[..., :-1].clone()  # shift: keep first token past threshold
-    mask[..., 0] = False                     # always keep top token
-    logits[:, sorted_idx[mask]] = float("-inf")
-    return logits
-```
-
-Add `--top_p` CLI arg. When `top_p` is set, skip `top_k`. Allow both to coexist (apply top-p after top-k).
-
-### 5. Tune generation temperature + top-k
-
-**File:** `src/sample.py`, `--temperature` arg
-
-Current T=0.75 is a guess. Sweep and observe:
-
-| T | Behavior |
-|---|----------|
-| 0.5 | Safe, may repeat |
-| 0.6 | Slightly varied, mostly coherent |
-| 0.75 | Current — occasionally creative |
-| 0.85 | More varied, sometimes wanders |
-| 0.95 | Creative, occasionally nonsense |
-
-Also try `--top_k 30` and `--top_k 80` to find the sweet spot.
+> Everything below is what's left. Done items have been removed to keep this focused.
 
 ---
 
-## 🟢 Medium Impact / Medium Effort
+## 🔴 Next: Two-Stage Training
 
-### 6. Clean training data — strict syllable filter
+> 📖 Full guide: **[two_stage_training.md](two_stage_training.md)**
 
-**File:** `src/preprocess.py`, `make_pairs()`
+**Goal:** Train on all genres first (136K poems), then fine-tune on Lục Bát only.
 
-Current: ±1 syllable tolerance for noisy data:
-```python
-p_ok = 5 <= count_syllables(prompt) <= 7
-r_ok = 7 <= count_syllables(reply) <= 9
-```
+**What you need to implement:**
+- `--resume` flag in `train.py` (load checkpoint + optimizer state, continue from saved step)
+- Filter Lục Bát-only corpus from the existing 942K pairs
+- Run Stage 1 (15K steps, all genres) → then Stage 2 (5K steps, Lục Bát only, lower LR)
 
-Lục Bát is *defined* as exactly 6→8. Tightening removes garbage lines mislabeled as Lục Bát:
-```python
-p_ok = count_syllables(prompt) == 6
-r_ok = count_syllables(reply) == 8
-```
-
-Fewer but cleaner pairs. Combine with #4 (true couplets) for maximum data quality.
-
-### 7. Scale the model up
-
-**File:** `src/train.py`, `CONFIG` dict
-
-| Config | Params | Training time (L4) | VRAM |
-|--------|--------|--------------------|------|
-| `n_embd=384, n_layer=6` | 14.8M | ~43 min (5K steps) | ~4GB |
-| `n_embd=512, n_layer=8` | ~30M | ~1.5 hr | ~8GB |
-| `n_embd=768, n_layer=8` | ~45M | ~2.5 hr | ~14GB |
-| `n_embd=768, n_layer=12` | ~60M | ~3.5 hr | ~16GB |
-
-Start with `n_embd=512, n_layer=8` — it fits on Colab's T4 (16GB) and L4 (24GB).
-
-### 8. Clean training pairs — remove comma from prompt
-
-**File:** `src/preprocess.py`, `make_pairs()`
-
-Current format adds a comma after the prompt:
-```python
-pairs.append(f"{START} {TAG} {prompt}, {REPLY} {END}")
-#                                  ↑ this comma
-```
-
-This comma is noise — the model has to learn to ignore it or reproduce it. For cleaner training, remove it:
-```python
-pairs.append(f"{START} {TAG} {prompt} {REPLY} {END}")
-```
-
-Update `sample.py` default prompt to match (remove trailing comma).
+**Why this first:** Establishes your 30M model's quality ceiling. No new data formats, no new tokens — just training strategy.
 
 ---
 
-## 🔵 Higher Effort / Long Term
+## 🟡 Then: Rhyme Conditioning
 
-> 📖 Detailed guides:
->
-> - **[two_stage_training.md](two_stage_training.md)** — Phase 10: all-genre pretrain → Lục Bát fine-tune
-> - **[rhyme_conditioning.md](rhyme_conditioning.md)** — Phase 9: rhyme + tone control tokens
+> 📖 Full guide: **[rhyme_conditioning.md](rhyme_conditioning.md)**
 
-Order (and why):
+**Goal:** Inject `[RHYME:en]` and `[TONE:BTB]` control tokens so the model learns to produce rhyming, tone-correct poetry.
 
-```
-11. Data cleaning pipeline     ← Fix garbage data FIRST
-12. Multi-genre support         ← Add all genres on clean foundation
- 9. Rhyme conditioning          ← Enhance quality on diverse data
-10. Two-stage training          ← Final: pretrain all → fine-tune Lục Bát
-```
+**What you need to implement:**
+- `src/tones.py` — tone classification + rhyme extraction utilities
+- Update `preprocess.py` — inject control tokens into training pairs
+- Update `server.py` + `sample.py` — auto-inject during generation
+- Retrain tokenizer + retrain model
 
-Each step depends on the previous one. See the roadmap for full implementation.
+**Why this second:** Builds on the two-stage model. The control token format is model-agnostic — works for your 30M GPT and Qwen later.
 
 ---
 
-## 📊 Implementation Order
+## 🔵 Future: Qwen2.5-1.5B Fine-Tune
 
-```
-Phase 1 — Stability (do now)
-  ☑ 1. Fix pad token loop in sample.py (+ model.py)
+**Goal:** Swap your 30M GPT for a 1.5B pretrained model with LoRA fine-tuning.
 
-Phase 2 — Better Poetry (next)
-  □ 2. Train longer (15K steps)
-  □ 3. True couplets (step=2 in preprocess.py)
-  □ 4. Add top-p sampling
-  □ 5. Sweep temperature + top-k
+**Why this last:** Your 30M model will hit a quality wall (correct form, simple vocabulary). Qwen brings rich Vietnamese understanding from its pretraining. The same rhyme/tone control tokens transfer directly.
 
-Phase 3 — Cleaner Data
-  □ 6. Strict syllable filter (6 and 8 exactly)
-  □ 7. Scale model up (n_embd=512, n_layer=8)
-  □ 8. Remove comma from prompt format
-
-Phase 4 — Advanced
-  □ 11. Data cleaning pipeline ✅
-  □ 12. Multi-genre support ✅
-  □ 10. Two-stage training (→ two_stage_training.md)
-  □ 9.  Rhyme conditioning (→ rhyme_conditioning.md)
-```
+**Requirements:** HuggingFace `transformers` + `peft` + `bitsandbytes`. Colab L4 can handle it with 4-bit QLoRA.
 
 ---
 
-## 🧪 How to Evaluate Each Improvement
+## 📊 Done (for reference)
 
-After each change, generate 5 samples with `python src/sample.py --num_samples 5` and check:
+| What | Status |
+|------|--------|
+| Pad token loop fix | ✅ |
+| True couplets (step=2) | ✅ |
+| Top-p nucleus sampling | ✅ |
+| 30M model (n_embd=512, n_head=8, n_layer=8) | ✅ |
+| Comma-free prompt format | ✅ |
+| Data cleaning pipeline | ✅ |
+| Multi-genre ([LUC_BAT] + [THAT_NGON]) | ✅ |
+| Dual-genre corpus (942K pairs) | ✅ |
+| Retrained tokenizer (10,785 vocab) | ✅ |
+| Chat UI (FastAPI + React) | ✅ |
+| Auto-detect genre (6-syl→LUC_BAT, 7-syl→THAT_NGON) | ✅ |
+| Save best.pt on val improvement | ✅ |
 
-| Metric | Target |
-|--------|--------|
-| Syllable count | prompt=6, response=8 (exactly) |
-| Response tones | pos2=B, pos4=T, pos6=B, pos8=B |
-| Rhyme | prompt's 6th syllable rhymes with response's 6th syllable |
-| Semantic coherence | response relates to prompt, not random words |
-| Diversity | 5 runs → 5 different responses |
-| No empty output | never `<|reply|>` followed by nothing |
+---
+
+## 🧪 Evaluation Checklist
+
+After each remaining step, generate 5 samples:
+
+```bash
+python src/sample.py --num_samples 5 --temperature 0.75 --top_p 0.92
+```
+
+| Metric | Current | After two-stage | After rhyme |
+|--------|---------|-----------------|-------------|
+| 6→8 syllable accuracy | ~85% | 95%+ | 95%+ |
+| B-T-B-B tone correctness | ~60% | 80%+ | 90%+ |
+| Rhyme (6th-syl match) | ~30% | ~30% | 60%+ |
+| Semantic coherence | Medium | Medium-High | High |
+| No empty output | ✅ | ✅ | ✅ |
