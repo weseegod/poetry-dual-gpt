@@ -155,9 +155,10 @@ Update `sample.py` default prompt to match (remove trailing comma).
 
 ## 🔵 Higher Effort / Long Term
 
-> 📖 Full implementation guide: **[documents/phase4_roadmap.md](phase4_roadmap.md)**
+> 📖 Detailed guides:
 >
-> Read that document. It's a student roadmap — each step explained, you implement, I verify.
+> - **[two_stage_training.md](two_stage_training.md)** — Phase 10: all-genre pretrain → Lục Bát fine-tune
+> - **[rhyme_conditioning.md](rhyme_conditioning.md)** — Phase 9: rhyme + tone control tokens
 
 Order (and why):
 
@@ -192,8 +193,8 @@ Phase 3 — Cleaner Data
 Phase 4 — Advanced
   □ 11. Data cleaning pipeline ✅
   □ 12. Multi-genre support ✅
-  □ 9.  Rhyme conditioning (→ documents/phase9_rhyme_conditioning.md)
-  □ 10. Two-stage training (all genres → Lục Bát fine-tune)
+  □ 10. Two-stage training (→ two_stage_training.md)
+  □ 9.  Rhyme conditioning (→ rhyme_conditioning.md)
 ```
 
 ---
