@@ -38,8 +38,8 @@ CONFIG = {
     "checkpoint_dir": "checkpoints",
 
     # Modes
-    "test":  {"max_steps": 200,  "batch_size": 8,   "eval_interval": 100},
-    "train": {"max_steps": 10000, "batch_size": 192, "eval_interval": 200},
+    "test":  {"max_steps": 200,  "batch_size": 8,   "eval_interval": 100, "patience": 0},
+    "train": {"max_steps": 10000, "batch_size": 192, "eval_interval": 200, "patience": 5},
 
     # Optimizer
     "learning_rate": 3e-4, "min_lr": 1e-5, "warmup_steps": 500,
@@ -89,6 +89,8 @@ def evaluate(model, loader, device, n_batches=20):
 
 def save_ckpt(model, opt, step, loss, vocab, cfg, fname):
     d = ROOT / cfg["checkpoint_dir"]; d.mkdir(exist_ok=True)
+    prefix = cfg.get("ckpt_prefix", "")
+    full_name = f"{prefix}{fname}" if prefix else fname
     torch.save({
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": opt.state_dict(),
@@ -96,8 +98,8 @@ def save_ckpt(model, opt, step, loss, vocab, cfg, fname):
         "model_config": {"n_embd": cfg["n_embd"], "n_head": cfg["n_head"],
                          "n_layer": cfg["n_layer"], "block_size": cfg["block_size"],
                          "dropout": cfg["dropout"]},
-    }, d / fname)
-    return d / fname
+    }, d / full_name)
+    return d / full_name
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -109,6 +111,7 @@ def train(max_lines=None, resume_from=None):
     mode = cfg["mode"]; S = cfg[mode]
     max_steps, batch_size = S["max_steps"], S["batch_size"]
     eval_interval = S["eval_interval"]
+    patience = S.get("patience", 0)
 
     # ── Banner ──
     is_ft = resume_from is not None
@@ -192,6 +195,7 @@ def train(max_lines=None, resume_from=None):
     print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
     model.train()
     step, best_val, loss_sum, loss_cnt = start_step, float("inf"), 0.0, 0
+    plateau_count = 0  # evals without improvement
     t0 = time.time()
     it = iter(train_loader)
     pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
@@ -219,22 +223,36 @@ def train(max_lines=None, resume_from=None):
         step += 1; loss_sum += loss.item(); loss_cnt += 1
         pbar.update(1); pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
-        # ── Eval (summary line, like diffusion epoch display) ──
+        # ── Eval ──
         if step % eval_interval == 0:
             train_loss = loss_sum / loss_cnt
             val_loss = evaluate(model, val_loader, dev)
             is_best = val_loss < best_val
             trend = "📉" if is_best else "➡️"
             best_val = min(best_val, val_loss)
+
+            # Plateau tracking
+            if is_best:
+                plateau_count = 0
+            else:
+                plateau_count += 1
+
             pbar.close()
-            print(f"── Step {step:5d}/{max_steps} ({time.time()-t0:.0f}s) ── "
-                  f"loss={train_loss:.4f} val={val_loss:.4f} {trend} lr={lr:.2e}")
+            status = f"loss={train_loss:.4f} val={val_loss:.4f} {trend} lr={lr:.2e}"
+            if patience > 0:
+                status += f"  [{plateau_count}/{patience}]"
+            print(f"── Step {step:5d}/{max_steps} ({time.time()-t0:.0f}s) ── {status}")
             loss_sum = 0.0; loss_cnt = 0
 
             # Save best model
             if is_best:
                 p = save_ckpt(model, opt, step, val_loss, V, cfg, "best.pt")
                 print(f"   🏆  Best! val={val_loss:.4f} → {p.name}")
+
+            # Early stop
+            if patience > 0 and plateau_count >= patience:
+                print(f"   ⏹️  Plateau ({patience} evals no improvement) — stopping early")
+                break
 
             if step < max_steps:
                 nxt = min(step + eval_interval, max_steps)
@@ -263,6 +281,7 @@ if __name__ == "__main__":
     p.add_argument("--max_lines", type=int, default=None)
     p.add_argument("--resume", type=str, default=None, help="Resume from checkpoint (for fine-tuning)")
     p.add_argument("--corpus", type=str, default=None, help="Override corpus file (e.g. data/corpus_luc_bat.txt)")
+    p.add_argument("--name", type=str, default="", help="Prefix for checkpoint files (e.g. stage1_)")
     args = p.parse_args()
 
     if args.mode:       CONFIG["mode"] = args.mode
@@ -270,5 +289,6 @@ if __name__ == "__main__":
     if args.batch_size: CONFIG[CONFIG["mode"]]["batch_size"] = args.batch_size
     if args.device:     CONFIG["device"] = args.device
     if args.corpus:     CONFIG["corpus_path"] = args.corpus
+    if args.name:       CONFIG["ckpt_prefix"] = args.name
 
     train(args.max_lines, resume_from=args.resume)
