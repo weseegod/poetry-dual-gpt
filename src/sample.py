@@ -8,6 +8,7 @@ Usage:
 
 import argparse
 from pathlib import Path
+import re
 import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
@@ -191,7 +192,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--checkpoint", default="checkpoints/final.pt")
     p.add_argument("--tokenizer", default="tokenizer/poetry_bpe.model")
-    p.add_argument("--prompt", default="[LUC_BAT] Thân em như chẽn lúa đòng đòng")
+    p.add_argument("--prompt", default="Thân em như chẽn lúa đòng")
     p.add_argument("--temperature", type=float, default=0.75)
     p.add_argument("--top_k", type=int, default=50)
     p.add_argument("--top_p", type=float, default=None)
@@ -229,20 +230,34 @@ if __name__ == "__main__":
 
     # Batch generation
     else:
+        # Auto-tag if prompt doesn't have genre tags, or has genre but missing rhyme/tone
+        prompt = args.prompt
+        if not prompt.startswith('['):
+            prompt = auto_tag(prompt)
+        elif '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
+            # Has genre tag but missing rhyme/tone — re-tag
+            inner = prompt.replace('[LUC_BAT]', '').strip()
+            prompt = auto_tag(inner)
+        elif '[THAT_NGON]' in prompt and '[LINK2:' not in prompt:
+            inner = prompt.replace('[THAT_NGON]', '').strip()
+            prompt = auto_tag(inner)
+
         for i in range(args.num_samples):
             print(f"\n{'='*60}\nSample {i+1}/{args.num_samples}\n{'='*60}")
-            print(f"Prompt:   {args.prompt}")
+            print(f"Prompt:   {prompt}")
 
-            _, ids = generate(model, tok, args.prompt, args.max_tokens,
+            _, ids = generate(model, tok, prompt, args.max_tokens,
                               args.temperature, args.top_k, args.top_p, dev)
             response_only = tok.decode(ids).replace("<|end|>", "").strip()
             print(f"Response: {response_only}")
 
-            # Rule check
-            prompt_part = args.prompt.replace("[LUC_BAT]", "").replace("[THAT_NGON]", "").strip().rstrip(",")
+            # Rule check — strip control tokens properly with regex
+            prompt_part = re.sub(r'\[(?:RHYME|TONE|LINK2):[^\]]+\]', '', prompt)
+            prompt_part = prompt_part.replace('[LUC_BAT]', '').replace('[THAT_NGON]', '')
+            prompt_part = ' '.join(prompt_part.split()).strip().rstrip(',')
             resp_clean = response_only.rstrip(",. ")
-            is_luc_bat = "[LUC_BAT]" in args.prompt
-            is_that_ngon = "[THAT_NGON]" in args.prompt
+            is_luc_bat = "[LUC_BAT]" in prompt
+            is_that_ngon = "[THAT_NGON]" in prompt
 
             if is_luc_bat or is_that_ngon:
                 tag = "Lục Bát (6→8)" if is_luc_bat else "Thất Ngôn (7→7)"

@@ -4,6 +4,50 @@
 
 ---
 
+## 🐛 CRITICAL BUG: Tokenizer Corruption from Rhyme/Tone Tokens
+
+> **Date:** 2026-05-20 | **Diagnosed and fixed**
+
+### What happened
+
+Rhyme/tone control tokens (`[RHYME:ong]`, `[TONE:BBBTTB]`, `[LINK2:B]`) were included as **plain text** in the training corpus. When BPE tokenizer was retrained on this corpus, the tokens got split into 5-6 subword pieces:
+
+```
+[LUC_BAT]    → 1 token (id=4)  ✅ special token
+[RHYME:ong]  → 5 tokens         ❌ BPE-split: [, RHYME, :, ong, ]
+[TONE:BBBTTB] → 5 tokens        ❌ BPE-split
+```
+
+### Diagnosis: model IS working, sample.py missing auto_tag
+
+Tests confirmed the model generates coherent Vietnamese poetry when given properly tagged prompts:
+
+```
+Prompt:  [LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng
+Output:  "để anh ngơ ngẩn đứng trông ngóng nhìn em"
+```
+
+The broken output came from plain-text prompts without genre tags. `sample.py` batch mode doesn't call `auto_tag()`, unlike interactive mode which does. Fixed: batch mode now auto-tags.
+
+### Remaining concern: fragmented control tokens
+
+Even though the model works, `[RHYME:ong]` being 5 BPE tokens is suboptimal. The model has to assemble rhyme meaning from 5 positions. For stronger rhyme control, these should be special tokens (single IDs). Left as future improvement.
+
+### Also fixed: sample.py batch mode auto_tag
+
+```python
+# Before: raw prompt passed to generate
+_, ids = generate(model, tok, args.prompt, ...)
+
+# After: auto-detect and tag
+prompt = args.prompt
+if not prompt.startswith('['): prompt = auto_tag(prompt)
+if '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
+    prompt = auto_tag(prompt.replace('[LUC_BAT] ', ''))
+_, ids = generate(model, tok, prompt, ...)
+
+---
+
 ## 🔴 Next: Two-Stage Training
 
 > 📖 Full guide: **[two_stage_training.md](two_stage_training.md)**
