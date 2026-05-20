@@ -184,7 +184,16 @@ def train(max_lines=None, resume_from=None):
             new_state[nk] = v
         model.load_state_dict(new_state, strict=False)
         opt.load_state_dict(ckpt["optimizer_state_dict"])
-        start_step = ckpt.get("step", 0)
+        old_step = ckpt.get("step", 0)
+
+        # If resuming from a checkpoint trained further than max_steps
+        # (e.g. Stage 2 fine-tuning from Stage 1), reset the step counter
+        # so the loop actually runs and LR schedule restarts from warmup.
+        if old_step >= max_steps:
+            print(f"   🔄  Resetting step counter (old={old_step} ≥ max_steps={max_steps})")
+            start_step = 0
+        else:
+            start_step = old_step
 
         # Lower LR for fine-tuning
         cfg["learning_rate"] = 1e-4
@@ -195,6 +204,7 @@ def train(max_lines=None, resume_from=None):
     print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
     model.train()
     step, best_val, loss_sum, loss_cnt = start_step, float("inf"), 0.0, 0
+    loss = torch.tensor(0.0)  # safety net — always bound before save_ckpt
     plateau_count = 0  # evals without improvement
     t0 = time.time()
     it = iter(train_loader)
