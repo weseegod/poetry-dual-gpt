@@ -11,6 +11,7 @@ import argparse
 import re
 from pathlib import Path
 import pandas as pd
+from tones import get_luc_bat_tags, get_that_ngon_tags
 
 ROOT = Path(__file__).parent.parent
 CSV_PATH = ROOT / "data" / "poems_dataset_clean.csv"
@@ -71,7 +72,16 @@ def make_pairs(lines: list[str], genre: str) -> list[str]:
         r_ok = count_syllables(reply) == r_syl_target
 
         if p_ok and r_ok and prompt and reply:
-            pairs.append(f"{START} {tag} {prompt} {REPLY} {reply} {END}")
+            extras = ""
+            if genre == "lục bát":
+                rhyme, tone = get_luc_bat_tags(prompt)
+                extras = f"{rhyme} {tone}".strip()
+            elif genre == "bảy chữ":
+                link2 = get_that_ngon_tags(prompt)
+                if link2:
+                    extras = link2
+            tag_part = f"{tag} {extras}".strip() if extras else tag
+            pairs.append(f"{START} {tag_part} {prompt} {REPLY} {reply} {END}")
     return pairs
 
 
@@ -86,12 +96,17 @@ def make_pairs_song_that(lines: list[str]) -> list[str]:
         # Lines i and i+1 should be 7-syllable each (thất ngôn couplet)
         l1, l2 = lines[i], lines[i + 1]
         if count_syllables(l1) == 7 and count_syllables(l2) == 7:
-            pairs.append(f"{START} [THAT_NGON] {l1} {REPLY} {l2} {END}")
+            link2 = get_that_ngon_tags(l1)
+            tag_part = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+            pairs.append(f"{START} {tag_part} {l1} {REPLY} {l2} {END}")
 
         # Lines i+2 and i+3 should be 6→8 (lục bát couplet)
         l3, l4 = lines[i + 2], lines[i + 3]
         if count_syllables(l3) == 6 and count_syllables(l4) == 8:
-            pairs.append(f"{START} [LUC_BAT] {l3} {REPLY} {l4} {END}")
+            rhyme, tone = get_luc_bat_tags(l3)
+            extras = f"{rhyme} {tone}".strip()
+            tag_part = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
+            pairs.append(f"{START} {tag_part} {l3} {REPLY} {l4} {END}")
 
         i += 4  # jump to next stanza
     return pairs

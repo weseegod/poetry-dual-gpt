@@ -1,6 +1,6 @@
 # 🎵 Phase 9: Rhyme & Tone Conditioning
 
-> Full implementation guide for injecting Vietnamese poetic rules into training data and generation.
+> ✅ Steps 1-4 implemented. Steps 5-8 for evaluation after training.
 
 ---
 
@@ -670,3 +670,31 @@ THẤT NGÔN:
 Tones: B = Bằng (ngang, huyền)  |  T = Trắc (sắc, nặng, hỏi, ngã)
 Rhyme:  everything from last vowel onward after stripping tone marks
 ```
+
+---
+
+## ✅ Implementation Status
+
+| Step | What | Status | File |
+|------|------|--------|------|
+| 1 | Tone classification (get_tone, get_tone_sequence) | ✅ | `src/tones.py` |
+| 2 | Rhyme extraction (strip_tone, get_rhyme_group) | ✅ | `src/tones.py` |
+| 3 | Training data injection (make_pairs, make_pairs_song_that) | ✅ | `src/preprocess.py` |
+| 4 | Generation-time injection (auto_tag in sample.py, server.py) | ✅ | `src/sample.py`, `client/server.py` |
+| 5 | Retrained tokenizer (10,922 vocab) | ✅ | `tokenizer/poetry_bpe.model` |
+| 6 | Regenerated corpus with rhyme/tone tokens | ✅ | `data/poetry_corpus.txt` |
+| 7 | Unit tests (27 new tests, 74 total) | ✅ | `tests/test_tones.py` |
+| 8 | Train model + evaluate | ⏳ | Run Colab cells 6a-6c |
+
+### Training data format (current)
+
+```
+[LUC_BAT] [RHYME:en] [TONE:BBBTTB] Thân em như thể bông sen <|reply|> ...
+[THAT_NGON] [LINK2:B] đẩy hoa dun lá khỏi tay trời <|reply|> ...
+```
+
+### Known limitations
+
+- Compound vowel nuclei (uô, ươ, iê) not detected by heuristic — affects ~5-10% of syllables
+- `[ENDTONE]` not implemented (single-syllable constraint, low expected impact)
+- Grammatical/semantic parallelism needs POS tagger (future work)

@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
 from model import PoetryDuelGPT
+from tones import get_luc_bat_tags, get_that_ngon_tags
 
 ROOT = Path(__file__).parent.parent
 
@@ -101,15 +102,35 @@ def load_model(ckpt_path, device="cpu"):
 # ═══════════════════════════════════════════════════════════════
 
 def auto_tag(prompt):
-    """Auto-wrap genre tag based on syllable count. 6→[LUC_BAT], 7→[THAT_NGON]."""
+    """Auto-wrap genre tag + rhyme/tone based on syllable count."""
     p = prompt.strip()
-    # Already tagged
-    if p.startswith("["):
+    # Already tagged with genre
+    if any(p.startswith(t) for t in ["[LUC_BAT]", "[THAT_NGON]"]):
+        # Inject rhyme/tone if missing
+        if "[LUC_BAT]" in p and "[RHYME:" not in p:
+            line = p.replace("[LUC_BAT]", "").strip()
+            rhyme, tone = get_luc_bat_tags(line)
+            extras = f"{rhyme} {tone}".strip()
+            if extras:
+                p = p.replace("[LUC_BAT]", f"[LUC_BAT] {extras}")
+        if "[THAT_NGON]" in p and "[LINK2:" not in p:
+            line = p.replace("[THAT_NGON]", "").strip()
+            link2 = get_that_ngon_tags(line)
+            if link2:
+                p = p.replace("[THAT_NGON]", f"[THAT_NGON] {link2}")
         return p
+
     syl = len(p.split())
     if syl == 7:
-        return f"[THAT_NGON] {p}"
-    return f"[LUC_BAT] {p}"  # default (6-syl or anything else)
+        link2 = get_that_ngon_tags(p)
+        tag = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+        return f"{tag} {p}"
+
+    # Default: Lục Bát
+    rhyme, tone = get_luc_bat_tags(p)
+    extras = f"{rhyme} {tone}".strip()
+    tag = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
+    return f"{tag} {p}"
 
 
 @torch.no_grad()

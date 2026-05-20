@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from tokenizers import Tokenizer
 
 from model import PoetryDuelGPT
+from tones import get_luc_bat_tags, get_that_ngon_tags
 
 
 # ── Config ──────────────────────────────────────────
@@ -127,10 +128,16 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64)
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
 
-    # Auto-wrap genre tag based on syllable count
+    # Auto-wrap genre + rhyme/tone tags
     if not prompt.startswith("["):
         syl = len(prompt.split())
-        tag = "[THAT_NGON]" if syl == 7 else "[LUC_BAT]"
+        if syl == 7:
+            link2 = get_that_ngon_tags(prompt)
+            tag = f"[THAT_NGON] {link2}".strip() if link2 else "[THAT_NGON]"
+        else:
+            rhyme, tone = get_luc_bat_tags(prompt)
+            extras = f"{rhyme} {tone}".strip()
+            tag = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
         prompt = f"{tag} {prompt}"
 
     ids = tokenizer.encode(prompt).ids

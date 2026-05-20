@@ -19,19 +19,13 @@
 
 ---
 
-## 🟡 Then: Rhyme Conditioning
+## 🟡 Then: Rhyme Conditioning ✅
 
 > 📖 Full guide: **[rhyme_conditioning.md](rhyme_conditioning.md)**
 
-**Goal:** Inject `[RHYME:en]` and `[TONE:BTB]` control tokens so the model learns to produce rhyming, tone-correct poetry.
+**Implemented:** `src/tones.py`, corpus regenerated with `[RHYME:en] [TONE:BBBTTB]`, tokenizer retrained.
 
-**What you need to implement:**
-- `src/tones.py` — tone classification + rhyme extraction utilities
-- Update `preprocess.py` — inject control tokens into training pairs
-- Update `server.py` + `sample.py` — auto-inject during generation
-- Retrain tokenizer + retrain model
-
-**Why this second:** Builds on the two-stage model. The control token format is model-agnostic — works for your 30M GPT and Qwen later.
+**Remaining:** Train model, evaluate rhyme/tone improvement after training.
 
 ---
 
