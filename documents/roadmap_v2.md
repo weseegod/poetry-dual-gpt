@@ -52,21 +52,28 @@ Just swap PoetryDuelGPT(31M) → Qwen2.5(1.5B) + LoRA adapters
 
 ## 📚 Better Training Data
 
-**Goal:** Expand beyond the current 135K-poem single-source corpus.
+**Goal:** Expand beyond the current 135K-poem single-source corpus with poems from 8 canonical Vietnamese poets.
 
-**Current data:** 135,863 poems from one collection → 942K pairs. Good for form/rules, but limited vocabulary and themes (mostly classical/romantic poetry).
+**Target authors** (scraped from isach.info via `data_service/scraper.py`):
 
-**Suggested additions:**
+| # | Author | Period | Poems | Source |
+|---|--------|--------|-------|--------|
+| 1 | **Nguyễn Du** | Trung đại | Truyện Kiều (3,254 lines) | isach.info |
+| 2 | **Hồ Xuân Hương** | Trung đại | ~50 poems | isach.info |
+| 3 | **Nguyễn Khuyến** | Trung đại | ~100 poems | isach.info |
+| 4 | **Hàn Mặc Tử** | Hiện đại | ~80 poems | isach.info |
+| 5 | **Tố Hữu** | Hiện đại | ~100 poems | isach.info |
+| 6 | **Xuân Diệu** | Hiện đại | **160 poems** | isach.info ✅ |
+| 7 | **Huy Cận** | Hiện đại | ~80 poems | isach.info |
+| 8 | **Nguyễn Bính** | Hiện đại | ~80 poems | isach.info |
 
-| Source | Poems | Style | Value |
-|--------|-------|-------|-------|
-| Ca dao / folk poetry | 5,000+ | Rural life, proverbs, love | Everyday Vietnamese, idioms |
-| Nguyễn Du (Truyện Kiều) | 3,254 lines | Epic, classical | Rich vocabulary, literary canon |
-| Tố Hữu | ~500 poems | Revolutionary, modern | 20th century Vietnamese |
-| Xuân Diệu, Huy Cận | ~1,000 poems | Romantic, modern | Diverse themes, modern language |
-| Lục Bát online collections | 10,000+ | Various | Volume for fine-tuning |
-
-**Impact:** Broader vocabulary, more diverse themes, better generalization to novel prompts. The current model only knows the vocabulary of its 135K-poem corpus — adding folk poetry and modern works would dramatically expand its range.
+**Usage:**
+```bash
+pip install playwright && playwright install chromium
+python data_service/scraper.py --all          # download all 8 authors
+python data_service/scraper.py --author xuan_dieu  # single author
+python data_service/scraper.py --dry-run      # preview without downloading
+```
 
 ---
 
