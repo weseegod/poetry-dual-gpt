@@ -65,11 +65,12 @@ NOISE_PREFIXES = [
     'mae west', 'they say', 'an institution',
 ]
 
-def strip_noise_prefix(content, author_name=''):
-    """Remove leading garbage lines: site noise + author header."""
+def strip_noise_prefix(content, author_name='', title=''):
+    """Remove leading garbage: site noise, author name, Tập thơ, embedded title."""
     sep = '<\n>'
     lines = content.split(sep)
     author_lower = author_name.lower().strip() if author_name else ''
+    title_lower = title.lower().strip() if title else ''
 
     while lines:
         first = lines[0].strip().lower()
@@ -79,14 +80,20 @@ def strip_noise_prefix(content, author_name=''):
         # Noise keywords
         if any(n in first for n in NOISE_PREFIXES):
             lines = lines[1:]; continue
-        # Author name alone (e.g. "Hàn Mặc Tử")
+        # Author name alone
         if author_lower and first == author_lower:
             lines = lines[1:]
-            # Also skip "Tập thơ ..." that follows author name
             if lines and ('tập thơ' in lines[0].lower()):
                 lines = lines[1:]
             continue
-        # "Tập thơ Author:" without preceding author line
+        # Embedded metadata: title → author → "Tập thơ ..." (3 lines)
+        if (title_lower and len(lines) >= 3 and
+            first == title_lower and
+            lines[1].strip().lower() == author_lower and
+            'tập thơ' in lines[2].strip().lower()):
+            lines = lines[3:]
+            continue
+        # "Tập thơ Author:" without preceding lines
         if 'tập thơ' in first and first.endswith(':'):
             lines = lines[1:]; continue
         # Non-Vietnamese or very short
@@ -119,7 +126,7 @@ def load_scraped():
     # Clean prefix garbage
     for idx, row in scraped.iterrows():
         scraped.at[idx, 'content'] = strip_noise_prefix(
-            str(row['content']), str(row.get('author', '')))
+            str(row['content']), str(row.get('author', '')), str(row.get('title', '')))
 
     print(f"  Total (deduped): {len(scraped)} poems")
     return scraped
