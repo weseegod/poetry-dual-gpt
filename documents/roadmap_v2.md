@@ -23,6 +23,8 @@ Same training format → same preprocess.py → same control tokens
 Just swap PoetryDuelGPT(31M) → Qwen2.5(1.5B) + LoRA adapters
 ```
 
+**⚡ Base, not Instruct.** The base model (`Qwen/Qwen2.5-1.5B`) does pure next-token prediction — no chat template, no instruction format baked in. The Instruct variant (`Qwen/Qwen2.5-1.5B-Instruct`) is optimized for `<|im_start|>user`/`<|im_start|>assistant` chat format, which actively fights our `<|start|> [LUC_BAT] ... <|reply|>` format. Base model accepts any format; Instruct has been trained to *refuse* non-chat formats. Start with base, experiment with Instruct later.
+
 **Requirements:** `transformers` + `peft` + `bitsandbytes`. Colab T4/L4 handles 4-bit QLoRA.
 
 **Expected quality:** Semantic coherence from "medium" → "high". Rule accuracy similar or better. Poetry that reads like poetry, not just rule-compliant text.
