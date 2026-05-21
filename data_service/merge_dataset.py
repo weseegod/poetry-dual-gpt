@@ -1,96 +1,114 @@
 """
-Validate scraped poems, deduplicate, and merge into a new dataset.
-
-What it does:
-  1. Read all data_service/raw/*.csv files
-  2. Validate each poem (must have content, Vietnamese chars, reasonable line count)
-  3. Check for duplicates against poems_dataset_clean.csv
-  4. Report: new, duplicate, invalid, stats by author
-  5. Merge valid new poems → data/poems_dataset_merged.csv
+Validate scraped poems, deduplicate, and merge into dataset.
 
 Usage:
-  python data_service/merge_dataset.py            # validate + merge (dry-run)
-  python data_service/merge_dataset.py --commit   # actually merge
-  python data_service/merge_dataset.py --validate # only validate, no merge
+  python data_service/merge_dataset.py                # dry-run: stats only
+  python data_service/merge_dataset.py --extract-new   # extract new poems → new/*.csv
+  python data_service/merge_dataset.py --commit        # merge from new/ into dataset
 """
 
-import argparse, hashlib, os, re, sys
+import argparse, hashlib, os, re, shutil, sys
 from pathlib import Path
 
 import pandas as pd
 
 ROOT = Path(__file__).parent.parent
 RAW_DIR = ROOT / "data_service" / "raw"
+NEW_DIR = ROOT / "data_service" / "new"
 EXISTING_CSV = ROOT / "data" / "poems_dataset_clean.csv"
 MERGED_CSV = ROOT / "data" / "poems_dataset_merged.csv"
 
+COLUMNS = ['content', 'title', 'url', 'genre', 'period', 'specific_genre', 'author']
 
-# ═══════════════════════════════════════════════════════
-#  VALIDATION
-# ═══════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════
+#  HASHING
+# ═════════════════════════════════════════════════
+
+def content_hash(text):
+    """Normalized hash: lowercase, collapse whitespace."""
+    t = re.sub(r'\s+', ' ', str(text).strip().lower())
+    return hashlib.sha256(t.encode()).hexdigest()[:16]
+
+def title_hash(text):
+    """Normalized title hash: lowercase, strip punctuation."""
+    t = re.sub(r'[^\w\s]', '', str(text).lower().strip())
+    t = re.sub(r'\s+', ' ', t)
+    return hashlib.sha256(t.encode()).hexdigest()[:12]
+
+
+# ═════════════════════════════════════════════════
+#  VALIDATE
+# ═════════════════════════════════════════════════
 
 def validate_poem(row):
-    """Check if a scraped poem row is valid. Returns (is_valid, reason)."""
     content = str(row.get('content', ''))
     title = str(row.get('title', ''))
-    author = str(row.get('author', ''))
-    genre = str(row.get('genre', ''))
-
-    # Must have content
     if not content or len(content) < 20:
         return False, "empty or too short"
-
-    # Must contain Vietnamese characters
     if not any(ord(c) > 127 for c in content):
-        return False, "no Vietnamese characters"
-
-    # Content must have lines (at least 2)
+        return False, "no Vietnamese"
     lines = content.split('<\n>')
     if len(lines) < 2:
         return False, f"only {len(lines)} line(s)"
-
-    # Each line should be reasonable length
-    for line in lines:
-        words = line.split()
-        if len(words) < 2:
-            return False, f"line too short: '{line[:40]}'"
-
-    # Title should not be empty
     if not title or len(title) < 2:
         return False, "empty title"
-
     return True, "ok"
 
 
-def compute_hash(content):
-    """Normalized content hash for fuzzy dedup: strip whitespace, lowercase."""
-    text = str(content).strip().lower()
-    text = re.sub(r'\s+', ' ', text)  # normalize whitespace
-    return hashlib.sha256(text.encode()).hexdigest()[:16]
+# ═════════════════════════════════════════════════
+#  LOAD & CLEAN
+# ═════════════════════════════════════════════════
 
+NOISE_PREFIXES = [
+    'tập thơ', 'cách sử dụng', 'chuỗi tìm kiếm', 'qr code',
+    'bạn không đủ sức', 'nếu bạn', 'mọt sách', 'thư viện',
+    'mae west', 'they say', 'an institution',
+]
 
-def compute_title_hash(title):
-    """Normalized title hash: lowercase, strip punctuation."""
-    text = re.sub(r'[^\w\s]', '', str(title).lower().strip())
-    text = re.sub(r'\s+', ' ', text)
-    return hashlib.sha256(text.encode()).hexdigest()[:12]
+def strip_noise_prefix(content, author_name=''):
+    """Remove leading garbage lines: site noise + author header."""
+    sep = '<\n>'
+    lines = content.split(sep)
+    author_lower = author_name.lower().strip() if author_name else ''
 
+    while lines:
+        first = lines[0].strip().lower()
+        if not first:
+            lines = lines[1:]; continue
+        words = first.split()
+        # Noise keywords
+        if any(n in first for n in NOISE_PREFIXES):
+            lines = lines[1:]; continue
+        # Author name alone (e.g. "Hàn Mặc Tử")
+        if author_lower and first == author_lower:
+            lines = lines[1:]
+            # Also skip "Tập thơ ..." that follows author name
+            if lines and ('tập thơ' in lines[0].lower()):
+                lines = lines[1:]
+            continue
+        # "Tập thơ Author:" without preceding author line
+        if 'tập thơ' in first and first.endswith(':'):
+            lines = lines[1:]; continue
+        # Non-Vietnamese or very short
+        if len(words) <= 1:
+            lines = lines[1:]; continue
+        if len(words) <= 2 and not any(ord(c) > 127 for c in first):
+            lines = lines[1:]; continue
+        break
+    return sep.join(lines)
 
-# ═══════════════════════════════════════════════════════
-#  MAIN LOGIC
-# ═══════════════════════════════════════════════════════
 
 def load_scraped():
-    """Load all scraped poems from data_service/raw/."""
-    raw_files = sorted(RAW_DIR.glob("*.csv"))
-    if not raw_files:
-        print("❌ No scraped files found in data_service/raw/")
+    """Load + clean all raw/*.csv files."""
+    files = sorted(RAW_DIR.glob("*.csv"))
+    if not files:
+        print("❌ No files in data_service/raw/")
         print("   Run: python data_service/scraper.py --all")
         return None
 
-    print(f"\n📁  Loading {len(raw_files)} scraped files:")
+    print(f"\n📁  {len(files)} scraped files:")
     dfs = []
-    for f in raw_files:
+    for f in files:
         df = pd.read_csv(f)
         dfs.append(df)
         print(f"    {f.name}: {len(df)} poems")
@@ -98,201 +116,178 @@ def load_scraped():
     scraped = pd.concat(dfs, ignore_index=True)
     scraped = scraped.drop_duplicates(subset=['url'])
 
-    # Clean "Tập thơ ..." / "Thơ ..." prefix from content
+    # Clean prefix garbage
     for idx, row in scraped.iterrows():
-        content = str(row['content'])
-        sep = '<\\n>'
-        if content.startswith('Tập thơ ') and sep in content:
-            content = content.split(sep, 1)[1] if content.split(sep, 1)[0].endswith(':') else content
-        if content.startswith('Thơ ') and sep in content:
-            content = content.split(sep, 1)[1] if content.split(sep, 1)[0].endswith(':') else content
-        scraped.at[idx, 'content'] = content
+        scraped.at[idx, 'content'] = strip_noise_prefix(
+            str(row['content']), str(row.get('author', '')))
 
-    print(f"  Total (deduped by URL): {len(scraped)} poems")
+    print(f"  Total (deduped): {len(scraped)} poems")
     return scraped
 
 
-def validate_all(scraped):
-    """Validate all poems. Print report."""
-    print(f"\n🔍  Validating {len(scraped)} poems...")
-    results = []
-    for _, row in scraped.iterrows():
-        ok, reason = validate_poem(row)
-        results.append((ok, reason))
+# ═════════════════════════════════════════════════
+#  EXTRACT NEW
+# ═════════════════════════════════════════════════
 
-    valid_mask = [r[0] for r in results]
+def extract_new(scraped):
+    """Validate scraped, check against existing, save new poems to new/*.csv."""
+    # Validate
+    valid_mask = [validate_poem(row)[0] for _, row in scraped.iterrows()]
     valid = scraped[valid_mask].copy()
-    invalid = scraped[[not v for v in valid_mask]].copy()
+    invalid = scraped[[not v for v in valid_mask]]
 
-    print(f"  ✅ Valid:   {len(valid)}")
-    print(f"  ❌ Invalid: {len(invalid)}")
-    if len(invalid) > 0:
-        print(f"\n  Invalid poems:")
-        for _, row in invalid.iterrows():
-            ok, reason = validate_poem(row)
-            print(f"    ❌ [{row.get('author', '?')}] {row.get('title', '?')[:50]} — {reason}")
+    print(f"\n🔍  Validate: {len(valid)} ✅  {len(invalid)} ❌")
+    for _, row in invalid.iterrows():
+        _, reason = validate_poem(row)
+        print(f"    ❌ [{row.get('author','?')}] {str(row.get('title',''))[:50]} — {reason}")
 
-    return valid, invalid
+    # Check against existing
+    existing = pd.read_csv(EXISTING_CSV, dtype={'content': str, 'title': str})
+    existing = existing.dropna(subset=['content'])
+    print(f"\n📊  Existing dataset: {len(existing):,} poems")
 
+    content_hashes = {content_hash(str(r['content'])) for _, r in existing.iterrows()}
+    title_hashes = {title_hash(str(r['title'])) for _, r in existing.iterrows()}
 
-def check_duplicates(valid, existing_path):
-    """Check new poems against existing dataset using normalized hashes."""
-    print(f"\n📊  Checking against {existing_path.name}...")
-    existing = pd.read_csv(existing_path, dtype={'content': str, 'title': str})
-    print(f"  Existing: {len(existing):,} poems")
-
-    # Build lookup: content hash + title hash for existing poems
-    existing_content_hashes = set()
-    existing_title_hashes = set()
-    for _, row in existing.iterrows():
-        existing_content_hashes.add(compute_hash(str(row['content'])))
-        existing_title_hashes.add(compute_title_hash(str(row['title'])))
-
-    dupes = []
-    truly_new = []
+    dupes, new_rows = [], []
     for _, row in valid.iterrows():
-        ch = compute_hash(str(row['content']))
-        th = compute_title_hash(str(row['title']))
-        # Match by content hash OR by title hash (same poem, different formatting)
-        if ch in existing_content_hashes or th in existing_title_hashes:
+        ch = content_hash(str(row['content']))
+        th = title_hash(str(row['title']))
+        if ch in content_hashes or th in title_hashes:
             dupes.append(row)
         else:
-            truly_new.append(row)
+            new_rows.append(row)
 
-    print(f"  New (unique):    {len(truly_new)}")
-    print(f"  Duplicates:      {len(dupes)} (content hash or title match)")
-    if len(dupes) > 0 and len(dupes) <= 10:
-        print(f"\n  Duplicate poems:")
-        for row in dupes:
-            print(f"    ♻️  [{row['author']}] {str(row['title'])[:60]}")
-    elif len(dupes) > 10:
-        print(f"\n  Duplicate poems (first 10):")
-        for row in dupes[:10]:
-            print(f"    ♻️  [{row['author']}] {str(row['title'])[:60]}")
-        print(f"    ... +{len(dupes)-10} more")
+    new_df = pd.DataFrame(new_rows) if new_rows else pd.DataFrame()
+    print(f"  New: {len(new_df)}  |  Duplicates: {len(dupes)}")
 
-    return pd.DataFrame(truly_new) if truly_new else pd.DataFrame()
-
-
-def stats_by_author(scraped, valid, new):
-    """Print per-author statistics."""
+    # Per-author stats
+    authors = valid['author'].unique()
     print(f"\n📈  By author:")
-
-    def count(df, author):
-        if df is None or len(df) == 0:
-            return 0
-        return df['author'].eq(author).sum()
-
-    authors = scraped['author'].unique()
     for a in authors:
-        total = count(scraped, a)
-        v = count(valid, a)
-        n = count(new, a) if new is not None else 0
-        print(f"  {a:<20s}  scraped={total:3d}  valid={v:3d}  new={n:3d}  "
-              f"{'✅' if v == total else '⚠️' if v > 0 else '❌'}")
+        t = valid['author'].eq(a).sum()
+        n = new_df['author'].eq(a).sum() if len(new_df) > 0 else 0
+        mark = '⚠️' if t > 0 and n == 0 else '✅'
+        print(f"  {a:<20s}  scraped={t:3d}  new={n:3d}  {mark}")
+
+    if len(new_df) == 0:
+        print("\n✅ No new poems to extract.")
+        return 0
+
+    # Save new poems by author
+    NEW_DIR.mkdir(parents=True, exist_ok=True)
+    # Clean old new/ files
+    for f in NEW_DIR.glob("*_new.csv"):
+        f.unlink()
+
+    total = 0
+    for a in new_df['author'].unique():
+        subset = new_df[new_df['author'] == a][COLUMNS]
+        fname = NEW_DIR / f"{a.lower().replace(' ', '_')}_new.csv"
+        subset.to_csv(fname, index=False)
+        print(f"  💾  {fname.name}: {len(subset)} poems")
+        total += len(subset)
+
+    print(f"\n✅ Extracted {total} new poems to data_service/new/")
+    print(f"   Review files, then run: python data_service/merge_dataset.py --commit")
+    return total
 
 
-def merge(new_df, existing_path, output_path):
-    """Merge new poems into existing dataset."""
-    print(f"\n📦  Merging...")
-    existing = pd.read_csv(existing_path)
+# ═════════════════════════════════════════════════
+#  MERGE
+# ═════════════════════════════════════════════════
 
-    # Ensure column alignment
-    cols = ['content', 'title', 'url', 'genre', 'period', 'specific_genre', 'author']
-    for c in cols:
+def merge():
+    """Merge all new/*.csv files into dataset."""
+    files = sorted(NEW_DIR.glob("*_new.csv"))
+    if not files:
+        print("❌ No files in data_service/new/")
+        print("   Run: python data_service/merge_dataset.py --extract-new")
+        return
+
+    print(f"\n📦  Merging {len(files)} new files:")
+    new_parts = []
+    for f in files:
+        df = pd.read_csv(f)[COLUMNS]
+        new_parts.append(df)
+        print(f"    {f.name}: {len(df)} poems")
+
+    new_df = pd.concat(new_parts, ignore_index=True)
+    existing = pd.read_csv(EXISTING_CSV)
+
+    # Align columns
+    for c in COLUMNS:
         if c not in existing.columns:
             existing[c] = ""
-        if c not in new_df.columns:
-            new_df[c] = ""
-    existing = existing[cols]
-    new_df = new_df[cols]
+    existing = existing[COLUMNS]
 
-    # Backup existing
-    backup = existing_path.with_suffix('.csv.bak')
-    import shutil
-    shutil.copy2(existing_path, backup)
-    print(f"  Backup: {backup}")
+    # Backup
+    backup = EXISTING_CSV.with_suffix('.csv.bak')
+    shutil.copy2(EXISTING_CSV, backup)
 
     merged = pd.concat([existing, new_df], ignore_index=True)
-    merged.to_csv(output_path, index=False)
-    print(f"  Existing: {len(existing):,}  +  New: {len(new_df):,}  →  {len(merged):,}")
-    print(f"  Saved: {output_path}")
+    merged.to_csv(MERGED_CSV, index=False)
 
-    # Genre stats
+    print(f"\n  Existing: {len(existing):,}  +  New: {len(new_df):,}  →  {len(merged):,}")
+    print(f"  Backup: {backup}")
+    print(f"  Output: {MERGED_CSV}")
+
+    # Genre breakdown
     lb = merged['genre'].eq('lục bát').sum()
     tn = merged['genre'].eq('bảy chữ').sum()
     other = len(merged) - lb - tn
     print(f"  Lục bát: {lb:,}  |  Bảy chữ: {tn:,}  |  Other: {other:,}")
-    return merged
+    print(f"\n✅ Done!")
 
 
-# ═══════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════
 #  CLI
-# ═══════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════
 
 def main():
     p = argparse.ArgumentParser(description="Validate and merge scraped poems")
+    p.add_argument("--extract-new", action="store_true",
+                   help="Extract new poems to data_service/new/*.csv for review")
     p.add_argument("--commit", action="store_true",
-                   help="Actually merge (without this flag, dry-run only)")
-    p.add_argument("--validate", action="store_true",
-                   help="Only validate, don't merge")
-    p.add_argument("--list-new", action="store_true",
-                   help="Show all new poems with preview")
+                   help="Merge poems from data_service/new/ into dataset")
     args = p.parse_args()
 
+    if args.commit:
+        merge()
+        return
+
     if not EXISTING_CSV.exists():
-        print(f"❌ Existing dataset not found: {EXISTING_CSV}")
+        print(f"❌ Dataset not found: {EXISTING_CSV}")
         sys.exit(1)
 
-    # 1. Load scraped
     scraped = load_scraped()
     if scraped is None:
         return
 
-    # 2. Validate
-    valid, invalid = validate_all(scraped)
-
-    # 3. Duplicate check
-    new = check_duplicates(valid, EXISTING_CSV)
-
-    # 4. Stats
-    stats_by_author(scraped, valid, new)
-
-    # Show new poems for review
-    if args.list_new and len(new) > 0:
-        print(f"\n{'='*60}")
-        print(f"📋  NEW POEMS ({len(new)} total)")
-        print(f"{'='*60}")
-        for _, row in new.iterrows():
-            author = str(row.get('author', ''))
-            title = str(row.get('title', ''))
-            genre = str(row.get('genre', ''))
-            content = str(row.get('content', ''))
-            lines = content.split('<\n>')
-            preview = ' '.join(lines[:2])
-            print(f"\n  [{author}] {title} ({genre})")
-            print(f"    {preview[:120]}{'...' if len(preview) > 120 else ''}")
-
-    # 5. Merge (optional)
-    if args.validate:
-        print(f"\n✅ Validation complete. {len(new)} new poems ready to merge.")
-        print(f"   Run with --commit to merge.")
+    if args.extract_new:
+        extract_new(scraped)
         return
 
-    if not args.commit:
-        print(f"\n{'='*60}")
-        print(f"🔍  DRY-RUN — no changes made.")
-        print(f"   {len(new)} new poems would be merged.")
-        print(f"   Run with --commit to actually merge.")
-        print(f"{'='*60}")
-        return
+    # Default: dry-run stats
+    valid_mask = [validate_poem(row)[0] for _, row in scraped.iterrows()]
+    valid = scraped[valid_mask]
 
-    if len(new) == 0:
-        print(f"\n✅ No new poems to merge.")
-        return
+    existing = pd.read_csv(EXISTING_CSV, dtype={'content': str, 'title': str})
+    existing = existing.dropna(subset=['content'])
+    content_hashes = {content_hash(str(r['content'])) for _, r in existing.iterrows()}
+    title_hashes = {title_hash(str(r['title'])) for _, r in existing.iterrows()}
 
-    merge(new, EXISTING_CSV, MERGED_CSV)
-    print(f"\n✅ Merge complete! New dataset: {MERGED_CSV}")
+    new_count = 0
+    for _, row in valid.iterrows():
+        ch = content_hash(str(row['content']))
+        th = title_hash(str(row['title']))
+        if ch not in content_hashes and th not in title_hashes:
+            new_count += 1
+
+    print(f"\n📊  Scraped: {len(scraped)}  |  Valid: {len(valid)}  |  New: {new_count}")
+    print(f"   Existing dataset: {len(existing):,} poems")
+    print(f"\n   Next: python data_service/merge_dataset.py --extract-new")
+    print(f"         python data_service/merge_dataset.py --commit")
 
 
 if __name__ == "__main__":

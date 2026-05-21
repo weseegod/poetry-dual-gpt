@@ -121,45 +121,50 @@ def _extract_body(html):
         'nghệ thuật sống', 'việc làm', 'giáo dục', 'lịch sử',
         'danh mục', 'ngẫu nhiên', 'thêm bài', 'xem hướng dẫn',
         'ai đang online', 'nạp gạo', 'phú ông', 'ca sĩ', 'tác giả',
+        'cách sử dụng', 'qr code', 'chuỗi tìm kiếm', 'tập thơ',
         'chọn ngày giờ', 'cưới hỏi', 'đạo hiếu', 'giỗ tết',
         'khấn nôm', 'phong thủy', 'sinh dưỡng', 'tang lễ',
         'cẩm nang', 'chuyện công sở', 'thăng tiến', 'phỏng vấn',
         'tìm việc', 'thị trường', 'nhà tuyển dụng', 'đổi nghề',
         'lương bổng', 'sức khỏe', 'thưởng thức', 'công sở',
         'học đường', 'gia đình', 'nấu ăn', 'tình yêu', 'đắc nhân tâm',
+        'bạn không đủ sức', 'nếu bạn', 'mae west', 'they say love',
+        'an institution', 'mọt sách', 'thư viện trực tuyến',
     }
     vn_lines = []
     for line in lines:
         if not any(ord(c) > 127 for c in line):
             continue
-        if any(n in line.lower() for n in NOISE):
+        lower = line.lower()
+        if any(n in lower for n in NOISE):
             continue
         if len(line) < 5:
             continue
         vn_lines.append(line)
 
-    # Group into contiguous blocks of poem-like lines
+    # Group into contiguous blocks of poem-like lines (5-12 words)
     blocks, current = [], []
     for line in vn_lines:
         words = line.split()
-        if 3 <= len(words) <= 15:
+        if 4 <= len(words) <= 15:
             current.append(line)
         else:
-            if len(current) >= 4:
+            if len(current) >= 3:
                 blocks.append('\n'.join(current))
             current = []
-    if len(current) >= 4:
+    if len(current) >= 3:
         blocks.append('\n'.join(current))
 
     if not blocks:
         return '\n'.join(vn_lines)
 
     result = max(blocks, key=len)
-    # Strip "Tập thơ ..." header
+    # Strip any remaining header lines at the start
     lines = result.split('\n')
-    if lines and re.match(r'(Tập thơ|Thơ)\s+.+:', lines[0]):
+    # Remove leading lines that look like headers (short, no sentence structure)
+    while lines and (len(lines[0].split()) <= 3 or 'tập thơ' in lines[0].lower()):
         lines = lines[1:]
-    return '\n'.join(lines)
+    return '\n'.join(lines) if lines else result
 
 
 def _detect_genre(content):
