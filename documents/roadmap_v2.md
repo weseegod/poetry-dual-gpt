@@ -90,3 +90,34 @@ Full evaluation: [rule_evaluation.md](rule_evaluation.md)
 | 1 | Qwen2.5-1.5B QLoRA | 🚀🚀🚀 | 1 day | Nothing — same data, same tokens |
 | 2 | Multi-couplet generation | 🚀🚀 | 2-3 days | Enables end-rhyme rule |
 | 3 | Better training data | 🚀 | Ongoing | Requires data collection |
+| 4 | Scheduled sampling | 🚀🚀 | 1 hour | Reduces train/inference gap |
+| 5 | Curriculum learning | 🚀 | 30 min | Train on short→long poems |
+
+---
+
+## 🎓 Scheduled Sampling
+
+**Problem:** Teacher forcing gap — during training the model always sees perfect context, but at inference it sees its own (potentially wrong) previous tokens. This creates a gap: training loss looks good, but real generation quality is worse.
+
+**Fix:** During training, gradually replace some ground-truth tokens with the model's own predictions. Early steps use 100% teacher forcing; later steps mix in model-generated tokens. The model learns to recover from its own mistakes.
+
+**Implementation (~10 lines in train.py):**
+```python
+use_teacher_prob = max(0.5, 1.0 - step / total_steps * 0.5)  # decay 1.0→0.5
+mask = torch.rand(x.shape, device=x.device) < use_teacher_prob
+x_input = torch.where(mask, x_teacher, x_model_generated)
+```
+
+**Expected:** More robust generation, fewer empty/malformed outputs, higher rhyme/tone accuracy at inference.
+
+---
+
+## 📏 Curriculum Learning
+
+**Problem:** Model trains on random poem lengths. Short poems (2 lines) and long poems (20+ lines) are mixed together. The model never learns progressive complexity.
+
+**Fix:** Sort training data by poem length. Start with short poems (2-4 lines), gradually add longer ones. The model learns basic form first, then extends to longer sequences.
+
+**Implementation:** Sort `poetry_corpus.txt` by token length, or group by number of couplets. Modify `PoetryDataset` to sample from progressively larger subsets.
+
+**Expected:** Better form adherence on long sequences, smoother training curves.
