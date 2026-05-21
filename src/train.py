@@ -17,7 +17,7 @@ from tokenizers import Tokenizer
 from tqdm import tqdm
 
 from model import PoetryDuelGPT
-from dataset import PoetryDataset, tokenize_corpus, get_dataloaders
+from dataset import PoetryDataset, tokenize_corpus, get_dataloaders, CurriculumDataset
 
 ROOT = Path(__file__).parent.parent
 
@@ -106,7 +106,7 @@ def save_ckpt(model, opt, step, loss, vocab, cfg, fname):
 #  TRAINING LOOP
 # ═══════════════════════════════════════════════════════════════
 
-def train(max_lines=None, resume_from=None):
+def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.25):
     cfg, dev = CONFIG, CONFIG["device"]
     mode = cfg["mode"]; S = cfg[mode]
     max_steps, batch_size = S["max_steps"], S["batch_size"]
@@ -144,9 +144,27 @@ def train(max_lines=None, resume_from=None):
     data = tokenize_corpus(lines, tok)
 
     # ── DataLoaders ──
-    train_loader, val_loader = get_dataloaders(data, cfg["block_size"], batch_size,
-                                                val_fraction=0.05,
-                                                num_workers=2 if dev == "cuda" else 0)
+    if curriculum:
+        # Curriculum learning: start with first curriculum_rate of sorted data,
+        # progressively expand window during training.
+        split = int(len(data) * 0.05)  # val always from last 5%
+        train_data, val_data = data[:-split], data[-split:]
+
+        train_ds = CurriculumDataset(train_data, cfg["block_size"], max_fraction=curriculum_rate)
+        val_ds = PoetryDataset(val_data, cfg["block_size"])
+
+        print(f"Train: {len(train_ds):,} samples ({curriculum_rate:.0%} of {len(train_data) - cfg['block_size']:,}) | Val: {len(val_ds):,}")
+
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                                   pin_memory=True, num_workers=2 if dev == "cuda" else 0,
+                                   drop_last=True)
+        val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                                 pin_memory=True, num_workers=2 if dev == "cuda" else 0)
+        print(f"   📈  Curriculum: starts at {curriculum_rate:.0%} → 100% over training")
+    else:
+        train_loader, val_loader = get_dataloaders(data, cfg["block_size"], batch_size,
+                                                    val_fraction=0.05,
+                                                    num_workers=2 if dev == "cuda" else 0)
 
     # ── Model ──
     model = PoetryDuelGPT(V, cfg["n_embd"], cfg["n_head"], cfg["n_layer"],
@@ -222,9 +240,28 @@ def train(max_lines=None, resume_from=None):
         lr = get_lr(step, cfg["warmup_steps"], max_steps, cfg["learning_rate"], cfg["min_lr"])
         for pg in opt.param_groups: pg["lr"] = lr
 
+        # ── Scheduled Sampling ──
+        # Replace a subset of teacher tokens with model's own argmax predictions,
+        # forcing it to learn recovery from its mistakes. Decays from 100%→50%
+        # teacher over training to reduce the train/inference mismatch.
+        use_teacher_prob = max(0.5, 1.0 - step / max_steps * 0.5)
+        if use_teacher_prob < 1.0:
+            # 1. Get model's own predictions from teacher input
+            with torch.autocast(device_type=dev, dtype=torch.bfloat16):
+                logits, _ = model(x, y)
+            model_tokens = logits.argmax(dim=-1)  # (B, T) — what model would generate
+            # Shift: prediction at position t becomes input at position t+1
+            x_model = torch.cat([x[:, :1], model_tokens[:, :-1]], dim=1)
+            # 2. Mix: with prob use_teacher_prob, keep teacher; else use model's own
+            mask = torch.rand(x.shape, device=dev) < use_teacher_prob
+            x_input = torch.where(mask, x, x_model)
+        else:
+            x_input = x  # early steps: pure teacher forcing
+
         # Forward + backward
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
-            _, loss = model(x, y)
+            _, loss = model(x_input, y)
+        
         opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg["grad_clip"])
@@ -268,6 +305,17 @@ def train(max_lines=None, resume_from=None):
                 nxt = min(step + eval_interval, max_steps)
                 pbar = tqdm(total=eval_interval, desc=f"  Steps {step}-{nxt}", unit="s", leave=False)
 
+        # ── Curriculum expansion ──
+        if curriculum and step % (eval_interval * 2) == 0:
+            # Gradually grow from curriculum_rate → 1.0 over first 80% of training
+            progress = min(1.0, step / (max_steps * 0.8))
+            new_fraction = curriculum_rate + (1.0 - curriculum_rate) * progress
+            old_n = len(train_ds)
+            train_ds.expand(new_fraction)
+            if len(train_ds) > old_n:
+                print(f"   📈  Curriculum: {old_n:,} → {len(train_ds):,} samples ({new_fraction:.1%})")
+                it = iter(train_loader)  # force DataLoader re-sampling with new range
+
         # ── Save periodic checkpoint ──
         if step % 5000 == 0:
             p = save_ckpt(model, opt, step, loss.item(), V, cfg, f"step_{step}.pt")
@@ -292,6 +340,8 @@ if __name__ == "__main__":
     p.add_argument("--resume", type=str, default=None, help="Resume from checkpoint (for fine-tuning)")
     p.add_argument("--corpus", type=str, default=None, help="Override corpus file (e.g. data/corpus_luc_bat.txt)")
     p.add_argument("--name", type=str, default="", help="Prefix for checkpoint files (e.g. stage1_)")
+    p.add_argument("--curriculum", action="store_true", help="Progressive difficulty: short→long poems")
+    p.add_argument("--curriculum_rate", type=float, default=0.25, help="Starting fraction of curriculum data")
     args = p.parse_args()
 
     if args.mode:       CONFIG["mode"] = args.mode
@@ -301,4 +351,5 @@ if __name__ == "__main__":
     if args.corpus:     CONFIG["corpus_path"] = args.corpus
     if args.name:       CONFIG["ckpt_prefix"] = args.name
 
-    train(args.max_lines, resume_from=args.resume)
+    train(args.max_lines, resume_from=args.resume, curriculum=args.curriculum, 
+          curriculum_rate=args.curriculum_rate)

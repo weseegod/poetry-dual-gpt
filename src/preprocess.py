@@ -119,7 +119,7 @@ def is_song_that(row) -> bool:
     return "song thất" in sg.lower()
 
 
-def preprocess(csv_path=None, output_path=None, max_poems=None):
+def preprocess(csv_path=None, output_path=None, max_poems=None, curriculum=False):
     """Main: read clean CSV → create pairs for all genres."""
     csv_path = Path(csv_path or CSV_PATH)
     output_path = Path(output_path or OUTPUT_PATH)
@@ -156,6 +156,12 @@ def preprocess(csv_path=None, output_path=None, max_poems=None):
             genre = row["genre"]
             all_pairs.extend(make_pairs(lines, genre))
 
+    # Curriculum: sort pairs by token count (short → long)
+    if curriculum:
+        all_pairs.sort(key=len)  # approximate token count via char length
+        output_path = output_path.parent / "poetry_corpus_curriculum.txt"
+        print(f"  Curriculum: sorted {len(all_pairs):,} pairs by length (short→long)")
+
     # Save
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
@@ -176,5 +182,6 @@ if __name__ == "__main__":
     p.add_argument("--csv", type=str, default=None)
     p.add_argument("--output", type=str, default=None)
     p.add_argument("--max", type=int, default=None, help="Limit poems for testing")
+    p.add_argument("--curriculum", action="store_true", help="Sort pairs by length (short→long) for curriculum learning")
     args = p.parse_args()
-    preprocess(args.csv, args.output, args.max)
+    preprocess(args.csv, args.output, args.max, args.curriculum)

@@ -96,6 +96,32 @@ class PoetryDataset(Dataset):
         return chunk[:self.block_size], chunk[1:]           # x, y (shifted by 1)
 
 
+class CurriculumDataset(PoetryDataset):
+    """
+    PoetryDataset with progressive difficulty — only exposes the first
+    `max_fraction` of the token stream. Grow max_fraction from 0.1→1.0
+    during training to implement curriculum learning.
+    
+    Data must be pre-sorted by difficulty (short→long pairs).
+    """
+    def __init__(self, data: torch.Tensor, block_size: int, max_fraction: float = 0.1):
+        super().__init__(data, block_size)
+        self.max_fraction = min(1.0, max(max_fraction, 0.05))
+
+    def __len__(self):
+        return int(super().__len__() * self.max_fraction)
+
+    def __getitem__(self, idx):
+        # Clamp idx to valid range for current fraction
+        idx = idx % len(self)
+        return super().__getitem__(idx)
+
+    def expand(self, new_fraction: float):
+        """Grow the curriculum window. Called periodically during training."""
+        self.max_fraction = min(1.0, max(new_fraction, 0.05))
+        return len(self)
+
+
 # ═══════════════════════════════════════════════════════════════
 #  DATALOADER FACTORY
 # ═══════════════════════════════════════════════════════════════
