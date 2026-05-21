@@ -1,132 +1,113 @@
-Here is a comprehensive, production-grade `README.md` designed specifically to showcase your machine learning engineering skills to tech recruiters. It emphasizes engineering choices, architectural details, and hardware optimization.
+# 🎭 PoetryDuel-GPT — Vietnamese Poetry Generator
+
+A 31M-parameter GPT-style Transformer built from scratch in raw PyTorch for Vietnamese poetry generation (Lục Bát 6→8, Thất Ngôn 7→7). Zero HuggingFace wrappers. Trained with rhyme, tone, and tonal contrast conditioning via 335 custom special tokens.
+
+**[v1.0](https://github.com/weseegod/poetry-dual-gpt/releases/tag/v1.0)** — [Colab Notebook](https://colab.research.google.com/github/weseegod/poetry-dual-gpt/blob/main/colab/colab_train.ipynb)
 
 ---
 
-# PoetryDuel-GPT: Custom Autoregressive Transformer for Vietnamese Poetic Duels (Đối Thơ)
-
-PoetryDuel-GPT is a $45\text{M}$-parameter, causal language model built completely **from scratch** using raw PyTorch. Unlike standard models that generate generic text, this architecture is custom-engineered to participate in real-time Vietnamese Poetic Duels (*Đối Thơ*). It accepts a single verse of traditional poetry (e.g., *Thơ Lục Bát*, *Thơ Tứ Tuyệt*) and autoregressively generates a response verse that strictly satisfies Vietnamese linguistic rules, syllabic constraints, and rhythmic tone alignments (**Luật Bằng-Trắc**).
-
----
-
-## 🚀 Core Engineering Highlights
-
-* **Zero Hugging Face Wrappers:** Built entirely using raw `torch.nn` modules. Every matrix multiplication in the attention heads and residual blocks is custom-written.
-* **Custom Vocabulary Tokenizer:** Avoided generic multilingual tokenizers by training a domain-specific **Byte-Pair Encoding (BPE)** tokenizer optimized explicitly for Vietnamese diacritics and syllabic boundaries.
-* **Hardware Optimized (NVIDIA L4):** Designed to train efficiently under hardware constraints. Tuned using Mixed-Precision (`bfloat16`) to achieve full convergence on a single Google Colab L4 GPU in under 2 hours.
-* **Linguistic Control Tokens:** Implemented structured sequence formatting to condition the generative head on specific poetic genres via prefix control tokens.
-
----
-
-## 🏗️ Technical Architecture Spec Sheet
-
-The core engine is an autoregressive, decoder-only Transformer network modeled with the following hyperparameters tailored for specialized domain convergence:
-
-| Hyperparameter | Value | Description |
-| --- | --- | --- |
-| **Embedding Dim ($n_{\text{embd}}$)** | 384 | Hidden dimension size for token and spatial embeddings |
-| **Number of Layers ($n_{\text{layer}}$)** | 6 | Stacked causal Transformer blocks |
-| **Attention Heads ($n_{\text{head}}$)** | 6 | Multi-head self-attention paths (64-dim per head) |
-| **Context Length ($\text{block\_size}$)** | 256 | Maximum sequence token window |
-| **Vocabulary Size** | 12,000 | Custom BPE tokens capturing Vietnamese phonemes |
-| **Total Parameters** | ~45.3M | Optimally scaled for single-GPU training density |
-
-### Custom Self-Attention Layer
-
-The network utilizes standard causal scaled dot-product attention masked to prevent tokens from attending to future positions during the poetic duel sequence generation:
-
-$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
-
----
-
-## 📊 Dataset & Sequence Pipeline
-
-The model was trained on a synthesized conversational variant of the `roots_vi_vietnamese_poetry` and `vietnamese-poetry-corpus` datasets (~370,000 lines total).
-
-A custom preprocessing script converted static, multi-line poems into turn-based interactions using structured boundary markers. The sequence is explicitly packed as follows:
-
-```text
-<|start|> [LUC_BAT] Trăm năm trong cõi người ta, <|reply|> Chữ tài chữ mệnh khéo là ghét nhau. <|end|>
-
-```
-
-During training, cross-entropy loss is minimized over the shift-right sequence targets, forcing the attention heads to model the conditional probability distribution of the reply tokens based entirely on the prefix prompt rules.
-
----
-
-## 💻 Code Structure
-
-```text
-├── data/
-│   ├── preprocess.py       # Script converting static text into conversational pairs
-│   └── poetry_corpus.txt   # Raw parsed text corpus
-├── tokenizer/
-│   ├── train_bpe.py        # Tokenizer training logic script
-│   └── poetry_bpe.model    # Saved vocabulary state
-├── model.py                # Raw PyTorch MultiHeadAttention & Transformer layers
-├── train.py                # Custom training loop with mixed-precision, logging, & checkpoints
-├── sample.py               # Autoregressive generation script with Top-k/Top-p sampling
-└── requirements.txt        # Minimal environment dependencies
-
-```
-
----
-
-## 🛠️ Installation & Reproduction
-
-### 1. Clone the repository and install dependencies
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/weseegod/poetry-dual-gpt.git
 cd poetry-dual-gpt
 pip install -r requirements.txt
 
-```
+# Download pretrained checkpoint + tokenizer (from Releases) or train:
+# python src/train_bpe.py && python src/train.py
 
-### 2. Preprocess Data & Train Tokenizer
+# Generate poetry
+PYTHONPATH=. python src/sample.py --checkpoint checkpoints/stage2_best.pt
 
-```bash
-python data/preprocess.py
-python tokenizer/train_bpe.py
-
-```
-
-### 3. Run the Training Pipeline (Configured for L4/T4 GPUs)
-
-The script uses PyTorch AMP (`torch.cuda.amp`) and the AdamW optimizer with a cosine learning rate scheduler peaking at $2 \times 10^{-4}$.
-
-```bash
-python train.py --epochs 3 --batch_size 64 --device cuda
-
+# Chat UI
+cd client && python start.py
 ```
 
 ---
 
-## 🎮 Evaluation & Live Generation
+## 📊 Model
 
-To test the conversational poetic capabilities of the trained weights, run the inference module. The generation loop supports customizable `temperature`, `top_k`, and `top_p` (nucleus) sampling values to control creative flow versus rule strictness.
+| | |
+|---|---|
+| **Params** | 31.2M |
+| **Architecture** | Decoder-only Transformer, 8 layers, 8 heads, n_embd=512, block_size=256 |
+| **Vocabulary** | 11,392 BPE tokens (335 special control tokens) |
+| **Training** | Two-stage: Stage 1 (all genres, 10K steps) → Stage 2 (Lục Bát, 5K steps) |
+| **Hardware** | Colab T4/L4, ~3 hours total |
+| **Mixed precision** | bfloat16 |
 
-```bash
-python sample.py --prompt "[LUC_BAT] Thân em như chẽn lúa đòng đòng," --temperature 0.75
+## 🎯 Rule Accuracy (v1.0, 173 novel prompts)
+
+| Rule | Token | Accuracy | vs Random |
+|------|-------|----------|-----------|
+| **Rhyme** (vần lưng) | `[RHYME:X]` | **58.4%** | 93× |
+| **Tone** (B-T-B-B) | `[TONE:XXXXXX]` | **87.5%** | 14× |
+| **Syllable** (exact 8) | form + truncation | **78.0%** | 12× |
+| **Đối Âm** (tonal contrast) | `[DOIAM:XXXXXXX]` | **69.4%** | 1.4× |
+| **All 3 rules pass** | — | **50.9%** | — |
+
+[Full evaluation](documents/rule_evaluation.md)
+
+## 🎭 Sample Output
 
 ```
+Prompt:  Thân em như chẽn lúa đòng
+Tags:    [LUC_BAT] [RHYME:ong] [TONE:BBBTTB]
+Output:  anh về em lúa trổ đòng vàng hong phơi
 
-### Expected Output Structure:
-
-```text
-[Input Prompt]: [LUC_BAT] Thân em như chẽn lúa đòng đòng,
-[Model Rebuttal]: Phất phơ dưới ngọn nắng hồng ban mai.
-==================================================
-* Metric Evaluation *
-Syllable Verification: PASS (6-word prompt -> 8-word response)
-Tone Map Alignment: Bằng - Trắc Match Confirmed.
-
+Prompt:  Rủ nhau xuống biển mò cua
+Output:  tôi đây vẫn giữ canh chua cá vàng
 ```
 
----
+## 🏗️ Training Format
 
-## 📝 Performance & Loss Convergence
+```
+[LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng <|reply|> response_8_syl <|end|>
+[THAT_NGON] [LINK2:B] [DOIAM:TTBBTTB] Lom khom dưới núi tiều vài chú <|reply|> response_7_syl <|end|>
+```
 
-* **Initial Cross-Entropy Loss:** ~9.39
-* **Final Validation Convergence:** ~1.42 (Achieved at Epoch 2.4)
-* **Hardware Efficiency:** Out-of-memory errors were avoided completely by pinning sequence arrays directly to `bf16`/`fp16` tensor allocations, preserving optimal VRAM bandwidth limits on consumer/free cloud instances.
-# poetry-dual-gpt
+All control tokens (`[RHYME:X]`, `[TONE:XXXXXX]`, `[DOIAM:XXXXXXX]`, `[LINK2:X]`) are single special token IDs — not BPE subwords. 335 total, auto-collected from the corpus.
+
+## 📁 Project Structure
+
+```
+src/
+  model.py          # Transformer (attention, FFN, blocks)
+  train.py          # Training loop with resume, patience, mixed precision
+  sample.py         # Autoregressive generation + rule checking
+  preprocess.py     # CSV → training pairs with control tokens
+  train_bpe.py      # BPE tokenizer with 335 special tokens
+  tones.py          # Vietnamese tone classification + rhyme extraction
+  clean_data.py     # Data cleaning pipeline
+  dataset.py        # PyTorch Dataset + DataLoader
+evaluate/
+  eval_rules.py     # Per-rule evaluation on novel prompts
+client/
+  server.py         # FastAPI backend
+  frontend/         # React chat UI
+  start.py          # Launch backend + frontend
+colab/
+  colab_train.ipynb # One-click Colab training with verification gates
+documents/
+  roadmap.md        # Learning guide (Transformer from scratch)
+  improvements.md   # v2.0 roadmap
+  rhyme_conditioning.md  # Rule implementation details
+  rule_evaluation.md     # v1.0 evaluation results
+checkpoints/        # Trained model weights
+data/               # poems_dataset_clean.csv, poetry_corpus.txt
+tokenizer/          # poetry_bpe.model
+```
+
+## 🛤️ v2.0 Roadmap
+
+See [improvements.md](documents/improvements.md)
+
+| # | Item | Impact |
+|---|------|--------|
+| 1 | Qwen2.5-1.5B QLoRA | 50× more params, pretrained Vietnamese |
+| 2 | Multi-couplet generation | Full 4-8 line poems |
+| 3 | Better training data | Ca dao, Truyện Kiều, modern poetry |
+
+## 📄 License
+
+MIT

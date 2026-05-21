@@ -1,6 +1,6 @@
 # 🗺️ PoetryDuel-GPT Learning Roadmap
 
-> Build a ~45M-parameter Vietnamese poetry generator from scratch with raw PyTorch.
+> Build a 31M-parameter Vietnamese poetry generator from scratch with raw PyTorch.
 > Zero HuggingFace model wrappers. Every matrix multiplication is yours.
 
 ---
@@ -11,37 +11,32 @@
 |--------|--------|
 | **Goal** | Build a model that accepts a Vietnamese poetic line and generates a rule-compliant response |
 | **Model** | Decoder-only Transformer (GPT-style), autoregressive |
-| **Params** | ~45M (embed 384, 6 layers, 6 heads, vocab 12K) |
+| **Params** | 31.2M (n_embd=512, 8 layers, 8 heads, vocab 11,392) |
 | **Framework** | Raw PyTorch (`torch.nn`) — no `transformers`, no `trl`, no Keras |
-| **Data** | Vietnamese poetry corpus → turn-based dialogue pairs |
-| **Hardware** | Single GPU (NVIDIA L4 / T4 / any ~16GB VRAM) |
+| **Data** | 135K Vietnamese poems → 942K training pairs |
+| **Hardware** | Single GPU (NVIDIA T4/L4, ~16GB VRAM, Colab free tier) |
 
 ---
 
-## 🎯 Phased Training Strategy
-
-**Don't train on all 198K poems at once.** Start small, validate, then scale.
+## 🎯 Training Strategy (What We Actually Built)
 
 ```
-Phase 1: Lục Bát only (89,943 poems, 45% of data)
-  → 1 genre, 1 rule (6→8 syllables + B-T-B tone)
-  → Fastest iteration loop, easiest to debug
-  → Goal: model reliably generates 8-syllable responses to 6-syllable prompts
+Stage 1: All genres (Lục Bát + Thất Ngôn, 10K steps)
+  → Model learns Vietnamese language + multi-genre form
+  → 942K pairs, 135K poems, val loss: 2.21
 
-Phase 2: Add bảy chữ / thất ngôn bát cú (46,586 poems, 23%)
-  → 2 genres now, model learns [GENRE] tag means different rules
-  → Goal: model switches between 8-syllable and 7-syllable output
-
-Phase 3: Add remaining genres (tám chữ, năm chữ, thơ tự do, etc.)
-  → Full 198K dataset
-  → Goal: model handles all Vietnamese poetic forms
+Stage 2: Lục Bát fine-tune (5K steps)
+  → Specialization on 6→8 syllable form
+  → 651K Lục Bát-only pairs, val loss: 1.94
 ```
 
-**Why this order matters:**
-- Lục Bát has the most data AND the simplest rules — perfect for proving the pipeline works
-- If the model can't do Lục Bát, it definitely can't do more complex forms
-- Each phase adds exactly one new capability, so failures are easy to isolate
-- Training time scales linearly: Phase 1 is ~2hr on L4, Phase 3 is ~6hr
+**Four poetic rules** via 335 special control tokens:
+1. **Internal rhyme** (vần lưng) — `[RHYME:X]`, 58.4%
+2. **Tone pattern** (B-T-B-B) — `[TONE:XXXXXX]`, 87.5%
+3. **Syllable count** (6→8) — genre tag + truncation, 78.0%
+4. **Đối âm** (tonal contrast) — `[DOIAM:XXXXXXX]`, 69.4%
+
+Full evaluation: [rule_evaluation.md](rule_evaluation.md) | v2.0 roadmap: [improvements.md](improvements.md)
 
 ---
 
@@ -49,93 +44,99 @@ Phase 3: Add remaining genres (tám chữ, năm chữ, thơ tự do, etc.)
 
 ```
 poetry-dual-gpt/
-├── README.md                       ← Project pitch (already exists)
-├── requirements.txt                ← Dependencies (add as you go)
-├── .gitignore                      ← Ignore venv/, checkpoints/, generated files
-│
-├── data/                           ← 📦 Data files (not code)
-│   └── poems_dataset.csv           ← Raw Vietnamese poetry corpus
+├── README.md
+├── requirements.txt
 │
 ├── src/                            ← 🧠 All source code
-│   ├── preprocess.py               ← Phase 1B: raw poetry → training pairs
-│   ├── train_bpe.py                ← Phase 1C: train custom BPE tokenizer
-│   ├── dataset.py                  ← Phase 3B: PyTorch Dataset class
-│   ├── model.py                    ← Phase 2: the Transformer (5 classes)
-│   ├── train.py                    ← Phase 3: training loop + mixed precision
-│   └── sample.py                   ← Phase 4: generation + Vietnamese rule checks
+│   ├── preprocess.py               ← Raw poetry → tagged training pairs
+│   ├── train_bpe.py                 ← BPE tokenizer (335 special tokens)
+│   ├── dataset.py                   ← PyTorch Dataset + DataLoader
+│   ├── model.py                     ← Transformer (GPT-style, 31M)
+│   ├── train.py                     ← Two-stage training loop + mixed precision
+│   ├── sample.py                    ← Generation + auto-tag + rule checks
+│   ├── tones.py                     ← Vietnamese tone + rhyme extraction
+│   └── clean_data.py                ← CSV cleaning pipeline
 │
-├── documents/                      ← 📖 Documentation
-│   └── roadmap.md                  ← YOU ARE HERE — learning guide
+├── evaluate/                        ← 📊 Evaluation scripts
+│   └── eval_rules.py                ← Per-rule scoring on novel prompts
 │
-├── checkpoints/                    ← 💾 Saved model weights (gitignored)
-└── tokenizer/                      ← 🔤 Generated tokenizer files (gitignored)
-    └── poetry_bpe.model            ← Phase 1C output: saved vocabulary
-```
+├── client/                          ← 💬 Chat UI
+│   ├── server.py                    ← FastAPI backend
+│   ├── frontend/                    ← React frontend
+│   └── start.py                     ← Launch both
+│
+├── colab/                           ← ☁️ Colab training
+│   └── colab_train.ipynb            ← One-click two-stage training
+│
+├── documents/                       ← 📖 Docs
+│   ├── roadmap.md                   ← Learning guide (you are here)
+│   ├── improvements.md              ← v2.0 roadmap
+│   ├── rhyme_conditioning.md        ← Rule design + implementation
+│   └── rule_evaluation.md           ← v1.0 evaluation results
+│
+├── checkpoints/                     ← 💾 Model weights (gitignored)
+├── tokenizer/                       ← 🔤 BPE model (gitignored)
+└── data/                            ← 📦 Corpus + CSV
 
 ---
 
 ## 🏗️ Architecture Deep Dive
 
-### Layer-by-layer diagram (14.8M params)
+### Layer-by-layer diagram (31.2M params)
 
 ```
 INPUT: token IDs (B, T)  e.g. (192, 256)
 ┌──────────────────────────────────────────────┐
 │ EMBEDDINGS                                   │
-│   Token Embedding   10581×384 = 4,063,104    │
-│   Position Embedding  256×384 =    98,304    │
-│   → tok + pos = (B, T, 384)                  │
+│   Token Embedding  11392×512 = 5,832,704     │
+│   Position Embedding  256×512 =   131,072    │
+│   → tok + pos = (B, T, 512)                  │
 └──────────────────────────────────────────────┘
     │
-    ├── BLOCK 0 ─────────────────── 1,773,600
-    │   ├── LayerNorm           (768)
+    ├── BLOCK 0 ─────────────────── 3,152,384
+    │   ├── LayerNorm           (1,024)
     │   ├── MultiHeadAttention
-    │   │   QKV proj  384×1152 = 442,368
-    │   │   Out proj   384×384 = 147,456
-    │   │   Total attn         = 589,824
+    │   │   QKV proj   512×1536 = 786,432
+    │   │   Out proj    512×512 = 262,144
+    │   │   Total attn          = 1,048,576
     │   │   + residual (0 params)
-    │   ├── LayerNorm           (768)
+    │   ├── LayerNorm           (1,024)
     │   ├── FeedForward
-    │   │   fc1       384×1536 = 589,824 + 1,536 bias
-    │   │   fc2      1536×384  = 589,824 + 384 bias
-    │   │   Total FFN          = 1,181,568
+    │   │   fc1        512×2048 = 1,048,576 + 2,048 bias
+    │   │   fc2       2048×512  = 1,048,576 + 512 bias
+    │   │   Total FFN           = 2,099,712
     │   │   + residual (0 params)
-    │   └── Total block        = 1,773,600
+    │   └── Total block         = 3,152,384
     │
-    ├── BLOCK 1 ─────────────────── 1,773,600
-    ├── BLOCK 2 ─────────────────── 1,773,600
-    ├── BLOCK 3 ─────────────────── 1,773,600
-    ├── BLOCK 4 ─────────────────── 1,773,600
-    ├── BLOCK 5 ─────────────────── 1,773,600
+    ├── BLOCK 1-7 ───────────────── 3,152,384 × 7
     │
-    ▼  (B, T, 384) — same shape throughout!
+    ▼  (B, T, 512) — same shape throughout!
 ┌──────────────────────────────────────────────┐
 │ OUTPUT                                        │
-│   Final LayerNorm                     (768)  │
+│   Final LayerNorm                   (1,024)  │
 │   LM Head (tied to token embedding)      (0) │
-│   → logits: (B, T, 10581)                    │
+│   → logits: (B, T, 11392)                    │
 └──────────────────────────────────────────────┘
 ```
 
 ### Parameter breakdown
 
 ```
-FeedForward     ████████████████████████████  7.09M  (47.9%)
-Token Embedding ██████████████████████        4.06M  (27.5%)
-Attention       ████████████████              3.54M  (23.9%)
-Position Embed  █                              0.10M  ( 0.7%)
-LayerNorms      █                              0.01M  ( 0.1%)
-                ─────────────────────────────
-Total                                        14.80M
+FeedForward     ████████████████████████████████████  16.80M  (53.9%)
+Token Embedding ████████████████████                   5.83M  (18.7%)
+Attention       █████████████                          8.39M  (26.9%)
+Position Embed  █                                       0.13M  ( 0.4%)
+LayerNorms      █                                       0.02M  ( 0.1%)
+                ───────────────────────────────────────
+Total                                                  31.17M
 ```
 
 **Key insights:**
-- FeedForward is the heaviest (48%) — expanding 384→1536→384 costs `384×1536×2` per block
-- Attention is surprisingly light (24%) — the combined QKV projection saves params vs 3 separate matrices
-- Embeddings cost 27% because vocab_size directly controls size
-- Residuals, GELU, and Dropout cost ZERO params — they're pure operations
-- Weight tying makes LM Head free — saves ~4M params
-- Same tensor shape (B,T,384) flows through every block — this is why stacking works
+- FeedForward is the heaviest (54%) — expanding 512→2048→512 costs `512×2048×2` per block
+- Attention is 27% — combined QKV projection saves params vs 3 separate matrices
+- Embeddings cost 19% because vocab_size directly controls size
+- Weight tying makes LM Head free — saves ~5.8M params
+- Same tensor shape (B,T,512) flows through every block — this is why stacking works
 
 ---
 
@@ -155,7 +156,7 @@ Block 2: [15.2, -32.1, 47.8, ...]   (exploding!)
 Block 6: [1421.3, -893.2, ...]      (Gradient = NaN → training dies)
 ```
 
-Each matrix multiply amplifies the values. After 6 layers, the numbers are so large that softmax saturates (outputs 0 or 1 only) and gradients become NaN.
+Each matrix multiply amplifies the values. After 8 layers, the numbers are so large that softmax saturates (outputs 0 or 1 only) and gradients become NaN.
 
 ### The fix: force mean=0, std≈1 after each block
 
@@ -163,13 +164,13 @@ Each matrix multiply amplifies the values. After 6 layers, the numbers are so la
 # LayerNorm(x) = γ * (x - mean) / std + β
 #                ↑ scale      ↑ normalize    ↑ shift
 
-mean = x.mean(dim=-1, keepdim=True)    # average across 384 features
-std  = x.std(dim=-1, keepdim=True)     # spread across 384 features
+mean = x.mean(dim=-1, keepdim=True)    # average across 512 features
+std  = x.std(dim=-1, keepdim=True)     # spread across 512 features
 x_norm = (x - mean) / (std + 1e-5)    # → mean=0, std=1
 return γ * x_norm + β                  # learnable scale + shift
 ```
 
-`γ` (gamma) and `β` (beta) are 384 learned numbers each — the model can undo the normalization if it wants, but in practice it keeps values stable.
+`γ` (gamma) and `β` (beta) are 512 learned numbers each — the model can undo the normalization if it wants, but in practice it keeps values stable.
 
 ### Why pre-norm (before attention) not post-norm (after)
 
@@ -183,7 +184,7 @@ Post-Norm (old, less stable):
 
 Pre-norm gives a "clean" input to each sublayer. The residual path (`+ x`) stays un-normalized, providing a gradient highway. Post-norm normalizes the residual too, which can kill the gradient signal.
 
-### Visual: what LayerNorm does to a 384-dim vector
+### Visual: what LayerNorm does to a 512-dim vector
 
 ```
 Before LN:  [-12.3,  0.5,  45.2,  -8.1,  3.7, ...]  scattered all over
@@ -197,14 +198,14 @@ Same information, different scale. The attention + FFN layers expect clean, cent
 ## 🧠 Model Insights (from Q&A)
 
 ### 1. Token Embedding = learned word space
-After training, similar words cluster together in the 384-dim space.
+After training, similar words cluster together in the 512-dim space.
 `"thương"` and `"yêu"` both appear near `"em"`, `"anh"`, `"lòng"` → vectors drift together.
 The model learns relationships purely from context — no dictionary needed.
 
 ### 2. Attention = 6 parallel "lenses" (n_head=6)
-Each head sees 64 dims of the 384. Multiple heads let the model learn
+Each head sees 64 dims of the 512. Multiple heads let the model learn
 DIFFERENT types of relationships (syllable count, tone, rhyme, punctuation).
-One big 384-dim head would average everything into one blurry relationship.
+One big 512-dim head would average everything into one blurry relationship.
 
 ### 3. FeedForward = the "thinker" (48% of all params)
 Attention finds connections. FFN interprets what those connections MEAN.
@@ -225,7 +226,7 @@ Every position produces a loss. With only the last token as target, positions 0.
 never get gradients → training is T× slower.
 
 ### 7. Shape invariant: (B, T, C) throughout
-T stays T throughout all blocks. Only C changes at the final head (384 → vocab_size).
+T stays T throughout all blocks. Only C changes at the final head (512 → vocab_size).
 Position embedding is a separate (T, C) tensor broadcast-added — token IDs never change.
 
 ### 8. Pad token (id=0) must be suppressed during generation
@@ -569,7 +570,7 @@ Class 1: MultiHeadAttention      ← The "magic" of Transformers
 Class 2: FeedForward             ← Per-position processing (MLP)
 Class 3: TransformerBlock         ← Attention + FFN + norms + residuals
 Class 4: PoetryDuelGPT            ← The complete model
-Utility: count_parameters         ← Verify ~45M params
+Utility: count_parameters         ← Verify ~31M params
 ```
 
 ### 2A — Study the concepts first (30-60 min)
@@ -626,9 +627,9 @@ The full model:
 ```python
 from src.model import PoetryDuelGPT, count_parameters
 
-model = PoetryDuelGPT(vocab_size=12000, n_embd=384, n_head=6, n_layer=6, block_size=256)
+model = PoetryDuelGPT(vocab_size=11392, n_embd=512, n_head=8, n_layer=8, block_size=256)
 total, _ = count_parameters(model)
-print(f"Params: {total:.1f}M")  # Should be ~45M
+print(f"Params: {total:.1f}M")  # Should be ~31M
 
 # Test forward pass
 import torch
@@ -769,13 +770,13 @@ for x, y in train_loader:
 ### ✅ Phase 3 Checkpoint
 
 ```bash
-python -m src.train --epochs 3 --batch_size 64 --device cuda
+python src/train.py --mode train --name stage1_
 ```
 
 Expected:
 - Initial loss: ~9.4
 - Loss decreases steadily
-- After 3 epochs: validation loss should be ~1.4-2.0
+- Training stops at ~10K steps: validation loss ~2.2
 - Training time: ~2 hours on L4, ~4-6 hours on T4
 
 ---
@@ -881,7 +882,7 @@ Once the basic pipeline works:
 
 ### Phase 1 (Lục Bát only)
 - [ ] `model.py` compiles and produces correct shape outputs
-- [ ] Parameter count is ~45M
+- [ ] Parameter count is ~31M
 - [ ] Initial loss ≈ 9.4 (close to random guessing)
 - [ ] Training loss decreases steadily on 89K Lục Bát poems
 - [ ] Final validation loss < 2.0
