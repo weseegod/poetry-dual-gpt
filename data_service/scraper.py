@@ -27,7 +27,6 @@ AUTHORS = {
     "to_huu":        {"name": "Tố Hữu",           "period": "hiện đại", "pages": 2},
     "nguyen_binh":   {"name": "Nguyễn Bính",      "period": "hiện đại", "pages": 3},
     "ho_xuan_huong": {"name": "Hồ Xuân Hương",    "period": "trung đại", "pages": 2},
-    "nguyen_khuyen": {"name": "Nguyễn Khuyến",    "period": "trung đại", "pages": 2},
     "nguyen_du":     {"name": "Nguyễn Du",         "period": "trung đại", "pages": 1},
 }
 

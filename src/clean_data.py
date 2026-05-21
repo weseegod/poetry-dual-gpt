@@ -38,12 +38,22 @@ def filter_genres(df):
 # STAGE 2: Clean HTML + normalize Unicode
 # ═══════════════════════════════════════════════════════════════
 
+def fix_spacing(line: str) -> str:
+    """Fix spacing around punctuation: 'word , word' → 'word, word'."""
+    # Space before punctuation
+    line = re.sub(r'\s+([,.;:?!%])', r'\1', line)
+    # Space after opening paren
+    line = re.sub(r'\(\s+', '(', line)
+    # Space before closing paren
+    line = re.sub(r'\s+\)', ')', line)
+    # Fix multiple consecutive spaces (after above fixes may create them)
+    return line
+
 def clean_text(text: str) -> str:
-    """Clean HTML artifacts per line, normalize Unicode. Preserves <\n> separators."""
+    """Clean HTML artifacts + normalize spacing + strip metadata per line."""
     if pd.isna(text):
         return ""
-    # Split by line separator first (so HTML regex doesn't eat them)
-    sep = "<" + chr(10) + ">"  # < + newline + > is the CSV line separator
+    sep = "<" + chr(10) + ">"
     lines = text.split(sep)
     cleaned_lines = []
     for line in lines:
@@ -52,9 +62,16 @@ def clean_text(text: str) -> str:
         line = line.replace("&amp;", "&")
         line = line.replace("&lt;", "<")
         line = line.replace("&gt;", ">")
-        # Remove actual HTML tags (but NOT our <\n> separator — we already split)
+        # Remove HTML tags
         line = re.sub(r"<[^>]+>", "", line)
-        # Collapse spaces/tabs (newlines already handled)
+        # Remove metadata patterns: (câu 39-170), (1), (trang 5)
+        # Only when the entire line is just metadata
+        stripped = line.strip()
+        if re.match(r'\(\s*(câu|trang|chương)\s*[\d\s\-–]+\s*\)$', stripped, re.IGNORECASE):
+            continue  # drop this line entirely
+        # Fix spacing around punctuation
+        line = fix_spacing(line)
+        # Collapse spaces/tabs
         line = re.sub(r"[ \t]+", " ", line)
         # Unicode normalization
         line = unicodedata.normalize("NFC", line)
@@ -93,11 +110,15 @@ def filter_short(df, min_lines=2):
 # ═══════════════════════════════════════════════════════════════
 
 def content_hash(text: str) -> str:
-    """Hash normalized content for dedup."""
+    """Hash normalized content for dedup: apply same cleaning + lowercase."""
     if pd.isna(text):
         return ""
-    normalized = clean_text(text.lower())
-    return hashlib.md5(normalized.encode()).hexdigest()
+    # Apply same cleaning pipeline for fair comparison
+    cleaned = fix_spacing(text.lower())
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = unicodedata.normalize("NFC", cleaned)
+    cleaned = cleaned.strip()
+    return hashlib.md5(cleaned.encode()).hexdigest()
 
 def remove_duplicates(df):
     """Drop poems with identical cleaned content."""
@@ -114,7 +135,45 @@ def remove_duplicates(df):
 # MAIN
 # ═══════════════════════════════════════════════════════════════
 
-def clean(csv_path=None, output_path=None):
+def clean_existing(csv_path, output_path=None):
+    """Re-clean an already-processed CSV: fix spacing, strip metadata, re-dedup."""
+    csv_path = Path(csv_path)
+    output_path = Path(output_path or csv_path)
+
+    print(f"📖  Re-cleaning: {csv_path}")
+    df = pd.read_csv(csv_path)
+    before = len(df)
+    print(f"    Input: {before:,} poems")
+
+    # Apply text cleaning
+    df["content"] = df["content"].apply(clean_text)
+
+    # Drop rows that became empty
+    mask = df["content"].astype(str).str.strip() != ""
+    emptied = (~mask).sum()
+    df = df[mask].copy()
+    if emptied:
+        print(f"    Empty after cleaning: {emptied} (dropped)")
+
+    # Drop rows with too few lines
+    df = filter_short(df, min_lines=2)
+
+    # Re-deduplicate (spacing fixes may reveal duplicates)
+    df = remove_duplicates(df)
+
+    after = len(df)
+    print(f"    Output: {after:,} poems ({before - after} removed)")
+    print(f"    Spacing fixed: yes  |  Metadata stripped: yes  |  Re-deduped: yes")
+
+    if output_path != csv_path:
+        import shutil
+        shutil.copy2(csv_path, str(csv_path) + ".bak")
+        print(f"    Backup: {csv_path}.bak")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+    print(f"    Saved → {output_path}")
+    return df
     csv_path = Path(csv_path or CSV_PATH)
     output_path = Path(output_path or OUTPUT_PATH)
 
@@ -157,4 +216,15 @@ def clean(csv_path=None, output_path=None):
 
 
 if __name__ == "__main__":
-    clean()
+    import argparse
+    p = argparse.ArgumentParser(description="Clean poetry CSV")
+    p.add_argument("--csv", type=str, default=None, help="Input CSV")
+    p.add_argument("--output", type=str, default=None, help="Output CSV")
+    p.add_argument("--reclean", type=str, default=None,
+                   help="Re-clean existing CSV in-place (fix spacing, re-dedup)")
+    args = p.parse_args()
+
+    if args.reclean:
+        clean_existing(args.reclean, args.output)
+    else:
+        clean(args.csv, args.output)
