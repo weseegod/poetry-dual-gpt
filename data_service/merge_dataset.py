@@ -63,7 +63,17 @@ def validate_poem(row):
 
 
 def compute_hash(content):
-    return hashlib.sha256(str(content).encode()).hexdigest()[:16]
+    """Normalized content hash for fuzzy dedup: strip whitespace, lowercase."""
+    text = str(content).strip().lower()
+    text = re.sub(r'\s+', ' ', text)  # normalize whitespace
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
+def compute_title_hash(title):
+    """Normalized title hash: lowercase, strip punctuation."""
+    text = re.sub(r'[^\w\s]', '', str(title).lower().strip())
+    text = re.sub(r'\s+', ' ', text)
+    return hashlib.sha256(text.encode()).hexdigest()[:12]
 
 
 # ═══════════════════════════════════════════════════════
@@ -115,34 +125,40 @@ def validate_all(scraped):
 
 
 def check_duplicates(valid, existing_path):
-    """Check new poems against existing dataset."""
+    """Check new poems against existing dataset using normalized hashes."""
     print(f"\n📊  Checking against {existing_path.name}...")
-    existing = pd.read_csv(existing_path)
+    existing = pd.read_csv(existing_path, dtype={'content': str, 'title': str})
     print(f"  Existing: {len(existing):,} poems")
 
-    existing_hashes = set()
+    # Build lookup: content hash + title hash for existing poems
+    existing_content_hashes = set()
+    existing_title_hashes = set()
     for _, row in existing.iterrows():
-        existing_hashes.add(compute_hash(str(row['content'])))
+        existing_content_hashes.add(compute_hash(str(row['content'])))
+        existing_title_hashes.add(compute_title_hash(str(row['title'])))
 
-    new_hashes = set()
     dupes = []
     truly_new = []
     for _, row in valid.iterrows():
-        h = compute_hash(str(row['content']))
-        new_hashes.add(h)
-        if h in existing_hashes:
+        ch = compute_hash(str(row['content']))
+        th = compute_title_hash(str(row['title']))
+        # Match by content hash OR by title hash (same poem, different formatting)
+        if ch in existing_content_hashes or th in existing_title_hashes:
             dupes.append(row)
         else:
             truly_new.append(row)
 
     print(f"  New (unique):    {len(truly_new)}")
-    print(f"  Duplicates:      {len(dupes)}")
-    if len(dupes) > 0:
+    print(f"  Duplicates:      {len(dupes)} (content hash or title match)")
+    if len(dupes) > 0 and len(dupes) <= 10:
         print(f"\n  Duplicate poems:")
-        for row in dupes[:5]:
-            print(f"    ♻️  [{row['author']}] {row['title'][:60]}")
-        if len(dupes) > 5:
-            print(f"    ... +{len(dupes)-5} more")
+        for row in dupes:
+            print(f"    ♻️  [{row['author']}] {str(row['title'])[:60]}")
+    elif len(dupes) > 10:
+        print(f"\n  Duplicate poems (first 10):")
+        for row in dupes[:10]:
+            print(f"    ♻️  [{row['author']}] {str(row['title'])[:60]}")
+        print(f"    ... +{len(dupes)-10} more")
 
     return pd.DataFrame(truly_new) if truly_new else pd.DataFrame()
 

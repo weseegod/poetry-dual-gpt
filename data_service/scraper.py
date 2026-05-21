@@ -157,7 +157,7 @@ def _extract_body(html):
     result = max(blocks, key=len)
     # Strip "Tập thơ ..." header
     lines = result.split('\n')
-    if lines and re.match(r'(Tập thơ|Thơ)\s+[\wĐĂÂÊÔƠƯ]+\s*:', lines[0]):
+    if lines and re.match(r'(Tập thơ|Thơ)\s+.+:', lines[0]):
         lines = lines[1:]
     return '\n'.join(lines)
 
