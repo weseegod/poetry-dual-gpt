@@ -90,7 +90,7 @@ colab/
   colab_train.ipynb # One-click Colab training with verification gates
 documents/
   roadmap.md        # Learning guide (Transformer from scratch)
-  improvements.md   # v2.0 roadmap
+  roadmap_v2.md     # v2.0 roadmap
   rhyme_conditioning.md  # Rule implementation details
   rule_evaluation.md     # v1.0 evaluation results
 checkpoints/        # Trained model weights
@@ -100,7 +100,7 @@ tokenizer/          # poetry_bpe.model
 
 ## 🛤️ v2.0 Roadmap
 
-See [improvements.md](documents/improvements.md)
+See [roadmap_v2.md](documents/roadmap_v2.md)
 
 | # | Item | Impact |
 |---|------|--------|
