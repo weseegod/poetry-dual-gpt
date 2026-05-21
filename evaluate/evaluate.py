@@ -41,7 +41,9 @@ PROMPTS = [
 
 def load_model(ckpt_path, device="cpu"):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    m = PoetryDuelGPT(ckpt["vocab_size"], **ckpt["model_config"])
+    cfg = ckpt["model_config"].copy()
+    cfg.pop("vocab_size", None)
+    m = PoetryDuelGPT(ckpt["vocab_size"], **cfg)
     m.load_state_dict(ckpt["model_state_dict"])
     m.to(device).eval()
     return m
