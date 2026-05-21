@@ -14,8 +14,8 @@
 
 | # | Rule | Priority | Status | How |
 |---|------|----------|--------|-----|
-| 4 | **Đối âm** (tonal contrast between lines) | HIGH | ✅ Learned | Model learns from B-T-B ↔ T-B-T patterns in data |
-| 5 | **2nd syllable tone** | HIGH | ✅ Implemented | `[LINK2:X]` — tone of position 2, conditions contrast |
+| 4 | **Đối âm** (tonal contrast between lines) | HIGH | ✅ Implemented | `[DOIAM:XXXXXXX]` — expected response tone pattern (opposite of prompt) |
+| 5 | **2nd syllable tone** | HIGH | ✅ Implemented | `[LINK2:X]` — tone of position 2 |
 | 6 | **End rhyme** (position 7) | RECOMMENDED | ❌ Skipped | Single-syllable constraint, low impact |
 | 7 | **Grammatical parallelism** | HIGH | ❌ Skipped | Needs POS tagger (underthesea/pyvi) |
 | 8 | **Semantic parallelism** | HIGH | ❌ Skipped | Needs semantic model, research-level |
@@ -24,11 +24,22 @@
 
 ```
 [LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng <|reply|> ...
-[THAT_NGON] [LINK2:B] Lom khom dưới núi tiều vài chú <|reply|> ...
+[THAT_NGON] [LINK2:B] [DOIAM:TTBBTTB] Lom khom dưới núi tiều vài chú <|reply|> ...
 ```
 
-The model learns: "When I see `[RHYME:ong]`, my 6th syllable should rhyme with 'ong'."
-Same mechanism as `[LUC_BAT]` → "generate 8-syllable response" — proven to work.
+All control tokens (`[RHYME:X]`, `[TONE:XXXXXX]`, `[DOIAM:XXXXXXX]`, `[LINK2:X]`) are
+**single special tokens** (335 total) — not BPE subwords. Same mechanism as `[LUC_BAT]`.
+
+### Current accuracy (v2, 173 novel prompts)
+
+| Rule | Stage 2 (Lục Bát) | Random |
+|------|-------------------|--------|
+| R1: Rhyme | **58.4%** | 0.6% |
+| R2: Tone | **87.5%** | 6.2% |
+| R3: Syllable (8) | **78.0%** | 6.7% |
+| R4: Đối Âm (Stage 1) | **69.4%** | 50.0% |
+
+Full evaluation: [rule_evaluation.md](rule_evaluation.md)
 
 ---
 
@@ -217,7 +228,7 @@ We'll implement rules we CAN automate (tone, rhyme, syllable count) and leave se
 | Internal rhyme (vần lưng) | ✅ | N/A | `[RHYME:X]` from position 6 of prompt |
 | Tone pattern (B-T-B / B-T-B-B) | ✅ | N/A | `[TONE:XXXXXX]` from prompt's tones |
 | Tone linking (2nd syllable) | N/A | ✅ | `[LINK2:X]` from position 2 of prompt |
-| Đối âm (tonal contrast between lines) | N/A | Learned | Model learns from L1=B-T-B, L2=T-B-T patterns in data |
+| Đối âm (tonal contrast between lines) | N/A | ✅ | `[DOIAM:XXXXXXX]` — expected response tone pattern (opposite of prompt) |
 | Rhythm pattern | ❌ | N/A | Needs word segmentation |
 | End rhyme | N/A | Not implemented | Single-syllable constraint, low impact |
 | Grammatical parallelism | ❌ | ❌ | Needs POS tagger |
@@ -706,4 +717,4 @@ Rhyme:  everything from last vowel onward after stripping tone marks
 - Compound vowel nuclei (uô, ươ, iê) — heuristic gets ~90% correct, misses ~10%
 - `[ENDTONE]` skipped — single-syllable constraint, low expected impact
 - Grammatical/semantic parallelism — needs POS tagger (future work)
-- Đối âm (tonal contrast) — not enforced via token, model learns from data patterns
+- Đối âm (tonal contrast) — implemented via `[DOIAM:XXXXXXX]` special token (69.4% accuracy)

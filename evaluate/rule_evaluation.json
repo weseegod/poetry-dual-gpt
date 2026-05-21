@@ -1,274 +1,274 @@
 {
   "summary": {
     "Stage 1": {
-      "R1_rhyme": 47.398843930635834,
-      "R2_tone": 77.45398773006134,
-      "R3_syllable": 61.849710982658955,
-      "all_pass": 33.52601156069364
+      "R1_rhyme": 45.664739884393065,
+      "R2_tone": 78.5493827160494,
+      "R3_syllable": 65.3179190751445,
+      "all_pass": 38.15028901734104
     },
     "Stage 2": {
-      "R1_rhyme": 58.38150289017341,
-      "R2_tone": 87.5195007800312,
-      "R3_syllable": 78.03468208092485,
-      "all_pass": 50.86705202312138
+      "R1_rhyme": 49.71098265895954,
+      "R2_tone": 88.08724832214764,
+      "R3_syllable": 71.09826589595376,
+      "all_pass": 45.664739884393065
     }
   },
   "samples": [
     {
       "p": "Thân em như tấm lụa đào",
-      "r": "anh bảo ngày ấy thế nào cũng xong",
+      "r": "làm sao em muốn ước ao bao chàng",
       "R1": true,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Trèo lên cây khế nửa ngày",
-      "r": "đã tới phút cuối đến đây sao đành",
-      "R1": true,
+      "r": "còn mấy lần trái tim nồng ý thơ",
+      "R1": false,
       "R2": 3,
       "R3": true
     },
     {
       "p": "Ai làm cho bướm xa hoa",
-      "r": "bướm bay  để cho bướm đậu cành hoa ngập đường",
+      "r": "héo gầy",
       "R1": false,
-      "R2": 2,
+      "R2": 1,
       "R3": false
     },
     {
       "p": "Đêm khuya thắp ngọn đèn dầu",
-      "r": "màu hoa nguyệt quế rầu rầu buồn vui",
+      "r": "ta về thăm lại sắc màu thanh xuân",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Gió mùa thu mẹ ru con",
-      "r": "ngủ ngoan  mẹ ru con trong vòng tay mẹ hiền",
+      "r": "mẹ ru con ngủ mẹ cười à ơi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": 4,
+      "R3": true
     },
     {
       "p": "Chim khôn đậu nóc nhà quan",
-      "r": "linh",
+      "r": "viên",
       "R1": false,
       "R2": 0,
       "R3": false
     },
     {
       "p": "Cây khô chưa dễ mọc chồi",
-      "r": "chỉ e gió lạnh một trời mùa thu",
+      "r": "ai người biết được cuộc đời ra sao",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Mẹ già như chuối ba hương",
-      "r": "không nuôi được mẹ nằm giường ngủ ngon",
+      "r": "thôi đành khép kín cổng trường nhìn đâu",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ru con con ngủ cho lâu",
-      "r": "những câu mẹ dặn những câu dặn dò",
+      "r": "không tròn tiếng hát bên cầu tri âm",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Công cha như núi thái sơn",
-      "r": "mẹ yêu con lắm con yêu không về",
+      "r": "bắc nam xum họp không còn khổ đau",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Rủ nhau xuống biển mò cua",
-      "r": "tôi đây vẫn giữ canh chua cá vàng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "thỏa lòng",
+      "R1": false,
+      "R2": 1,
+      "R3": false
     },
     {
       "p": "Đố ai đếm được lá rừng",
-      "r": "anh hùng ai biết ai từng bảo nhau",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Cày đồng đang buổi ban trưa",
-      "r": "mà sao lại đến nắng thừa thãi mưa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Mồ hôi thánh thót như mưa",
-      "r": "nắng lên chẳng sợ nắng thưa thớt dần",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Dẻo thơm một hạt đắng cay",
-      "r": "để ai phải chịu chua cay một mình",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Ai về tôi gửi buồng cau",
-      "r": "tôi về gói gọn buồng cau nhớ nhà",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Buồng cau non mẹ để già",
-      "r": "cha già cha yếu tuổi già nhờ ai",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Cau già khéo bổ thì non",
-      "r": "có con chim hót véo von trên cành",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Cây đa bến nước sân đình",
-      "r": "trai tài gái sắc thông minh hơn nhiều",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Qua đình ngả nón trông đình",
       "r": "",
       "R1": false,
       "R2": 0,
       "R3": false
     },
     {
+      "p": "Cày đồng đang buổi ban trưa",
+      "r": "mặt trời ló dạng đã thưa dần dần",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Mồ hôi thánh thót như mưa",
+      "r": "những chiều mưa đổ như vừa tắm xong",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Dẻo thơm một hạt đắng cay",
+      "r": "ai thương xin hãy tỏ bày cùng ta",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Ai về tôi gửi buồng cau",
+      "r": "chờ ngày khai hội cùng nhau họp bàn",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Buồng cau non mẹ để già",
+      "r": "cho con cháu hưởng tuổi già thảnh thơi",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Cau già khéo bổ thì non",
+      "r": "non  còn tui có sức tui còn ham chơi",
+      "R1": false,
+      "R2": 4,
+      "R3": false
+    },
+    {
+      "p": "Cây đa bến nước sân đình",
+      "r": "thuyền quyên nép bóng sân đình ngẩn ngơ",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Qua đình ngả nón trông đình",
+      "r": "chị hai xinh xắn tươi xinh duyên thầm",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
       "p": "Hòn đá đóng rêu vì ngâu",
-      "r": "để cho ta bắc nhịp cầu yêu thương",
+      "r": "làm mưa ngâu rụng mái đầu làm mưa",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Thuyền ơi có nhớ bến không",
-      "r": "một mình em có nhớ không hỡi người",
-      "R1": true,
+      "r": "đêm dài đêm ngắn đêm dài nhớ mong",
+      "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Bến thì một dạ khăng khăng",
-      "r": "gặp nhau chẳng dám nói năng chi nhiều",
+      "r": "làm sao ai cũng phải chăng hỡi trời",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Mưa từ xa tới mưa mau",
-      "r": "sao trăng vẫn sáng trên đầu long lanh",
+      "r": "đi qua mưa tạnh nắng mau mưa hoài",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Trời mưa trời gió đùng đùng",
-      "r": "đùng  hai ngàn dân lầm lũi đi",
+      "r": "không ngớt mưa gió không ngừng tạnh ngay",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": 3,
+      "R3": true
     },
     {
       "p": "Lúa mùa vàng óng đồng quê",
-      "r": "lúa non chín rộ tràn trề sức xuân",
+      "r": "hai ta chung sức đi về có nhau",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Trâu ơi ta bảo trâu này",
-      "r": "để trâu đi cầy cho trâu ta cày",
+      "r": "để trâu ăn lúa để ta cày bừa",
       "R1": false,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Bao giờ cho đến tháng ba",
-      "r": "mưa rào ướt áo người xa không về",
+      "r": "có gì đâu nữa để ta có người",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ếch kêu dưới vũng ao nhà",
-      "r": "ai không chịu hiểu thấu lòng bậu đâu",
+      "r": "bạn  có người đã mất lẽ ra thế này",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": 1,
+      "R3": false
     },
     {
       "p": "Tháng năm chưa đến đã mưa",
-      "r": "ngâu  cho mùa xuân đã nhạt màu vàng hoa",
+      "r": "rào  mưa rào ngập lụt biết bao cho vừa",
       "R1": false,
-      "R2": 2,
+      "R2": 3,
       "R3": false
     },
     {
       "p": "Ve kêu ra rả suốt mùa",
-      "r": "đông đến  rét mướt nhớ quê nhà nhớ lắm",
+      "r": "mưa ngâu",
       "R1": false,
-      "R2": 2,
+      "R2": 1,
       "R3": false
     },
     {
       "p": "Sen tàn cúc lại nở hoa",
-      "r": "cho ong hút mật la đà bướm ong",
+      "r": "quỳnh ơi nàng đã mất hút còn đâu",
+      "R1": false,
+      "R2": 3,
+      "R3": true
+    },
+    {
+      "p": "Sầu dài ngày ngắn sang đông",
+      "r": "em thường thích ngắm hoa hồng anh thương",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
-      "p": "Sầu dài ngày ngắn sang đông",
-      "r": "thương nhau như thể trong lòng lửa nhen",
-      "R1": false,
-      "R2": 4,
-      "R3": true
-    },
-    {
       "p": "Gió đông về lạnh lòng ai",
-      "r": "có ai thấu hiểu tình tôi với nàng",
+      "r": "đêm dài đêm ngắn ngày dài canh thâu",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Tóc mây một mái còn dài",
-      "r": "em còn nguyên vẹn hình hài để khoe",
+      "r": "bóng cây liễu yếu phôi phai má đào",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Mắt em là cả trời xanh",
-      "r": "đôi mắt long lanh long lanh sáng ngời",
-      "R1": true,
-      "R2": 2,
+      "r": "sao em không đến với mình không sang",
+      "R1": false,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Môi em là nắng long lanh",
-      "r": "gió lay nhè nhẹ mong manh dịu dàng",
+      "r": "cây cầu đã chọn ngày lành ấm no",
       "R1": true,
       "R2": 4,
       "R3": true
@@ -282,273 +282,273 @@
     },
     {
       "p": "Sông sâu bởi có nước nguồn",
-      "r": "khiến anh hùng hổ ở trong lòng mình",
+      "r": "ô nhiễm co vid chẳng buông lời bình",
       "R1": false,
-      "R2": 4,
+      "R2": 2,
       "R3": true
     },
     {
       "p": "Uống nước nhớ kẻ đào sông",
-      "r": "đêm đêm thổn thức lệ lòng thi nhân",
-      "R1": false,
+      "r": "nhớ em nhớ mãi tình không bến bờ",
+      "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ăn quả nhớ kẻ trồng cây",
-      "r": "cây trồng chẳng biết mùa này ra sao",
-      "R1": true,
-      "R2": 4,
+      "r": "đào tiên núi đôi mươi mốt núi ngàn",
+      "R1": false,
+      "R2": 2,
       "R3": true
     },
     {
       "p": "Đất lành chim đậu về đây",
-      "r": "gió về hôn nhánh hoa lay lắt cành",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "",
+      "R1": false,
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Người hiền thì lại gặp may",
-      "r": "vui vẻ mạnh khỏe chẳng suy nghĩ gì",
+      "r": "nhưng cũng phải quý lắm thay đổi nhiều",
       "R1": true,
       "R2": 3,
       "R3": true
     },
     {
       "p": "Lời nói chẳng mất tiền mua",
-      "r": "nếu gặp sẽ khổ chắc thua tôi rồi",
+      "r": "không tiền mà tính ganh đua với đời",
       "R1": true,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Lựa lời mà nói cho vừa",
-      "r": "cả nhà đoàn tụ cày bừa mà thôi",
+      "r": "để mai mốt nọ đêm thừa vắng anh",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Đèn nhà ai nấy sáng trưng",
-      "r": "bạn cùng chung một bức tranh tuyệt vời",
+      "r": "",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Chớ thấy đèn sáng mà mừng",
-      "r": "đêm về ai cũng phải dừng lại ngay",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Sông sâu còn có kẻ đò",
-      "r": "thì ít kẻ có người theo",
-      "R1": true,
+      "r": "quá vui quá không thấy vui ngay",
+      "R1": false,
       "R2": 2,
       "R3": false
     },
     {
+      "p": "Sông sâu còn có kẻ đò",
+      "r": "nào  một ngày không thấy nói sao đủ đầy",
+      "R1": false,
+      "R2": 0,
+      "R3": false
+    },
+    {
       "p": "Đường xa còn có người qua",
-      "r": "cho em đến với người ta làm người",
+      "r": "cho con tình cảm chan hòa không gian",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Bầu ơi thương lấy bí cùng",
-      "r": "vì dân vì nước mà chung một lòng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "",
+      "R1": false,
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Tuy rằng khác giống nhưng chung",
-      "r": "bây giờ đã thoát một vùng đạn bom",
+      "r": "khi nào ai cũng sống chung một nhà",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Một cây làm chẳng nên non",
-      "r": "xanh  để cho ta thấy đời thêm yêu đời",
-      "R1": false,
-      "R2": 2,
-      "R3": false
+      "r": "mẹ việt còn mẹ còn con bây giờ",
+      "R1": true,
+      "R2": 3,
+      "R3": true
     },
     {
       "p": "Ba cây chụm lại nên hòn",
-      "r": "đá trên",
+      "r": "đá kia",
       "R1": false,
       "R2": 1,
       "R3": false
     },
     {
       "p": "Gần mực thì đen gần đèn",
-      "r": "bạn bè phây búc chong đèn làm thơ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Gần người hiền trí thì nên",
-      "r": "làm việc thiện nguyện sống đời thẳng ngay",
+      "r": "mới lên đèn hoa đèn lồng phố phường",
       "R1": false,
       "R2": 3,
       "R3": true
     },
     {
-      "p": "Nước lã làm sao khuấy nên",
-      "r": "phải biết tình riêng mấy ai bằng lòng",
-      "R1": false,
-      "R2": 2,
-      "R3": true
-    },
-    {
-      "p": "Chữ rằng bán tự vi sư",
-      "r": "cho nhân chứng còn gì nữa đâu em",
-      "R1": false,
-      "R2": 2,
-      "R3": true
-    },
-    {
-      "p": "Nhất tự vi sư bán tự",
-      "r": "những gì tốt đẹp nhất thời xưa nay",
+      "p": "Gần người hiền trí thì nên",
+      "r": "sao mình lạc lõng giữa dòng nước trôi",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
+      "p": "Nước lã làm sao khuấy nên",
+      "r": "không cần lên mạng không phiền lắm đây",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Chữ rằng bán tự vi sư",
+      "r": "huynh",
+      "R1": false,
+      "R2": 0,
+      "R3": false
+    },
+    {
+      "p": "Nhất tự vi sư bán tự",
+      "r": "đắc đạo thành công chúa quý nhân",
+      "R1": false,
+      "R2": 0,
+      "R3": false
+    },
+    {
       "p": "Mồng một tết cha mồng hai",
-      "r": "một năm có lẻ năm dài lê thê",
+      "r": "con mong cha khỏe sống dài cả năm",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Tháng giêng ăn tết ở nhà",
-      "r": "gió mùa đông bắc thổi lùa áo em",
+      "r": "mẹ già con vắng mẹ già ngóng trông",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Tháng hai cờ bạc tháng ba",
-      "r": "tình anh như đã nhạt nhòa tháng ba",
-      "R1": true,
-      "R2": 4,
+      "r": "để anh hùng vương một lòng vì dân",
+      "R1": false,
+      "R2": 3,
       "R3": true
     },
     {
       "p": "Trên trời có đám mây vàng",
-      "r": "ai xui một mảnh trăng mang giữa trời",
+      "r": "có dòng nước chảy hai hàng bờ xa",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Bên sông có chị hái dâu",
-      "r": "đừng lấy chồng cho qua cầu đánh rơi",
+      "r": "chị em đi cấy đồng sâu một mình",
       "R1": true,
-      "R2": 2,
-      "R3": true
-    },
-    {
-      "p": "Đồng đăng có phố kỳ lừa",
-      "r": "trên cây đàn kiến bên bờ núi cao",
-      "R1": false,
       "R2": 4,
       "R3": true
     },
     {
-      "p": "Có nàng tô thị có chùa",
-      "r": "tam quan",
+      "p": "Đồng đăng có phố kỳ lừa",
+      "r": "",
       "R1": false,
-      "R2": 1,
+      "R2": 0,
+      "R3": false
+    },
+    {
+      "p": "Có nàng tô thị có chùa",
+      "r": "thanh  chàng hai trăm họ đã già còn đâu",
+      "R1": true,
+      "R2": 2,
       "R3": false
     },
     {
       "p": "Đường vô xứ nghệ quanh quanh",
-      "r": "bao nhiêu thành quách xây thành lũy cao",
+      "r": "anh hùng thiên hạ kinh thành tài hoa",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Non xanh nước biếc như tranh",
-      "r": "mặt trăng đỏ rực mong manh nét ngà",
-      "R1": true,
+      "r": "vẽ thành",
+      "R1": false,
+      "R2": 1,
+      "R3": false
+    },
+    {
+      "p": "Anh về câu cá bờ sông",
+      "r": "anh ơi có nhớ không em một thời",
+      "R1": false,
       "R2": 4,
       "R3": true
     },
     {
-      "p": "Anh về câu cá bờ sông",
-      "r": "vàm  có đôi chim sáo bay về đồng quê",
-      "R1": false,
-      "R2": 2,
-      "R3": false
-    },
-    {
       "p": "Em về cấy lúa trên đồng",
-      "r": "vắng tanh",
-      "R1": false,
+      "r": "em cấy vội vàng gặt xuống gặt nhanh",
+      "R1": true,
       "R2": 1,
-      "R3": false
+      "R3": true
     },
     {
       "p": "Nắng sớm mưa chiều đồng không",
-      "r": "có rơi  ruộng không bỏ cỏ cấy trồng nơi nao",
+      "r": "có người nhìn thấy bóng cây hoa tàn",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": 4,
+      "R3": true
     },
     {
       "p": "Mong cho lúa tốt bông vàng",
-      "r": "mênh mông  một vùng lúa tốt mênh mang cánh đồng",
+      "r": "trĩu bông",
       "R1": false,
-      "R2": 2,
+      "R2": 1,
       "R3": false
     },
     {
       "p": "Bàn tay ta làm nên tất",
-      "r": "cả  hạnh phúc trong lòng cùng sánh với ai",
+      "r": "cả  những gì tốt đẹp mãi không phai mờ",
       "R1": false,
-      "R2": 1,
+      "R2": 2,
       "R3": false
     },
     {
       "p": "Có sức người sỏi đá cũng",
-      "r": "lạnh lùng",
+      "r": "lạ  vì yêu nên phải yêu vội vàng chi",
       "R1": false,
-      "R2": 1,
+      "R2": 3,
       "R3": false
     },
     {
       "p": "Chim bay về núi tối rồi",
-      "r": "một vùng quê đẹp rạng ngời núi sông",
+      "r": "một ngày nắng đẹp mây trôi theo dòng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Mau lên kẻo nắng tắt rồi",
-      "r": "chiều nay ta nhớ một người không nhau",
+      "r": "mẹ ngồi hơ hớ nét môi héo tàn",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Trăng lên đỉnh núi trăng mờ",
-      "r": "mịt mờ  phía trên sông lặng lờ mờ sương giăng",
+      "r": "ảo sương mù  biển vắng hắt hiu hiu hắt trăng tà huy hoàng",
       "R1": false,
-      "R2": 2,
+      "R2": 3,
       "R3": false
     },
     {
       "p": "Đêm nay sao sáng hơn đêm",
-      "r": "cho nên trăng sáng bên thềm đêm thâu",
+      "r": "em đây cũng lắm nỗi niềm em ơi",
       "R1": true,
       "R2": 4,
       "R3": true
@@ -562,63 +562,63 @@
     },
     {
       "p": "Gió đưa hương lúa thơm mùa",
-      "r": "lúa chiêm vàng bông lúa quê mùa về",
+      "r": "cho em má thắm môi hường má xinh",
       "R1": false,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Sáng trăng suông sáng cả đồng",
-      "r": "bao nhiêu cực khổ chất chồng vai em",
+      "r": "gió mùa lạnh lẽo sương đông phủ mờ",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Em đi gặt lúa trên đồng",
-      "r": "xanh mượt mà mây bay  như cô thôn nữ má hồng má em",
+      "r": "quê  lúa vàng bông trải cánh đồng quê hương",
       "R1": false,
-      "R2": 2,
+      "R2": 1,
       "R3": false
     },
     {
       "p": "Mưa xuân lất phất vườn đào",
-      "r": "hoa cũng vội vã nhụy vào sắc phai",
+      "r": "nắng xuân ấm áp ngọt ngào đào phai",
       "R1": true,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Nụ tầm xuân nở ra chào",
-      "r": "mai vàng bung nụ mai vàng nở hoa",
+      "r": "đón xuân",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": 1,
+      "R3": false
     },
     {
       "p": "Hoa thơm ong bướm tìm về",
-      "r": "trời đêm trăng rằm sáng chung quanh trăng",
+      "r": "cho chàng bướm hẹn thề cùng hoa",
       "R1": false,
       "R2": 3,
-      "R3": true
+      "R3": false
     },
     {
       "p": "Người khôn thiên hạ tìm theo",
-      "r": "còn bao lâu nữa ai tìm đến nơi",
+      "r": "sau",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Tốt gỗ hơn là tốt nước",
-      "r": "cùng chung đồng đội vui chung chiến binh",
+      "r": "việt nam sáng ngời rạng rỡ non sông",
       "R1": false,
-      "R2": 4,
+      "R2": 2,
       "R3": true
     },
     {
       "p": "Xấu người đẹp nết còn hơn",
-      "r": "tự do làm chủ giang sơn hòa bình",
+      "r": "nhưng còn khoe sắc vẫn hơn quê mình",
       "R1": true,
       "R2": 4,
       "R3": true
@@ -632,28 +632,28 @@
     },
     {
       "p": "Con không nghe mẹ con hư",
-      "r": "ngày mai con lại âm thư trả mẹ",
-      "R1": true,
-      "R2": 3,
-      "R3": true
-    },
-    {
-      "p": "Cá không ăn muối cá ươn",
-      "r": "con không dám nói thiệt hơn làm gì",
+      "r": "là con đang sống vô tư trong lòng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
+      "p": "Cá không ăn muối cá ươn",
+      "r": "không hề nếm mật cho con cháu mình",
+      "R1": false,
+      "R2": 4,
+      "R3": true
+    },
+    {
       "p": "Con cãi cha mẹ trăm đường",
-      "r": "thân thể bé nhỏ tình thương vô bờ",
+      "r": "cho nên cha mẹ phải thương mọi người",
       "R1": true,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Đói cho sạch rách cho thơm",
-      "r": "vẫn luôn trong trắng tình thương dạt dào",
+      "r": "nhưng mà da diết còn gì đâu đây",
       "R1": false,
       "R2": 4,
       "R3": true
@@ -667,65 +667,65 @@
     },
     {
       "p": "Thương người như thể thương thân",
-      "r": "anh đây tên gọi ân cần gửi trao",
+      "r": "sao mình chẳng thể đến gần với nhau",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Nhiễu điều phủ lấy giá gương",
-      "r": "ta làm gì có được tương lai",
-      "R1": true,
-      "R2": 3,
+      "r": "vì dịch lây lan khắp biên giới nằm nhà",
+      "R1": false,
+      "R2": 2,
       "R3": false
     },
     {
       "p": "Một nắng hai sương mẹ cha",
-      "r": "cả nhà hạnh phúc tình thương dạt dào",
+      "r": "sớm hôm tần tảo nuôi con tháng ngày",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Lên non mới biết non cao",
-      "r": "cho non nước đẹp biết bao ân tình",
+      "r": "con đường cách mạng ngọt ngào đường xa",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Nuôi con mới biết công lao",
-      "r": "con đường ngày ấy giờ nào cần đi",
+      "r": "cha đâu có biết mà trao tấm lòng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Nước chảy đá mòn theo năm",
-      "r": "châu thành  đêm tàn vẫn sáng trăng rằm tháng tư",
+      "r": "tháng  nhớ về thời chiến trường làng quê ta",
       "R1": false,
       "R2": 2,
       "R3": false
     },
     {
       "p": "Gió lên cho biển hóa rồng",
-      "r": "biển tình biển tình người mênh mông mênh",
-      "R1": false,
-      "R2": 3,
-      "R3": true
-    },
-    {
-      "p": "Sóng to gió lớn mênh mông",
-      "r": "không gian rộng lớn mênh mông biển tình",
+      "r": "vua ban con đến con rồng cháu tiên",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
-      "p": "Đất phèn mọc trái thơm ngon",
-      "r": "ăn đi hãy còn ngọt hơn thế này",
+      "p": "Sóng to gió lớn mênh mông",
+      "r": "đưa ta về tìm người thương đang chờ",
       "R1": false,
       "R2": 3,
+      "R3": true
+    },
+    {
+      "p": "Đất phèn mọc trái thơm ngon",
+      "r": "hay cơm tấm áo vẫn còn vẹn nguyên",
+      "R1": true,
+      "R2": 4,
       "R3": true
     },
     {
@@ -737,65 +737,65 @@
     },
     {
       "p": "Học thầy không tày học bạn",
-      "r": "nhưng vẫn chưa hiểu học chính người ngu",
+      "r": "thầy đồ cô giáo ngày càng hăng say",
       "R1": false,
-      "R2": 2,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Đi một ngày đàng học một",
-      "r": "ngày  dạy học cho biết viết hay biết nói đúng sai",
-      "R1": false,
-      "R2": 0,
-      "R3": false
-    },
-    {
-      "p": "Xa mặt nhưng chẳng cách lòng",
-      "r": "vòng  chỉ vài hôm sau ta cùng sẻ chia",
+      "r": "ngày  đã đến trường xa học thuộc lòng mình",
       "R1": false,
       "R2": 1,
       "R3": false
     },
     {
-      "p": "Gần nhau càng thấy nhớ mong",
-      "r": "tình yêu chung thủy bên nhau trọn đời",
-      "R1": false,
+      "p": "Xa mặt nhưng chẳng cách lòng",
+      "r": "vòng tròn vo một cái nong bong hư không  cứ như được thỏa ước mong đợi chờ",
+      "R1": true,
       "R2": 4,
+      "R3": false
+    },
+    {
+      "p": "Gần nhau càng thấy nhớ mong",
+      "r": "một bóng một bóng bên song một mình",
+      "R1": true,
+      "R2": 3,
       "R3": true
     },
     {
       "p": "Trăng mờ còn tỏ hơn sao",
-      "r": "ta sao ta vẫn gối đầu bâng khuâng",
+      "r": "người thương người như một người như thế",
       "R1": false,
-      "R2": 4,
+      "R2": 2,
       "R3": true
     },
     {
       "p": "Dẫu rằng núi lở còn cao",
-      "r": "hỏi trời hỏi đất tại sao thế này",
+      "r": "một vùng đầy rẫy ai nào dám coi",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Công cha nghĩa mẹ sinh thành",
-      "r": "tuổi già xế bóng đầu xanh bạc màu",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "",
+      "R1": false,
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Một lòng thờ mẹ kính cha",
-      "r": "hai con một nhà chung vui một nhà",
+      "r": "nhân ngày phụ nữ trẻ trung của mình",
       "R1": false,
-      "R2": 3,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Con người có tổ có tông",
-      "r": "có tên là tổ có tông thần tông",
-      "R1": true,
-      "R2": 4,
+      "r": "có một tên gọi trong lòng rất vui",
+      "R1": false,
+      "R2": 3,
       "R3": true
     },
     {
@@ -807,420 +807,420 @@
     },
     {
       "p": "Nước non ngàn dặm xa xôi",
-      "r": "về đâu hỡi các anh ơi anh hùng",
+      "r": "người quên sao được nụ cười em trao",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ra đi từ thuở lên ba",
-      "r": "mươi  anh về qua một chuyến phà không em",
+      "r": "mươi  chiến hào đất nước quê nhà nhớ thương",
       "R1": false,
       "R2": 2,
       "R3": false
     },
     {
       "p": "Quê hương mỗi lúc một xa",
-      "r": "cùng nhau đi trẩy hội làng quê rộn ràng",
-      "R1": false,
-      "R2": 3,
-      "R3": false
+      "r": "một vùng biển đảo bao la ngọt ngào",
+      "R1": true,
+      "R2": 4,
+      "R3": true
     },
     {
       "p": "Bồng bềnh con nước về đâu",
-      "r": "vẫn là câu chuyện đẩu đâu bây giờ",
-      "R1": true,
+      "r": "mẹ già thui thủi với nhà bơ vơ",
+      "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Đò chiều khách vắng sang sông",
-      "r": "nhà ai hoa cỏ mấy giàn còn đây",
-      "R1": false,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Trời xanh mây trắng lang thang",
-      "r": "ta còn đang đứng đợi nàng ngày xưa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Đường quê lúa chín vàng ươm",
-      "r": "vàng ươm trong nắng nồng nàn ngát hương",
-      "R1": false,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Hương đồng gió nội bay xa",
-      "r": "mỗi giây mỗi phút vài lần nhớ nhau",
-      "R1": false,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Ve sầu kêu gọi hè sang",
-      "r": "ve sầu lột xác rộn ràng gọi nhau",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Phượng hồng thắp lửa sân trường",
-      "r": "mai trang giáo án vấn vương nụ cười",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Áo em trắng cả sân trường",
-      "r": "gió về man mác nỗi sầu quê hương",
-      "R1": false,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Tóc em dài quá vai thương",
-      "r": "anh nằm trên gối quê hương em chờ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
-    },
-    {
-      "p": "Bàn tay năm ngón nở hoa",
-      "r": "trắng muốt ngọc ngà",
+      "r": "",
       "R1": false,
       "R2": 0,
       "R3": false
     },
     {
+      "p": "Trời xanh mây trắng lang thang",
+      "r": "bên nhau quấn quýt nồng nàn bên nhau",
+      "R1": false,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Đường quê lúa chín vàng ươm",
+      "r": "anh về thăm mẹ thăm mẹ con rồi",
+      "R1": false,
+      "R2": 3,
+      "R3": true
+    },
+    {
+      "p": "Hương đồng gió nội bay xa",
+      "r": "",
+      "R1": false,
+      "R2": 0,
+      "R3": false
+    },
+    {
+      "p": "Ve sầu kêu gọi hè sang",
+      "r": "ve sầu rên rỉ thở than đêm trường",
+      "R1": false,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Phượng hồng thắp lửa sân trường",
+      "r": "em không đủ ánh trăng ngà soi chung",
+      "R1": false,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Áo em trắng cả sân trường",
+      "r": "làm cho tà áo vấn vương quê nghèo",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
+      "p": "Tóc em dài quá vai thương",
+      "r": "giờ thì một mình đơn côi cả đời",
+      "R1": false,
+      "R2": 3,
+      "R3": true
+    },
+    {
+      "p": "Bàn tay năm ngón nở hoa",
+      "r": "tình nhân còn mãi thiết tha chẳng nhòa",
+      "R1": true,
+      "R2": 4,
+      "R3": true
+    },
+    {
       "p": "Đôi chân chim sáo quanh nhà",
-      "r": "ngày xưa cũng đã vượt qua truông đèo",
+      "r": "líu lo chim hót lời ca vang lừng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Em như cây lúa trổ bông",
-      "r": "bông  hạt mưa hạt đã gieo mầm vào thu",
-      "R1": false,
-      "R2": 3,
-      "R3": false
+      "r": "bao ngày qua vẫn đứng trông đợi chờ",
+      "R1": true,
+      "R2": 4,
+      "R3": true
     },
     {
       "p": "Anh như hạt thóc vàng trong",
-      "r": "ngần  trời ơi sao không lấy chồng nơi xa",
+      "r": "tay  người ta có khác chứ không chịu vào",
       "R1": false,
       "R2": 2,
       "R3": false
     },
     {
       "p": "Xa quê nhớ mẹ nhớ cha",
-      "r": "nhớ mẹ nhớ mẹ lệ nhòa ướt mi",
-      "R1": true,
-      "R2": 3,
-      "R3": true
+      "r": "nhớ cha nhớ mẹ ruột diết da cõi lòng",
+      "R1": false,
+      "R2": 2,
+      "R3": false
     },
     {
       "p": "Nhớ hàng cau trước sân nhà",
-      "r": "gió vừa chớm lạnh nụ hoa lại tàn",
+      "r": "gió lay lắt lá rơi sà nhẹ lay",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Giếng làng trong mát tuổi thơ",
-      "r": "ngày xưa tôi viết bài thơ tặng mình",
+      "r": "tháng năm tắm nắng hong hơ xuân thì",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Cánh diều no gió tuổi thơ",
-      "r": "mẹ như ánh nắng đợi chờ trăng lên",
+      "r": "hoa bằng lăng tím đợi chờ hương quê",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Mưa rào tắm mát vườn quê",
-      "r": "nụ cười rạng rỡ chẳng chê tí nào",
+      "r": "để cho quân giặc trở về như lai",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Nắng vàng ươm cả đồng xa",
-      "r": "có ai nhìn thấy quê nhà có tôi",
+      "r": "cùng nhau uống cạn chén trà chung thân",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Bếp nhà ai đỏ lửa hồng",
-      "r": "ai ai yêu quý trọng chồng thương yêu",
-      "R1": true,
-      "R2": 4,
+      "r": "như đã đốt lò thiêu rụi đêm nay",
+      "R1": false,
+      "R2": 1,
       "R3": true
     },
     {
       "p": "Khói lam chiều tỏa mênh mông",
-      "r": "nắng vàng bên sông  hương giang lặng lẽ nhớ mong đợi chờ",
-      "R1": false,
+      "r": "mà em giờ còn nhớ không em",
+      "R1": true,
       "R2": 2,
       "R3": false
     },
     {
       "p": "Đàn trâu về ngõ chiều hôm",
-      "r": "anh về thưa với chồng yêu ta rồi",
+      "r": "cha yêu thương mẹ thương yêu vô vàn",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Tiếng sáo diều vọng triền đê",
-      "r": "vọng vang tiếng trẻ vọng về tuổi thơ",
+      "r": "mẹ cha quy tụ con về quê hương",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Đêm trăng soi tỏ vườn nhà",
-      "r": "mỗi lần về ghé qua nhà cùng anh",
+      "r": "hương thơm nhè nhẹ làm quà tặng nhau",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Hoa cau rụng trắng thềm xưa",
-      "r": "trầu khô héo úa hương nồng ai hay",
+      "r": "một cành hồng rụng mấy cành lá khô",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Thuyền ai lờ lững trên sông",
-      "r": "đò ai lơ lửng bềnh bồng ngược xuôi",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "bên giòng chảy ngược xuôi ngược bềnh bồng lờ trôi",
+      "R1": false,
+      "R2": 3,
+      "R3": false
     },
     {
       "p": "Câu hò vọng giữa thinh không",
-      "r": "hay vì đã biết người trông xa rồi",
-      "R1": true,
+      "r": "lời yêu đương ở trong lòng thủy chung",
+      "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Cây khế chua ngọt sau vườn",
-      "r": "anh mua về nấu canh ngon cho nàng",
+      "r": "cho đàn chim đậu uyên ương hòa bình",
       "R1": false,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Quả na mở mắt thơm lừng",
-      "r": "thương trường sơn nằm lại giữa núi rừng",
-      "R1": false,
-      "R2": 2,
+      "r": "cả năm nay đã không ngừng nhớ nha",
+      "R1": true,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Lời ru của mẹ ngày xưa",
-      "r": "mẹ tôi vất vả nắng mưa quê nhà",
+      "r": "có ai còn nhớ xuân xưa những ngày",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Theo con suốt cả chặng đường",
-      "r": "cho con cho con cho mẹ về bên cha",
-      "R1": false,
-      "R2": 2,
-      "R3": false
-    },
-    {
-      "p": "Người đi đâu suốt chiều nay",
-      "r": "nhưng vẫn còn nhiều tin vào tim em",
-      "R1": false,
-      "R2": 2,
-      "R3": true
-    },
-    {
-      "p": "Để lòng ai những vơi đầy",
-      "r": "hay gieo bão tố đọa đầy nhân gian",
+      "r": "tình quê thắm thiết nhớ thương vô bờ",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
+      "p": "Người đi đâu suốt chiều nay",
+      "r": "nhưng chỉ là một đấng anh hùng binh",
+      "R1": false,
+      "R2": 3,
+      "R3": true
+    },
+    {
+      "p": "Để lòng ai những vơi đầy",
+      "r": "tình ai còn sống ở đời liệu toan",
+      "R1": false,
+      "R2": 4,
+      "R3": true
+    },
+    {
       "p": "Đường trần ai biết được đâu",
-      "r": "làm sao để được lòng nhau vui vầy",
+      "r": "cho ai ai cũng nhìn lâu mới tài",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ngày mai sương gió dãi dầu",
-      "r": "nhớ nhau em ta bắc cầu yêu thương",
-      "R1": true,
-      "R2": 3,
+      "r": "để giờ nhớ bóng người xưa một thời",
+      "R1": false,
+      "R2": 4,
       "R3": true
     },
     {
       "p": "Thương ai con mắt lim dim",
-      "r": "cái eo non nõn lại tìm ngẩn ngơ",
+      "r": "đêm đêm anh có ngày tìm tới em",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Nhớ ai nước mắt đầm đìa",
-      "r": "ai đem ra hong nắng xế chiều",
+      "r": "phải qua sông vắng thuyền về bến mơ",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": 4,
+      "R3": true
     },
     {
       "p": "Mưa nguồn chớp bể ào ào",
-      "r": "chàng bèn liều lĩnh anh hào lên ngôi",
+      "r": "một ngày sao vẫn lao đao lạ lùng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Thương em anh biết làm sao",
-      "r": "tình yêu là thế anh nào có quên",
+      "r": "thương em thương cả ngọt ngào tình nhân",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Ví dầu cầu ván đóng đinh",
-      "r": "bao nhiêu chiếc nhẫn tự mình chuộc tôi",
+      "r": "ta đây không lụy cuộc tình đã qua",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Cầu tre lắc lẻo gập ghềnh",
-      "r": "hay là vì sợ cái bên là bờ",
-      "R1": false,
+      "r": "một phen vượt ẩu vượt ghềnh vượt qua",
+      "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Qua sông phải lụy đò ngang",
-      "r": "phải chăng lòng vẫn nặng mang nặng sầu",
+      "r": "cho dòng sông đuống mênh mang nỗi niềm",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Qua suối phải lụy cầu tre",
-      "r": "cầu tre lắt lẻo cầu tre lắc đầu",
+      "r": "để nay gặp được bạn bè thân thương",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Đồng bằng ruộng lúa mênh mông",
-      "r": "nuôi con vất vả ruộng đồng xa xôi",
+      "r": "lúa thì con gái lúa bông hạt vàng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Biển đông sóng vỗ rì rào",
-      "r": "hai bên tình cảm dạt dào trong tim",
+      "r": "em về đi ngủ đi nào cho nhanh",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Non cao ai đắp mà cao",
-      "r": "lớn nhiều",
+      "r": "vời vợi  yêu em yêu mãi thế nào anh ơi",
       "R1": false,
       "R2": 1,
       "R3": false
     },
     {
       "p": "Sông sâu ai bới ai đào",
-      "r": "tương lai phía trước ai nào có hay",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "sông sâu biển mặn lòng ta",
+      "R1": false,
+      "R2": 3,
+      "R3": false
     },
     {
       "p": "Khi vui cũng vậy khi buồn",
-      "r": "vậy mà bà đã ngồi buôn chuyện đời",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "",
+      "R1": false,
+      "R2": 0,
+      "R3": false
     },
     {
       "p": "Ở hiền thì lại gặp lành",
-      "r": "làm thơ để tặng riêng anh yêu rồi",
+      "r": "yêu thơ yêu cả trời xanh với trò",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Chị em như chuối nhiều tàu",
-      "r": "ai cũng biết bao nhiêu lần xông pha",
+      "r": "hai quả là đà nẵng mà thôi bớt cay",
       "R1": false,
-      "R2": 2,
-      "R3": true
+      "R2": 1,
+      "R3": false
     },
     {
       "p": "Tấm lành che tấm rách đừng",
-      "r": "để cho đau đớn quá chừng em ơi",
+      "r": "cả dân tộc cũng không ngừng diễn ra",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Rừng vàng biển bạc quê ta",
-      "r": "ta xin hứa sẽ đi xa em à",
+      "r": "mà sao ta lại là ta là mình",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Không gì bằng cơm với cà",
-      "r": "làm sao em khỏi xót xa quá trời",
+      "r": "ăn xong rồi lại thêm quà bà yêu",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Có chí thì nên có công",
-      "r": "anh yêu em thật lòng không thể rời",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ấy là  nếu ai muốn có việc làm gì không",
+      "R1": false,
+      "R2": 2,
+      "R3": false
     },
     {
       "p": "Mài sắt nên kim bạn ơi",
-      "r": "anh hùng chống dịch sáng ngời chiến công",
+      "r": "đã ghi dấu ấn của tôi không nào",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Tay làm hàm nhai tay quai",
-      "r": "dáng em xinh quá nhớ hoài không thôi",
+      "r": "anh còn đi mãi chưa phai trong lòng",
       "R1": true,
       "R2": 4,
       "R3": true
     },
     {
       "p": "Miệng ăn núi lở ai ơi",
-      "r": "anh đi để lại chơi vơi nỗi buồn",
+      "r": "ai lên phố thị tìm người tìm mua",
       "R1": true,
       "R2": 4,
       "R3": true
