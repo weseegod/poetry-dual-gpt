@@ -281,7 +281,7 @@ def check_near_duplicates(df, threshold=0.3):
 # MAIN PIPELINE
 # ═══════════════════════════════════════════════
 
-def clean(csv_path=None, output_path=None):
+def clean(csv_path=None, output_path=None, threshold=0.3):
     csv_path = Path(csv_path or CSV_PATH)
     output_path = Path(output_path or OUTPUT_PATH)
 
@@ -296,7 +296,7 @@ def clean(csv_path=None, output_path=None):
     df = clean_content(df)
     df = filter_short(df, min_lines=2)
     df = remove_duplicates(df)
-    df = remove_near_duplicates(df, threshold=0.3)
+    df = remove_near_duplicates(df, threshold=threshold)
 
     print(f"\n📊  Final: {len(df):,} poems")
     for genre in ["lục bát", "bảy chữ"]:
@@ -312,7 +312,7 @@ def clean(csv_path=None, output_path=None):
     return df
 
 
-def clean_existing(csv_path, output_path=None):
+def clean_existing(csv_path, output_path=None, threshold=0.3):
     """Re-clean a CSV: fix spacing, strip metadata, re-dedup."""
     csv_path = Path(csv_path)
     output_path = Path(output_path or csv_path)
@@ -321,6 +321,7 @@ def clean_existing(csv_path, output_path=None):
     df = pd.read_csv(csv_path)
     before = len(df)
     print(f"    Input: {before:,} poems")
+    print(f"    Near-duplicate threshold: {threshold:.0%}")
 
     df["content"] = df["content"].apply(clean_text)
     mask = df["content"].astype(str).str.strip() != ""
@@ -331,7 +332,7 @@ def clean_existing(csv_path, output_path=None):
 
     df = filter_short(df, min_lines=2)
     df = remove_duplicates(df)
-    df = remove_near_duplicates(df, threshold=0.3)
+    df = remove_near_duplicates(df, threshold=threshold)
 
     after = len(df)
     print(f"    Output: {after:,} poems ({before - after} removed)")
@@ -365,6 +366,6 @@ if __name__ == "__main__":
         print(f"    Poems: {len(df):,}")
         check_near_duplicates(df, threshold=args.threshold)
     elif args.reclean:
-        clean_existing(args.reclean, args.output)
+        clean_existing(args.reclean, args.output, threshold=args.threshold)
     else:
-        clean(args.csv, args.output)
+        clean(args.csv, args.output, threshold=args.threshold)
