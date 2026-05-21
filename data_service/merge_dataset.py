@@ -97,6 +97,17 @@ def load_scraped():
 
     scraped = pd.concat(dfs, ignore_index=True)
     scraped = scraped.drop_duplicates(subset=['url'])
+
+    # Clean "Tập thơ ..." / "Thơ ..." prefix from content
+    for idx, row in scraped.iterrows():
+        content = str(row['content'])
+        sep = '<\\n>'
+        if content.startswith('Tập thơ ') and sep in content:
+            content = content.split(sep, 1)[1] if content.split(sep, 1)[0].endswith(':') else content
+        if content.startswith('Thơ ') and sep in content:
+            content = content.split(sep, 1)[1] if content.split(sep, 1)[0].endswith(':') else content
+        scraped.at[idx, 'content'] = content
+
     print(f"  Total (deduped by URL): {len(scraped)} poems")
     return scraped
 
@@ -225,6 +236,8 @@ def main():
                    help="Actually merge (without this flag, dry-run only)")
     p.add_argument("--validate", action="store_true",
                    help="Only validate, don't merge")
+    p.add_argument("--list-new", action="store_true",
+                   help="Show all new poems with preview")
     args = p.parse_args()
 
     if not EXISTING_CSV.exists():
@@ -244,6 +257,21 @@ def main():
 
     # 4. Stats
     stats_by_author(scraped, valid, new)
+
+    # Show new poems for review
+    if args.list_new and len(new) > 0:
+        print(f"\n{'='*60}")
+        print(f"📋  NEW POEMS ({len(new)} total)")
+        print(f"{'='*60}")
+        for _, row in new.iterrows():
+            author = str(row.get('author', ''))
+            title = str(row.get('title', ''))
+            genre = str(row.get('genre', ''))
+            content = str(row.get('content', ''))
+            lines = content.split('<\n>')
+            preview = ' '.join(lines[:2])
+            print(f"\n  [{author}] {title} ({genre})")
+            print(f"    {preview[:120]}{'...' if len(preview) > 120 else ''}")
 
     # 5. Merge (optional)
     if args.validate:
