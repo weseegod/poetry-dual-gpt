@@ -4,12 +4,14 @@ Measures: syllable accuracy, tone correctness, rhyme accuracy.
 Saves report to documents/stage_comparison.md
 """
 
-import re
-import json
-import time
+import re, json, time, sys
 import torch
 from pathlib import Path
 from tokenizers import Tokenizer
+
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+
 from src.model import PoetryDuelGPT
 from src.tones import get_tone, get_rhyme_group
 

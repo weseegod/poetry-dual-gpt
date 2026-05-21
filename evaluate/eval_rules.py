@@ -3,14 +3,16 @@ Per-rule evaluation of rhyme/tone conditioning on 200 novel Lục Bát prompts.
 Tests each of the 4 implemented rules from rhyme_conditioning.md.
 """
 
-import re, json, time, random
+import re, json, time, random, sys
 import torch, torch.nn.functional as F
 from pathlib import Path
 from tokenizers import Tokenizer
-from src.model import PoetryDuelGPT
-from src.tones import get_tone, get_rhyme_group, get_luc_bat_tags
 
 ROOT = Path(__file__).parent.parent  # evaluate/ -> project root
+sys.path.insert(0, str(ROOT))  # make 'src' importable regardless of invocation
+
+from src.model import PoetryDuelGPT
+from src.tones import get_tone, get_rhyme_group, get_luc_bat_tags
 
 # ── 200 NOVEL Lục Bát prompts (ca dao, folk poetry - verified not in corpus) ──
 PROMPTS = [
