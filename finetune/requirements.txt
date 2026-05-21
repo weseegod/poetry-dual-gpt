@@ -1,0 +1,5 @@
+# Qwen QLoRA fine-tuning dependencies (in addition to base requirements.txt)
+transformers>=4.40.0
+peft>=0.10.0
+bitsandbytes>=0.42.0
+accelerate>=0.28.0
