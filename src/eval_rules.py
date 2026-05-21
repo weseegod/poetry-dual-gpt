@@ -111,7 +111,9 @@ print(f'Novel prompts: {len(PROMPTS)-in_corpus}/{len(PROMPTS)} (in corpus: {in_c
 # ── Model loading ──
 def load(path, dev):
     ckpt = torch.load(path, map_location=dev, weights_only=False)
-    m = PoetryDuelGPT(ckpt['vocab_size'], **ckpt['model_config'])
+    cfg = ckpt['model_config'].copy()
+    cfg.pop('vocab_size', None)  # Avoid duplicate if model_config has it
+    m = PoetryDuelGPT(ckpt['vocab_size'], **cfg)
     m.load_state_dict(ckpt['model_state_dict']); m.to(dev).eval()
     return m
 
@@ -216,7 +218,7 @@ def main():
     # Test both Stage 1 and Stage 2
     models = {
         'Stage 1 (all genres)': str(ROOT / 'checkpoints/stage1_best.pt'),
-        'Stage 2 (Lục Bát)': str(ROOT / 'checkpoints/final.pt'),
+        'Stage 2 (Lục Bát)': str(ROOT / 'checkpoints/stage2_best.pt'),
     }
     
     all_results = {}
