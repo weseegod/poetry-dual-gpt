@@ -43,6 +43,14 @@ def collect_tone_patterns(corpus_path):
 
 def collect_doi_am_patterns(corpus_path):
     """Collect all 7-position tone patterns for Thất Ngôn đối âm."""
+    # Inline get_tone to avoid import issues when run from any directory
+    TRAC = set('áắấéếíóốớúứýạặậẹệịọộợụựỵảẳẩẻểỉỏổởủửỷãẵẫẽễĩõỗỡũữỹ'
+               'ÁẮẤÉẾÍÓỐỚÚỨÝẠẶẬẸỆỊỌỘỢỤỰỴẢẲẨẺỂỈỎỔỞỦỬỶÃẴẪẼỄĨÕỖỠŨỮỸ')
+    def get_tone(syl):
+        for ch in syl:
+            if ch in TRAC: return 'T'
+        return 'B'
+    
     patterns = set()
     with open(corpus_path) as f:
         for line in f:
@@ -50,7 +58,6 @@ def collect_doi_am_patterns(corpus_path):
                 parts = line.split('<|reply|>')
                 if len(parts) >= 2:
                     resp = parts[1].split('<|end|>')[0].strip()
-                    from src.tones import get_tone
                     tones = ''.join(get_tone(s) for s in resp.split()[:7])
                     if len(tones) == 7:
                         patterns.add(tones)
