@@ -1,119 +1,92 @@
-# 🚀 Remaining Work
+# 🚀 v2.0 Roadmap
 
-> Everything below is what's left. Done items have been removed to keep this focused.
+> v1.0 shipped: 31M params, 4 rules (rhyme 58%, tone 88%, syllable 78%, đối âm 69%), two-stage training, chat UI, Colab pipeline.
+> Everything below is the path to v2.0.
 
 ---
 
-## 🐛 CRITICAL BUG: Tokenizer Corruption from Rhyme/Tone Tokens
+## 🔮 v2.0: Qwen2.5-1.5B QLoRA
 
-> **Date:** 2026-05-20 | **Diagnosed and fixed**
+**Goal:** Swap the 31M custom GPT for a 1.5B pretrained Qwen model with LoRA fine-tuning. Same control tokens transfer directly — no format changes needed.
 
-### What happened
+**Why:** A 31M model trained from scratch on 135K poems hits a quality ceiling. Qwen2.5-1.5B was pretrained on terabytes of text including Vietnamese. It already knows grammar, vocabulary, idioms, and cultural context. Fine-tuning on poetry data with control tokens just teaches it the rules — the foundation is already there.
 
-Rhyme/tone control tokens (`[RHYME:ong]`, `[TONE:BBBTTB]`, `[LINK2:B]`) were included as **plain text** in the training corpus. When BPE tokenizer was retrained on this corpus, the tokens got split into 5-6 subword pieces:
+**What Qwen brings:**
+- Rich Vietnamese vocabulary (not limited to 11K BPE tokens)
+- Grammatical correctness (no garbled subword fragments)
+- Cultural knowledge (folklore, idioms, historical references)
+- Coherent multi-sentence generation
 
+**Implementation:**
 ```
-[LUC_BAT]    → 1 token (id=4)  ✅ special token
-[RHYME:ong]  → 5 tokens         ❌ BPE-split: [, RHYME, :, ong, ]
-[TONE:BBBTTB] → 5 tokens        ❌ BPE-split
-```
-
-### Diagnosis: model IS working, sample.py missing auto_tag
-
-Tests confirmed the model generates coherent Vietnamese poetry when given properly tagged prompts:
-
-```
-Prompt:  [LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng
-Output:  "để anh ngơ ngẩn đứng trông ngóng nhìn em"
+Same training format → same preprocess.py → same control tokens
+Just swap PoetryDuelGPT(31M) → Qwen2.5(1.5B) + LoRA adapters
 ```
 
-The broken output came from plain-text prompts without genre tags. `sample.py` batch mode doesn't call `auto_tag()`, unlike interactive mode which does. Fixed: batch mode now auto-tags.
+**Requirements:** `transformers` + `peft` + `bitsandbytes`. Colab T4/L4 handles 4-bit QLoRA.
 
-### Remaining concern: fragmented control tokens
-
-Even though the model works, `[RHYME:ong]` being 5 BPE tokens is suboptimal. The model has to assemble rhyme meaning from 5 positions. For stronger rhyme control, these should be special tokens (single IDs). Left as future improvement.
-
-### Also fixed: sample.py batch mode auto_tag
-
-```python
-# Before: raw prompt passed to generate
-_, ids = generate(model, tok, args.prompt, ...)
-
-# After: auto-detect and tag
-prompt = args.prompt
-if not prompt.startswith('['): prompt = auto_tag(prompt)
-if '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
-    prompt = auto_tag(prompt.replace('[LUC_BAT] ', ''))
-_, ids = generate(model, tok, prompt, ...)
+**Expected quality:** Semantic coherence from "medium" → "high". Rule accuracy similar or better. Poetry that reads like poetry, not just rule-compliant text.
 
 ---
 
-## 🔴 Next: Two-Stage Training
+## 📜 Multi-Couplet Generation
 
-> 📖 Full guide: **[two_stage_training.md](two_stage_training.md)**
+**Goal:** Generate full 4-line (Lục Bát) or 8-line (Thất Ngôn bát cú) poems, not just single couplets.
 
-**Goal:** Train on all genres first (136K poems), then fine-tune on Lục Bát only.
+**Why:** Vietnamese poetry is structured in stanzas. A Lục Bát poem is 4+ lines (6-8-6-8...), and Thất Ngôn bát cú is 8 lines (7-7-7-7-7-7-7-7). Single couplet generation shows the model understands the form, but full-poem generation unlocks:
+- **End rhyme** between couplets (currently skipped because we only generate one couplet)
+- **Thematic coherence** across stanzas
+- **Real poetic structure** that reads like actual Vietnamese poetry
 
-**What you need to implement:**
-- `--resume` flag in `train.py` (load checkpoint + optimizer state, continue from saved step)
-- Filter Lục Bát-only corpus from the existing 942K pairs
-- Run Stage 1 (15K steps, all genres) → then Stage 2 (5K steps, Lục Bát only, lower LR)
+**Implementation approach:**
+1. Train on multi-couplet sequences (2-4 couplets per example)
+2. Add `[COUPLET1]`, `[COUPLET2]` markers
+3. Generate autoregressively until `[END_POEM]` token
+4. This automatically enables end-rhyme evaluation between couplets
 
-**Why this first:** Establishes your 30M model's quality ceiling. No new data formats, no new tokens — just training strategy.
-
----
-
-## 🟡 Then: Rhyme Conditioning ✅
-
-> 📖 Full guide: **[rhyme_conditioning.md](rhyme_conditioning.md)**
-
-**Implemented:** `src/tones.py`, corpus regenerated with `[RHYME:en] [TONE:BBBTTB]`, tokenizer retrained.
-
-**Remaining:** Train model, evaluate rhyme/tone improvement after training.
+**Challenge:** Longer sequences (4 couplets ≈ 56 syllables ≈ ~60 tokens) fit in block_size=256, so no architecture change needed. Just data format change.
 
 ---
 
-## 🔵 Future: Qwen2.5-1.5B Fine-Tune
+## 📚 Better Training Data
 
-**Goal:** Swap your 30M GPT for a 1.5B pretrained model with LoRA fine-tuning.
+**Goal:** Expand beyond the current 135K-poem single-source corpus.
 
-**Why this last:** Your 30M model will hit a quality wall (correct form, simple vocabulary). Qwen brings rich Vietnamese understanding from its pretraining. The same rhyme/tone control tokens transfer directly.
+**Current data:** 135,863 poems from one collection → 942K pairs. Good for form/rules, but limited vocabulary and themes (mostly classical/romantic poetry).
 
-**Requirements:** HuggingFace `transformers` + `peft` + `bitsandbytes`. Colab L4 can handle it with 4-bit QLoRA.
+**Suggested additions:**
 
----
+| Source | Poems | Style | Value |
+|--------|-------|-------|-------|
+| Ca dao / folk poetry | 5,000+ | Rural life, proverbs, love | Everyday Vietnamese, idioms |
+| Nguyễn Du (Truyện Kiều) | 3,254 lines | Epic, classical | Rich vocabulary, literary canon |
+| Tố Hữu | ~500 poems | Revolutionary, modern | 20th century Vietnamese |
+| Xuân Diệu, Huy Cận | ~1,000 poems | Romantic, modern | Diverse themes, modern language |
+| Lục Bát online collections | 10,000+ | Various | Volume for fine-tuning |
 
-## 📊 Done (for reference)
-
-| What | Status |
-|------|--------|
-| Pad token loop fix | ✅ |
-| True couplets (step=2) | ✅ |
-| Top-p nucleus sampling | ✅ |
-| 30M model (n_embd=512, n_head=8, n_layer=8) | ✅ |
-| Comma-free prompt format | ✅ |
-| Data cleaning pipeline | ✅ |
-| Multi-genre ([LUC_BAT] + [THAT_NGON]) | ✅ |
-| Dual-genre corpus (942K pairs) | ✅ |
-| Retrained tokenizer (10,785 vocab) | ✅ |
-| Chat UI (FastAPI + React) | ✅ |
-| Auto-detect genre (6-syl→LUC_BAT, 7-syl→THAT_NGON) | ✅ |
-| Save best.pt on val improvement | ✅ |
+**Impact:** Broader vocabulary, more diverse themes, better generalization to novel prompts. The current model only knows the vocabulary of its 135K-poem corpus — adding folk poetry and modern works would dramatically expand its range.
 
 ---
 
-## 🧪 Evaluation Checklist
+## 📊 v1.0 Baseline (for comparison)
 
-After each remaining step, generate 5 samples:
+| Metric | Stage 2 (v1.0) |
+|--------|----------------|
+| Rhyme (R1) | 58.4% |
+| Tone (R2) | 87.5% |
+| Syllable (R3) | 78.0% |
+| Đối Âm (R4, Stage 1) | 69.4% |
+| All 3 pass | 50.9% |
+| Semantic quality | Medium |
 
-```bash
-python src/sample.py --num_samples 5 --temperature 0.75 --top_p 0.92
-```
+Full evaluation: [rule_evaluation.md](rule_evaluation.md)
 
-| Metric | Current | After two-stage | After rhyme |
-|--------|---------|-----------------|-------------|
-| 6→8 syllable accuracy | ~85% | 95%+ | 95%+ |
-| B-T-B-B tone correctness | ~60% | 80%+ | 90%+ |
-| Rhyme (6th-syl match) | ~30% | ~30% | 60%+ |
-| Semantic coherence | Medium | Medium-High | High |
-| No empty output | ✅ | ✅ | ✅ |
+---
+
+## 🎯 Priority
+
+| # | Item | Impact | Effort | Blocks |
+|---|------|--------|--------|--------|
+| 1 | Qwen2.5-1.5B QLoRA | 🚀🚀🚀 | 1 day | Nothing — same data, same tokens |
+| 2 | Multi-couplet generation | 🚀🚀 | 2-3 days | Enables end-rhyme rule |
+| 3 | Better training data | 🚀 | Ongoing | Requires data collection |
