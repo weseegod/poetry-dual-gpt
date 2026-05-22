@@ -20,6 +20,7 @@ Merge into main dataset:
 
 import json, re, argparse, unicodedata
 from pathlib import Path
+import sys; sys.path.insert(0, str(Path(__file__).parent.parent))
 import pandas as pd
 
 ROOT = Path(__file__).parent.parent
