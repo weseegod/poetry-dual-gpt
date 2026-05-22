@@ -297,7 +297,7 @@ assert len(tok.encode("<|linebreak|>").ids) == 1
      * Generate window=2 examples: couplet_k+couplet_{k+1} → couplet_{k+2}
    - Extract [RHYME:X] from pos 8 of last input line's 8-syl line
    - Extract [TONE:XXXXXX] from last input line's 6-syl line
-   - Output: data/doi_tho_corpus.txt
+   - Output: resources/doi_tho_corpus.txt
 
 2. Merge with existing single-couplet corpus
    - Keep [LUC_BAT] single-couplet format alongside [DOI_THO] format
@@ -315,11 +315,11 @@ Same pipeline as current `train.py`:
 
 ```
 Stage 1 (all genres):
-  python src/train.py --corpus data/doi_tho_corpus.txt --name doi_tho_stage1_
+  python src/train.py --corpus resources/doi_tho_corpus.txt --name doi_tho_stage1_
   → 10K steps, batch=192, LR=3e-4
 
 Stage 2 (Lục Bát only):
-  python src/train.py --corpus data/doi_tho_luc_bat.txt
+  python src/train.py --corpus resources/doi_tho_luc_bat.txt
     --resume checkpoints/doi_tho_stage1_best.pt --name doi_tho_stage2_
   → 5K steps, batch=192, LR=1e-4
 ```

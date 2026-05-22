@@ -33,7 +33,7 @@ import pandas as pd
 
 ROOT = Path(__file__).parent.parent
 CSV_PATH = ROOT / "data" / "poems_dataset.csv"
-OUTPUT_PATH = ROOT / "data" / "poems_dataset_clean.csv"
+OUTPUT_PATH = ROOT / "resources" / "poems_dataset_clean.csv"
 
 SEP = "<" + chr(10) + ">"
 

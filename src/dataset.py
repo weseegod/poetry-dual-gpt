@@ -18,7 +18,7 @@ import pandas as pd
 from tqdm import tqdm
 
 ROOT = Path(__file__).parent.parent
-PATH_DATASET = ROOT / "data" / "poems_dataset.csv"
+PATH_DATASET = ROOT / "data" / "poems_dataset.csv"  # final clean dataset
 
 
 # ═══════════════════════════════════════════════════════════════

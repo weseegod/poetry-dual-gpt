@@ -663,7 +663,7 @@ Modified:
   tests/test_tones.py            ← unit tests for tone/rhyme functions
 
 Regenerated:
-  data/poetry_corpus.txt         ← new format with [RHYME:...] [TONE:...] [LINK2:...]
+  resources/poetry_corpus.txt         ← new format with [RHYME:...] [TONE:...] [LINK2:...]
   tokenizer/poetry_bpe.model     ← retrain (control tokens are BPE-learned subwords)
 ```
 
@@ -708,7 +708,7 @@ Rhyme:  everything from last vowel onward after stripping tone marks
 | 3 | Training data injection | `src/preprocess.py` ✅ |
 | 4 | Generation auto-inject | `src/sample.py`, `client/server.py` ✅ |
 | 5 | Tokenizer (10,922 vocab) | `tokenizer/poetry_bpe.model` ✅ |
-| 6 | Corpus with tags (942K pairs) | `data/poetry_corpus.txt` ✅ |
+| 6 | Corpus with tags (942K pairs) | `resources/poetry_corpus.txt` ✅ |
 | 7 | Tests (74) | `tests/test_tones.py` ✅ |
 | 8 | Train + evaluate | ⏳ Run Colab |
 

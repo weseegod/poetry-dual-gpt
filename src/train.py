@@ -33,7 +33,7 @@ CONFIG = {
     "n_embd": 512, "n_head": 8, "n_layer": 8, "block_size": 256, "dropout": 0.1,
 
     # Paths
-    "corpus_path": "data/poetry_corpus.txt",
+    "corpus_path": "resources/poetry_corpus.txt",
     "tokenizer_path": "tokenizer/poetry_bpe.model",
     "checkpoint_dir": "checkpoints",
 
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--max_lines", type=int, default=None)
     p.add_argument("--resume", type=str, default=None, help="Resume from checkpoint (for fine-tuning)")
-    p.add_argument("--corpus", type=str, default=None, help="Override corpus file (e.g. data/corpus_luc_bat.txt)")
+    p.add_argument("--corpus", type=str, default=None, help="Override corpus file (e.g. resources/corpus_luc_bat.txt)")
     p.add_argument("--name", type=str, default="", help="Prefix for checkpoint files (e.g. stage1_)")
     p.add_argument("--curriculum", action="store_true", help="Progressive difficulty: short→long poems")
     p.add_argument("--curriculum_rate", type=float, default=0.25, help="Starting fraction of curriculum data")

@@ -15,7 +15,7 @@ from pathlib import Path
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 
 ROOT = Path(__file__).parent.parent
-CORPUS = ROOT / "data" / "poetry_corpus.txt"
+CORPUS = ROOT / "resources" / "poetry_corpus.txt"
 OUTPUT = ROOT / "tokenizer" / "poetry_bpe.model"
 
 

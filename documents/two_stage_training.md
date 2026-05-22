@@ -25,9 +25,9 @@ Stage 2: Lục Bát only (~651K pairs)
 ## What You Already Have
 
 ```
-✅ Clean data:    data/poems_dataset_clean.csv  (136K poems, no HTML, no dupes)
+✅ Clean data:    resources/poems_dataset_clean.csv  (136K poems, no HTML, no dupes)
 ✅ Multi-genre:   [LUC_BAT] + [THAT_NGON] tokens both working
-✅ Corpus:        data/poetry_corpus.txt  (942K pairs, strict syllables)
+✅ Corpus:        resources/poetry_corpus.txt  (942K pairs, strict syllables)
 ✅ Tokenizer:     tokenizer/poetry_bpe.model  (10,785 vocab, indices 0-7 = special)
 ✅ Training code: src/train.py with cosine LR, mixed precision, best.pt saving
 ✅ 30M model:     n_embd=512, n_head=8, n_layer=8, block_size=256
@@ -45,14 +45,14 @@ You need one corpus with ALL genres (Stage 1) and one with only Lục Bát (Stag
 
 ```bash
 # Stage 1 corpus — all genres (already have this!)
-# data/poetry_corpus.txt = 942K pairs ([LUC_BAT] + [THAT_NGON])
+# resources/poetry_corpus.txt = 942K pairs ([LUC_BAT] + [THAT_NGON])
 
 # Stage 2 corpus — Lục Bát only
 python -c "
-with open('data/poetry_corpus.txt') as f:
+with open('resources/poetry_corpus.txt') as f:
     lines = f.readlines()
 luc_bat = [l for l in lines if '[LUC_BAT]' in l]
-with open('data/corpus_luc_bat.txt', 'w') as f:
+with open('resources/corpus_luc_bat.txt', 'w') as f:
     f.writelines(luc_bat)
 print(f'Lục Bát pairs: {len(luc_bat):,}')
 "
@@ -63,7 +63,7 @@ print(f'Lục Bát pairs: {len(luc_bat):,}')
 Add `--genre` flag to preprocess.py so you can run:
 ```bash
 python src/preprocess.py --output data/corpus_all.txt               # all genres
-python src/preprocess.py --output data/corpus_luc_bat.txt --genre lục_bát  # Lục Bát only
+python src/preprocess.py --output resources/corpus_luc_bat.txt --genre lục_bát  # Lục Bát only
 ```
 
 ### Step 2: Train Stage 1 (all genres, 15K steps)
@@ -158,7 +158,7 @@ Updated cell structure for two-stage training:
 ```python
 # Cell 4: Clean + Preprocess
 !python src/clean_data.py
-!python src/preprocess.py              # → data/poetry_corpus.txt (all genres)
+!python src/preprocess.py              # → resources/poetry_corpus.txt (all genres)
 !python src/train_bpe.py
 
 # Cell 5: Quick Test (verify everything works)
@@ -173,10 +173,10 @@ Updated cell structure for two-stage training:
 import subprocess
 subprocess.run("""
 python -c "
-with open('data/poetry_corpus.txt') as f:
+with open('resources/poetry_corpus.txt') as f:
     lines = f.readlines()
 luc_bat = [l for l in lines if '[LUC_BAT]' in l]
-with open('data/corpus_luc_bat.txt', 'w') as f:
+with open('resources/corpus_luc_bat.txt', 'w') as f:
     f.writelines(luc_bat)
 print(f'Lục Bát pairs: {len(luc_bat):,}')
 "
@@ -246,10 +246,10 @@ cp checkpoints/final.pt checkpoints/stage1_base.pt
 
 # 2. Filter Lục Bát corpus
 python -c "
-with open('data/poetry_corpus.txt') as f:
+with open('resources/poetry_corpus.txt') as f:
     lines = f.readlines()
 lb = [l for l in lines if '[LUC_BAT]' in l]
-with open('data/corpus_luc_bat.txt', 'w') as f:
+with open('resources/corpus_luc_bat.txt', 'w') as f:
     f.writelines(lb)
 print(f'{len(lb):,} Lục Bát pairs')
 "

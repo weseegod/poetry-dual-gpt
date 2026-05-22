@@ -9,13 +9,11 @@ venv/
 # Training artifacts
 checkpoints/
 
-# Data files (too large for GitHub, download/generate separately)
+# Resources (large generated/downloaded files)
+resources/
+
+# Data files (only final clean dataset is tracked)
 data/poems_dataset.csv
-data/poetry_corpus.txt
-data/corpus_luc_bat.txt
-data/doi_tho_corpus.txt
-data/poetry_corpus_combined.txt
-data/doi_tho_test.txt
 
 # Generated models (created by scripts)
 tokenizer/poetry_bpe.model

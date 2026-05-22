@@ -27,7 +27,64 @@ AUTHORS = {
     "to_huu":        {"name": "Tố Hữu",           "period": "hiện đại", "pages": 2},
     "nguyen_binh":   {"name": "Nguyễn Bính",      "period": "hiện đại", "pages": 3},
     "ho_xuan_huong": {"name": "Hồ Xuân Hương",    "period": "trung đại", "pages": 2},
-    "nguyen_du":     {"name": "Nguyễn Du",         "period": "trung đại", "pages": 1},
+
+    "bao_cuong":     {"name": "Bảo Cường",         "period": "hiện đại", "pages": 4},
+    "bac_tu":     {"name": "Bac Tu",         "period": "hiện đại", "pages": 1},
+    "bach_loan":     {"name": "Bạch Loan",         "period": "hiện đại", "pages": 2},
+    "be_kien_quoc":     {"name": "Bế Kiến Quốc",         "period": "hiện đại", "pages": 1},
+    "binh_nguyen_trang":     {"name": "Bình Nguyên Trang",         "period": "hiện đại", "pages": 1},
+    "btn":     {"name": "BTN",         "period": "hiện đại", "pages": 1},
+
+    "bui_giang":     {"name": "Bùi Giáng",         "period": "hiện đại", "pages": 1},
+    "bui_kim_anh":     {"name": "Bùi Kim Anh",         "period": "hiện đại", "pages": 1},
+    "bui_sim_sim":     {"name": "Bùi Sim Sim",         "period": "hiện đại", "pages": 1},
+    "che_lan_vien":     {"name": "Chế Lan Viên",         "period": "hiện đại", "pages": 2},
+    "cung_tram_tuong":     {"name": "Cung Trầm Tưởng",         "period": "hiện đại", "pages": 1},
+
+    "dam_huy_dong":     {"name": "Đàm Huy Đông",         "period": "hiện đại", "pages": 1},
+    "dang_hoai_anh":     {"name": "Ðặng Hoài Anh",         "period": "hiện đại", "pages": 1},
+    "dinh_hung":     {"name": "Đinh Hùng",         "period": "hiện đại", "pages": 2},
+    "doan_van_cu":     {"name": "Đoàn Văn Cừ",         "period": "hiện đại", "pages": 1},
+    "dong_duc_bon":     {"name": "Đồng Đức Bốn",         "period": "hiện đại", "pages": 1},
+
+    "do_trung_quan":     {"name": "Đỗ Trung Quân",         "period": "hiện đại", "pages": 2},
+    "du_tu_le":     {"name": "Du Tử Lê",         "period": "hiện đại", "pages": 2},
+    "giang_nam":     {"name": "Giang Nam",         "period": "hiện đại", "pages": 1},
+    "hoang_cam":     {"name": "Hoàng Cầm",         "period": "hiện đại", "pages": 2},
+    
+    "hoang_nhuan_cam":     {"name": "Hoàng Nhuận Cầm",         "period": "hiện đại", "pages": 1},
+    "hoang_phu_ngoc_tuong":     {"name": "Hoàng Phủ Ngọc Tường",         "period": "hiện đại", "pages": 1},
+    "ho_dzenh":     {"name": "Hồ Dzếnh",         "period": "hiện đại", "pages": 2},
+    "huynh_van_nghe":     {"name": "Huỳnh Văn Nghệ",         "period": "hiện đại", "pages": 2},
+    "khuyet_danh":     {"name": "Khuyết Danh",         "period": "hiện đại", "pages": 1},
+    
+    "le_minh_quoc":     {"name": "Lê Minh Quốc",         "period": "hiện đại", "pages": 1},
+    "luu_quang_vu":     {"name": "Lưu Quang Vũ",         "period": "hiện đại", "pages": 3},
+    "luu_trong_lu":     {"name": "Lưu Trọng Lư",         "period": "hiện đại", "pages": 2},
+    "muong_man":     {"name": "Mường Mán",         "period": "hiện đại", "pages": 2},
+    "nguyen_bac_son":     {"name": "Nguyễn Bắc Sơn",         "period": "hiện đại", "pages": 1},
+
+    "nguyen_cong_tru":     {"name": "Nguyễn Công Trứ",         "period": "hiện đại", "pages": 1},
+    "nguyen_duy":     {"name": "Nguyễn Duy",         "period": "hiện đại", "pages": 1},
+    "nguyen_nhuoc_phap":     {"name": "Nguyễn Nhược Pháp",         "period": "hiện đại", "pages": 1},
+    "nguyen_nhat_anh":     {"name": "Nguyễn Nhật Ánh",         "period": "hiện đại", "pages": 1},
+    "nguyen_tat_nhien":     {"name": "Nguyễn Tất Nhiên",         "period": "hiện đại", "pages": 5},
+    
+    "nguyen_viet_chien":     {"name": "Nguyễn Việt Chiến",         "period": "hiện đại", "pages": 1},
+    "pham_ngoc":     {"name": "Phạm Ngọc",         "period": "hiện đại", "pages": 1},
+    "pham_thien_thu":     {"name": "Phạm Thiên Thư",         "period": "hiện đại", "pages": 1},
+    "pham_tien_duat":     {"name": "Phạm Tiến Duật",         "period": "hiện đại", "pages": 1},
+    "phan_van_tri":     {"name": "Phan Văn Trị",         "period": "hiện đại", "pages": 1},
+    
+    "quang_dung":     {"name": "Quang Dũng",         "period": "hiện đại", "pages": 1},
+    "tan_da":     {"name": "Tản Đà",         "period": "hiện đại", "pages": 1},
+    "te_hanh":     {"name": "Tế Hanh",         "period": "hiện đại", "pages": 1},
+    "the_lu":     {"name": "Thế Lữ",         "period": "hiện đại", "pages": 2},
+    "tran_mong_tu":     {"name": "Trần Mộng Tú",         "period": "hiện đại", "pages": 1},
+    
+    "vien_phuong":     {"name": "Viễn Phương",         "period": "hiện đại", "pages": 1},
+    "vu_hoang_chuong":     {"name": "Vũ Hoàng Chương",         "period": "hiện đại", "pages": 4},
+    "xuan_quynh":     {"name": "Xuân Quỳnh",         "period": "hiện đại", "pages": 2},
 }
 
 LIST_URL = "https://isach.info/poem.php?list=poem&author={author}&order=poem_id&page={page}"

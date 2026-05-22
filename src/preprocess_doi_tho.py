@@ -27,8 +27,8 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).parent.parent
-CSV_PATH = ROOT / "data" / "poems_dataset_clean.csv"
-OUTPUT_PATH = ROOT / "data" / "doi_tho_corpus.txt"
+CSV_PATH = ROOT / "resources" / "poems_dataset_clean.csv"
+OUTPUT_PATH = ROOT / "resources" / "doi_tho_corpus.txt"
 
 # Control tokens
 START = "<|start|>"

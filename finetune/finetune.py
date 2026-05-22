@@ -35,8 +35,8 @@ except ImportError:
 MODEL_ID = "Qwen/Qwen2.5-1.5B"
 
 STAGE_CONFIGS = {
-    1: {"max_steps": 5000,  "corpus": "data/poetry_corpus.txt",              "lr": 2e-4, "patience": 5},
-    2: {"max_steps": 2000,  "corpus": "data/corpus_luc_bat.txt",             "lr": 1e-4, "patience": 3},
+    1: {"max_steps": 5000,  "corpus": "resources/poetry_corpus.txt",              "lr": 2e-4, "patience": 5},
+    2: {"max_steps": 2000,  "corpus": "resources/corpus_luc_bat.txt",             "lr": 1e-4, "patience": 3},
 }
 
 LORA_CONFIG = {

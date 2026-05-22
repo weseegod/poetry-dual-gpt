@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from tones import (
     get_tone, get_tone_sequence, strip_tone,
     get_rhyme_group, get_luc_bat_tags, get_that_ngon_tags,
+    get_doi_tho_tags,
 )
 
 
@@ -161,20 +162,54 @@ class TestGetLucBatTags(unittest.TestCase):
 
 class TestGetThatNgonTags(unittest.TestCase):
     def test_full_7_syllable(self):
-        result = get_that_ngon_tags("lom khom dưới núi tiều vài chú")
-        self.assertEqual(result, "[LINK2:B]")  # "khom" = B
+        link2, doi_am = get_that_ngon_tags("lom khom dưới núi tiều vài chú")
+        self.assertEqual(link2, "[LINK2:B]")  # "khom" = B
+        self.assertTrue(doi_am.startswith("[DOIAM:"))
 
     def test_trac_2nd_syllable(self):
-        result = get_that_ngon_tags("bước tới đèo ngang bóng xế tà")
-        self.assertEqual(result, "[LINK2:T]")  # "tới" = T (sắc)
+        link2, doi_am = get_that_ngon_tags("bước tới đèo ngang bóng xế tà")
+        self.assertEqual(link2, "[LINK2:T]")  # "tới" = T (sắc)
+        self.assertTrue(doi_am.startswith("[DOIAM:"))
 
     def test_short_line(self):
-        result = get_that_ngon_tags("một")
-        self.assertEqual(result, "")  # need at least 2 syllables
+        link2, doi_am = get_that_ngon_tags("một")
+        self.assertEqual(link2, "")  # need at least 2 syllables
+        self.assertEqual(doi_am, "")
 
     def test_empty(self):
-        result = get_that_ngon_tags("")
-        self.assertEqual(result, "")
+        link2, doi_am = get_that_ngon_tags("")
+        self.assertEqual(link2, "")
+        self.assertEqual(doi_am, "")
+
+
+class TestGetDoiThoTags(unittest.TestCase):
+    """Tests for đối thơ tag extraction (rhyme from pos 8, tone from 6-syl line)."""
+    
+    def test_basic(self):
+        rhyme, tone = get_doi_tho_tags(
+            "kiều nhi phận mỏng như tờ",
+            "một lời đã lỗi tóc tơ với chàng"
+        )
+        self.assertEqual(rhyme, "[RHYME:ang]")   # pos 8: "chàng" → "ang"
+        self.assertEqual(tone, "[TONE:BBTTBB]")   # 6-syl line tones
+    
+    def test_punctuation_in_last_syllable(self):
+        """Trailing punctuation on pos 8 should be stripped."""
+        rhyme, tone = get_doi_tho_tags(
+            "kiều nhi phận mỏng như tờ",
+            "một lời đã lỗi tóc tơ với chàng!"
+        )
+        self.assertEqual(rhyme, "[RHYME:ang]")   # "chàng!" → "ang"
+    
+    def test_short_eight_line(self):
+        rhyme, tone = get_doi_tho_tags("dòng sáu", "dòng tám ngắn")
+        self.assertEqual(rhyme, "")  # < 8 syllables
+        self.assertEqual(tone, "")   # 6-syl line too short (< 6 syl)
+    
+    def test_empty(self):
+        rhyme, tone = get_doi_tho_tags("", "")
+        self.assertEqual(rhyme, "")
+        self.assertEqual(tone, "")
 
 
 if __name__ == "__main__":
