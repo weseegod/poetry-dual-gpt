@@ -106,7 +106,7 @@ PROMPTS = [
 ]
 
 # Verify not in corpus
-corpus = open(ROOT / 'resources/poetry_corpus.txt').read()
+corpus = open(ROOT / 'data/poetry_corpus.txt').read()
 in_corpus = sum(1 for p in PROMPTS if p in corpus)
 print(f'Novel prompts: {len(PROMPTS)-in_corpus}/{len(PROMPTS)} (in corpus: {in_corpus})')
 

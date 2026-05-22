@@ -14,8 +14,8 @@ import pandas as pd
 from tones import get_luc_bat_tags, get_that_ngon_tags
 
 ROOT = Path(__file__).parent.parent
-CSV_PATH = ROOT / "resources" / "poems_dataset_clean.csv"
-OUTPUT_PATH = ROOT / "resources" / "poetry_corpus.txt"
+CSV_PATH = ROOT / "data" / "poems_dataset_clean.csv"
+OUTPUT_PATH = ROOT / "data" / "poetry_corpus.txt"
 
 # Control tokens — must match train_bpe.py SPECIAL_TOKENS
 START = "<|start|>"

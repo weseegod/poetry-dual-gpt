@@ -9,8 +9,10 @@ venv/
 # Training artifacts
 checkpoints/
 
-# Resources (large generated/downloaded files — gitignored)
+# Data files (generated locally, zipped, uploaded to Drive for Colab)
+data/
 resources/
+data.zip
 
 # Generated models (created by scripts)
 tokenizer/poetry_bpe.model
