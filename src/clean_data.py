@@ -11,9 +11,20 @@ Stages:
   6. Remove near-duplicates (shared lines)
 
 Usage:
-  python src/clean_data.py                          # full pipeline
-  python src/clean_data.py --reclean CSV            # in-place cleaning
-  python src/clean_data.py --check-dupes CSV        # dry-run stats
+  # Full pipeline (data/poems_dataset.csv → data/poems_dataset_clean.csv)
+  python src/clean_data.py
+
+  # Custom input/output
+  python src/clean_data.py --csv data/my_poems.csv --output data/out.csv
+
+  # Re-clean an existing CSV (fix spacing, re-dedup) in-place
+  python src/clean_data.py --reclean data/poems_dataset_clean.csv
+
+  # Validate: near-dupes + title duplicates + author stats (dry-run, no write)
+  python src/clean_data.py --check-dupes data/poems_dataset_clean.csv
+
+  # Custom near-duplicate overlap threshold (default: 0.3)
+  python src/clean_data.py --threshold 0.5
 """
 
 import re, hashlib, unicodedata, argparse
@@ -278,6 +289,94 @@ def check_near_duplicates(df, threshold=0.3):
 
 
 # ═══════════════════════════════════════════════
+# STAGE 6: Validation helpers
+# ═══════════════════════════════════════════════
+
+def check_title_dupes(df):
+    """Find poems with identical titles and show stats."""
+    title_counts = df["title"].str.strip().str.lower().value_counts()
+    duped = title_counts[title_counts > 1]
+    if len(duped) == 0:
+        print("  ✅ No duplicate titles found.")
+        return
+    print(f"\n  📋  Duplicate titles: {len(duped)} titles used more than once")
+    print(f"  {'Title':<45s} {'Count':>5s}  Authors")
+    print(f"  {'-'*43} {'-'*5}  {'-'*30}")
+    for title, count in duped.head(25).items():
+        authors = [str(a) for a in
+                   df[df["title"].str.strip().str.lower() == title]["author"].unique()
+                   if pd.notna(a)]
+        author_str = ", ".join(authors[:3]) if authors else "(unknown)"
+        if len(authors) > 3:
+            author_str += f" +{len(authors)-3} more"
+        print(f"  {title[:43]:<43s} {count:>5d}  {author_str}")
+    if len(duped) > 25:
+        print(f"  ... +{len(duped)-25} more")
+    total_duped = duped.sum()
+    print(f"  💡 Total poems sharing a title: {total_duped} / {len(df):,}")
+
+
+def check_same_title_author(df):
+    """Find poems with identical title AND author — likely actual duplicates."""
+    # Exclude blank/missing titles — those aren't meaningful duplicates
+    has_title = df["title"].fillna("").str.strip() != ""
+    d = df[has_title].copy()
+    skipped = len(df) - len(d)
+    key = d["title"].str.strip().str.lower() + " || " + d["author"].fillna("(unknown)").str.strip().str.lower()
+    duped = key.value_counts()
+    duped = duped[duped > 1]
+    if len(duped) == 0:
+        print(f"\n  ✅ No duplicate poems (same title + author) found.")
+        if skipped:
+            print(f"     ({skipped:,} poems with no title skipped)")
+        return
+    print(f"\n  🔁  Same title + author (real duplicates): {len(duped):,} groups")
+    if skipped:
+        print(f"     ({skipped:,} poems with no title skipped)")
+    print(f"  {'Title':<40s} {'Author':<30s} {'Count':>5s}")
+    print(f"  {'-'*38} {'-'*28} {'-'*5}")
+    total = 0
+    for k, count in duped.head(25).items():
+        parts = k.rsplit(" || ", 1)
+        title = parts[0][:38]
+        author = parts[1][:28] if len(parts) > 1 else "?"
+        print(f"  {title:<38s}  {author:<28s} {count:>5d}")
+        total += count
+    if len(duped) > 25:
+        print(f"  ... +{len(duped)-25} more")
+    total_duped = duped.sum()
+    print(f"  💡 Total duplicated poems: {total_duped} (in {len(duped):,} groups)")
+
+
+def show_author_stats(df):
+    """Show poem counts per author with genre breakdown."""
+    author_counts = df["author"].value_counts()
+    print(f"\n  📊  Authors: {len(author_counts):,} unique, {len(df):,} poems total")
+
+    top_n = min(20, len(author_counts))
+    top = author_counts.head(top_n)
+    print(f"\n  🏆  Top {top_n} authors:")
+    print(f"  {'Author':<40s} {'Poems':>6s} {'%':>6s}  {'Lục bát':>7s}  {'Bảy chữ':>7s}")
+    print(f"  {'-'*38} {'-'*6} {'-'*6}  {'-'*7}  {'-'*7}")
+    total = len(df)
+    for author, count in top.items():
+        pct = count / total * 100
+        lb = int(((df["author"] == author) & (df["genre"] == "lục bát")).sum())
+        bc = int(((df["author"] == author) & (df["genre"] == "bảy chữ")).sum())
+        print(f"  {author[:38]:<38s} {count:>6d} {pct:>5.1f}%  {lb:>7d}  {bc:>7d}")
+
+    if len(author_counts) > top_n:
+        others = author_counts.iloc[top_n:].sum()
+        print(f"  {'(rest)':<38s} {others:>6d} {others/total*100:>5.1f}%")
+
+    # Overall genre split
+    lb_count = int((df["genre"] == "lục bát").sum())
+    bc_count = int((df["genre"] == "bảy chữ").sum())
+    print(f"\n  📈  Genre split:  lục bát: {lb_count:,} ({lb_count/total*100:.1f}%)  "
+          f"bảy chữ: {bc_count:,} ({bc_count/total*100:.1f}%)")
+
+
+# ═══════════════════════════════════════════════
 # MAIN PIPELINE
 # ═══════════════════════════════════════════════
 
@@ -364,6 +463,9 @@ if __name__ == "__main__":
         print(f"🔍  Checking: {args.check_dupes}")
         df = pd.read_csv(args.check_dupes)
         print(f"    Poems: {len(df):,}")
+        check_title_dupes(df)
+        check_same_title_author(df)
+        show_author_stats(df)
         check_near_duplicates(df, threshold=args.threshold)
     elif args.reclean:
         clean_existing(args.reclean, args.output, threshold=args.threshold)
