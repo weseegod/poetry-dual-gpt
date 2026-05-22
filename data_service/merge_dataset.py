@@ -1,6 +1,34 @@
 """
 Validate scraped poems, deduplicate, and merge into dataset.
 
+═══ FULL PIPELINE ═══
+
+  STEP 1 — Collect raw data into data_service/raw/
+    python data_service/scraper.py --all                  # scrape poetry websites
+    python data_service/extract_facebook.py --to-raw      # extract from Facebook JSON
+    # (add any future source here → raw/*.csv)
+
+  STEP 2 — Validate & dedup (dry-run first, safe to run anytime)
+    python data_service/merge_dataset.py                  # show stats: how many valid/new/dupe
+
+  STEP 3 — Extract genuinely new poems → data_service/new/
+    python data_service/merge_dataset.py --extract-new    # deduped new poems by author
+
+  STEP 4 — Review new/*.csv, then commit to merged dataset
+    python data_service/merge_dataset.py --commit         # append → poems_dataset_merged.csv
+
+  STEP 5 — Clean merged → final training dataset
+    python src/clean_data.py --csv data/poems_dataset_merged.csv --output data/clean_data_vN.csv
+
+  STEP 6 — Validate final output
+    python src/clean_data.py --check-dupes data/clean_data_vN.csv
+
+Files:
+  data_service/raw/          ← append-only: all scraped sources land here
+  data_service/new/          ← temporary: new deduped poems for review before commit
+  data/poems_dataset_merged.csv  ← cumulative: all committed poems (append-only)
+  data/clean_data_vN.csv     ← final: cleaned + deduped, ready for training
+
 Usage:
   python data_service/merge_dataset.py                # dry-run: stats only
   python data_service/merge_dataset.py --extract-new   # extract new poems → new/*.csv
