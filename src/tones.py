@@ -135,3 +135,34 @@ def get_that_ngon_tags(prompt: str) -> tuple:
         doi_am_tag = f"[DOIAM:{r_tones}]"
     
     return link2_tag, doi_am_tag
+
+
+def get_doi_tho_tags(six_line: str, eight_line: str) -> tuple:
+    """
+    Extract [RHYME:X] and [TONE:XXXXXX] tags for đối thơ.
+    
+    [RHYME:X] — from position 8 of the 8-syllable line (chain rhyme)
+    [TONE:XXXXXX] — tone pattern of the 6-syllable line
+    
+    Args:
+        six_line: the 6-syllable line of the last input couplet
+        eight_line: the 8-syllable line of the last input couplet
+    
+    Returns (rhyme_tag, tone_tag).
+    """
+    import re
+    rhyme_tag = ""
+    tone_tag = ""
+    
+    syls_8 = eight_line.strip().split()
+    if len(syls_8) >= 8:
+        syl_8 = re.sub(r'[,.!?;:]+$', '', syls_8[7])  # strip trailing punctuation
+        rhyme = get_rhyme_group(syl_8)  # pos 8 → chain rhyme
+        rhyme_tag = f"[RHYME:{rhyme}]"
+    
+    syls_6 = six_line.strip().split()
+    if len(syls_6) >= 6:
+        seq = get_tone_sequence(six_line)
+        tone_tag = f"[TONE:{seq[:6]}]"
+    
+    return rhyme_tag, tone_tag

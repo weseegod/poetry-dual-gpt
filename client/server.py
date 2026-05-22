@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from tokenizers import Tokenizer
 
 from model import PoetryDuelGPT
-from tones import get_luc_bat_tags, get_that_ngon_tags
+from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags
 
 
 # ── Config ──────────────────────────────────────────
@@ -122,14 +122,51 @@ class ChatResponse(BaseModel):
     prompt: str
 
 
+def _auto_tag_doi_tho(user_input: str, max_context: int = 2) -> str:
+    """Wrap multi-line input as [DOI_THO] đối thơ format."""
+    lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
+    if len(lines) == 1:
+        return lines[0]  # fall back to single
+    
+    # Group into (6,8) couplets
+    couplets = []
+    i = 0
+    while i + 1 < len(lines):
+        s1, s2 = len(lines[i].split()), len(lines[i+1].split())
+        if s1 == 6 and s2 == 8:
+            couplets.append((lines[i], lines[i+1]))
+            i += 2
+        else:
+            i += 1
+    
+    if not couplets:
+        return lines[-1]
+    
+    couplets = couplets[-max_context:]
+    last_6, last_8 = couplets[-1]
+    rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
+    
+    input_lines = []
+    for six, eight in couplets:
+        input_lines.append(six)
+        input_lines.append(eight)
+    input_str = " <|linebreak|> ".join(input_lines)
+    
+    tags = f"{rhyme_tag} {tone_tag}".strip()
+    tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+    return f"{tag_part} {input_str} <|reply|>"
+
+
 @torch.no_grad()
-def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64):
-    """Autoregressive generation (same logic as sample.py)."""
+def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64, is_doi_tho=False):
+    """Autoregressive generation — supports single-couplet and đối thơ modes."""
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
 
-    # Auto-wrap genre + rhyme/tone tags
-    if not prompt.startswith("["):
+    # Auto-wrap: detect multi-line (đối thơ) vs single-line
+    if is_doi_tho:
+        prompt = _auto_tag_doi_tho(prompt)
+    elif not prompt.startswith("["):
         syl = len(prompt.split())
         if syl == 7:
             link2, doi_am = get_that_ngon_tags(prompt)
@@ -189,18 +226,27 @@ def chat(req: ChatRequest):
     if not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is empty")
 
+    # Detect multi-line: newlines or pipe separator
+    raw = req.prompt.replace("|", "\n")
+    is_doi_tho = "\n" in raw
+
     new_ids = generate(
-        req.prompt,
+        raw,
         req.temperature,
         req.top_k,
         req.top_p,
         req.max_tokens,
+        is_doi_tho=is_doi_tho,
     )
 
     # Decode only the NEW tokens, strip punctuation artifacts
     response = tokenizer.decode(new_ids)
     response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
     response = response.lstrip(", .;:-")
+    
+    # For đối thơ, split <|linebreak|> into newlines for frontend display
+    if is_doi_tho and "<|linebreak|>" in response:
+        response = response.replace("<|linebreak|>", "\n")
 
     return ChatResponse(response=response, prompt=req.prompt)
 

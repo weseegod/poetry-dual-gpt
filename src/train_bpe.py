@@ -75,6 +75,8 @@ def build_special_tokens(corpus_path):
         "[TU_TUYET]",           # 5
         "[THAT_NGON_BAT_CU]",   # 6
         "[THAT_NGON]",          # 7
+        "[DOI_THO]",            # 8  — couplet-to-couplet poetry duel
+        "<|linebreak|>",        # 9  — separates lines within input/output
     ]
     
     # Rhyme groups (R1 fix)
@@ -134,8 +136,8 @@ def train(corpus=None, output_dir=None, vocab_size=12000):
     
     # Key checks
     key_tokens = ["<|pad|>", "<|start|>", "<|reply|>", "<|end|>",
-                  "[LUC_BAT]", "[THAT_NGON]", "[RHYME:ong]", "[TONE:BBBTTB]",
-                  "[DOIAM:BBBBBBB]", "[LINK2:B]"]
+                  "[LUC_BAT]", "[THAT_NGON]", "[DOI_THO]", "<|linebreak|>",
+                  "[RHYME:ong]", "[TONE:BBBTTB]", "[DOIAM:BBBBBBB]", "[LINK2:B]"]
     print(f"\nVerification:")
     for t in key_tokens:
         tid = tok.token_to_id(t)

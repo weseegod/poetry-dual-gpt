@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
 from model import PoetryDuelGPT
-from tones import get_luc_bat_tags, get_that_ngon_tags
+from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags
 
 ROOT = Path(__file__).parent.parent
 
@@ -136,6 +136,59 @@ def auto_tag(prompt):
     return f"{tag} {p}"
 
 
+def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 2) -> str:
+    """
+    Detect multi-line input → wrap as [DOI_THO] đối thơ format.
+    
+    User input can be:  
+      - "line6\\nline8" (1 couplet)  
+      - "line6\\nline8\\nline6\\nline8" (2 couplets)  
+    
+    Returns formatted prompt with <|linebreak|> separators and <|reply|>.
+    """
+    lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
+    
+    # Single line → delegate to existing auto_tag
+    if len(lines) == 1:
+        return auto_tag(lines[0])
+    
+    # Group into (6-syl, 8-syl) pairs
+    couplets = []
+    i = 0
+    while i + 1 < len(lines):
+        s1 = len(lines[i].split())
+        s2 = len(lines[i+1].split())
+        if s1 == 6 and s2 == 8:
+            couplets.append((lines[i], lines[i+1]))
+            i += 2
+        else:
+            i += 1
+    
+    if not couplets:
+        # No valid couplets found → fall back to last line as single prompt
+        return auto_tag(lines[-1])
+    
+    # Keep at most max_context_couplets recent couplets
+    couplets = couplets[-max_context_couplets:]
+    
+    # Extract tags from LAST couplet
+    last_6, last_8 = couplets[-1]
+    rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
+    
+    # Build input lines with <|linebreak|> separators
+    input_lines = []
+    for six, eight in couplets:
+        input_lines.append(six)
+        input_lines.append(eight)
+    input_str = " <|linebreak|> ".join(input_lines)
+    
+    # Build tag
+    tags = f"{rhyme_tag} {tone_tag}".strip()
+    tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+    
+    return f"{tag_part} {input_str} <|reply|>"
+
+
 def truncate_syllables(text, max_syl):
     """Truncate text to exactly max_syl syllables (words)."""
     syls = text.split()
@@ -237,29 +290,55 @@ if __name__ == "__main__":
     # Interactive mode
     if args.interactive:
         print("\n🎭  Interactive Poetry Duel")
-        print("    Type [LUC_BAT] ... or [THAT_NGON] ... or just a line.")
+        print("    Single line → [LUC_BAT] single couplet")
+        print("    Multi-line (use '|' between lines) → [DOI_THO] couplet duel")
+        print("    Example: kiều nhi phận mỏng như tờ | một lời đã lỗi tóc tơ với chàng!")
         print("    'quit' to exit.\n")
         while True:
             u = input("You: ").strip()
             if u.lower() == "quit": break
             if not u: continue
-            if not u.startswith("["): u = auto_tag(u)
-            _, ids = generate(model, tok, u, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
-            print(f"Bot: {tok.decode(ids).replace('<|end|>','').strip()}\n")
+            
+            # Support pipe as line separator for multi-line input
+            if "|" in u:
+                u = u.replace("|", "\n")
+            
+            if "\n" in u:
+                # Multi-line → đối thơ
+                prompt = auto_tag_doi_tho(u)
+            elif not u.startswith("["):
+                prompt = auto_tag(u)
+            else:
+                prompt = u
+            
+            _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
+            response = tok.decode(ids).replace("<|end|>", "").strip()
+            
+            # Display: split <|linebreak|> into separate lines for đối thơ
+            if "<|linebreak|>" in response:
+                out_lines = response.replace("<|linebreak|>", "\n    ")
+                print(f"Bot: {out_lines}\n")
+            else:
+                print(f"Bot: {response}\n")
 
     # Batch generation
     else:
-        # Auto-tag if prompt doesn't have genre tags, or has genre but missing rhyme/tone
-        prompt = args.prompt
-        if not prompt.startswith('['):
-            prompt = auto_tag(prompt)
-        elif '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
-            # Has genre tag but missing rhyme/tone — re-tag
-            inner = prompt.replace('[LUC_BAT]', '').strip()
-            prompt = auto_tag(inner)
-        elif '[THAT_NGON]' in prompt and '[DOIAM:' not in prompt:
-            inner = prompt.replace('[THAT_NGON]', '').strip()
-            prompt = auto_tag(inner)
+        # Support pipe as line separator in --prompt
+        raw_prompt = args.prompt.replace("|", "\n")
+        is_doi_tho = "\n" in raw_prompt
+        
+        if is_doi_tho:
+            prompt = auto_tag_doi_tho(raw_prompt)
+        else:
+            prompt = raw_prompt
+            if not prompt.startswith('['):
+                prompt = auto_tag(prompt)
+            elif '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
+                inner = prompt.replace('[LUC_BAT]', '').strip()
+                prompt = auto_tag(inner)
+            elif '[THAT_NGON]' in prompt and '[DOIAM:' not in prompt:
+                inner = prompt.replace('[THAT_NGON]', '').strip()
+                prompt = auto_tag(inner)
 
         for i in range(args.num_samples):
             print(f"\n{'='*60}\nSample {i+1}/{args.num_samples}\n{'='*60}")
@@ -268,11 +347,17 @@ if __name__ == "__main__":
             _, ids = generate(model, tok, prompt, args.max_tokens,
                               args.temperature, args.top_k, args.top_p, dev)
             response_only = tok.decode(ids).replace("<|end|>", "").strip()
-            print(f"Response: {response_only}")
+            
+            # Display: split <|linebreak|> for đối thơ
+            if is_doi_tho and "<|linebreak|>" in response_only:
+                out_lines = response_only.replace("<|linebreak|>", "\n           ")
+                print(f"Response: {out_lines}")
+            else:
+                print(f"Response: {response_only}")
 
             # Rule check — strip control tokens properly with regex
             prompt_part = re.sub(r'\[(?:RHYME|TONE|LINK2):[^\]]+\]', '', prompt)
-            prompt_part = prompt_part.replace('[LUC_BAT]', '').replace('[THAT_NGON]', '')
+            prompt_part = prompt_part.replace('[LUC_BAT]', '').replace('[DOI_THO]', '').replace('[THAT_NGON]', '')
             prompt_part = ' '.join(prompt_part.split()).strip().rstrip(',')
             resp_clean = response_only.rstrip(",. ")
             is_luc_bat = "[LUC_BAT]" in prompt
@@ -286,3 +371,10 @@ if __name__ == "__main__":
                 print(f"  Prompt tone:  {r['tone_p'][1]}")
                 print(f"  Response tone: {r['tone_r'][1]}")
                 print(f"{'─'*60}")
+            elif is_doi_tho:
+                resp_lines = response_only.split("<|linebreak|>")
+                if len(resp_lines) >= 2:
+                    r6 = resp_lines[0].strip()
+                    r8 = resp_lines[1].strip() if len(resp_lines) > 1 else ""
+                    print(f"\n{'─'*60}\n📏  Đối Thơ (couplet→couplet) Rule Check\n{'─'*60}")
+                    print(f"  Output: {len(r6.split())}syl → {len(r8.split()) if r8 else '?'}syl")
