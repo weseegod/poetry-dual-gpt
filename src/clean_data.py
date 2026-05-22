@@ -156,6 +156,7 @@ def _norm_line(line):
 
 def remove_near_duplicates(df, threshold=0.3):
     """Remove poems that share >threshold% of lines. Keeps the longer one."""
+    df = df.reset_index(drop=True)  # ensure positional index matches enumerate
     before = len(df)
     if before < 2:
         return df
