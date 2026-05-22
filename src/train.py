@@ -246,10 +246,12 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         # teacher over training to reduce the train/inference mismatch.
         use_teacher_prob = max(0.5, 1.0 - step / max_steps * 0.5)
         if use_teacher_prob < 1.0:
-            # 1. Get model's own predictions from teacher input
-            with torch.autocast(device_type=dev, dtype=torch.bfloat16):
-                logits, _ = model(x, y)
+            # 1. Get model's own predictions from teacher input (no_grad saves memory)
+            with torch.no_grad():
+                with torch.autocast(device_type=dev, dtype=torch.bfloat16):
+                    logits, _ = model(x, y)
             model_tokens = logits.argmax(dim=-1)  # (B, T) — what model would generate
+            del logits  # free ~786 MB (B*T*V in bf16)
             # Shift: prediction at position t becomes input at position t+1
             x_model = torch.cat([x[:, :1], model_tokens[:, :-1]], dim=1)
             # 2. Mix: with prob use_teacher_prob, keep teacher; else use model's own
