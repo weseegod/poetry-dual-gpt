@@ -226,6 +226,11 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
             logits, _ = model(idx[:, -model.block_size:])
             logits = logits[:, -1, :] / temperature
             logits[:, pad_id] = float("-inf")
+            
+            # P2: Repetition penalty — penalize tokens from recent output
+            for prev in new_tokens[-16:]:
+                logits[:, prev] -= 1.2
+            
             if top_k:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, -1:]] = float("-inf")
@@ -255,8 +260,9 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     return all_new_tokens
 
 
-def _decode_doi_tho(tok, new_token_ids):
-    """Decode tokens, splitting on <|linebreak|> positions (id=9 decodes to empty)."""
+def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True):
+    """Decode tokens, splitting on <|linebreak|> positions (id=9 decodes to empty).
+    Optionally enforces 6/8 syllable per line (P3)."""
     lb_id = tok.token_to_id("<|linebreak|>")
     lines = []
     chunk = []
@@ -269,6 +275,17 @@ def _decode_doi_tho(tok, new_token_ids):
             chunk.append(t)
     if chunk:
         lines.append(tok.decode(chunk).strip())
+    
+    # P3: Enforce 6/8 syllable pattern
+    if enforce_syllables:
+        targets = [6, 8]
+        for i, line in enumerate(lines):
+            words = line.split()
+            target = targets[i % 2]
+            if len(words) > target:
+                words = words[:target]
+            lines[i] = ' '.join(words)
+    
     return lines
 
 

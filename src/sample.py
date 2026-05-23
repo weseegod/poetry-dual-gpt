@@ -198,11 +198,11 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
-def decode_doi_tho(tokenizer, new_token_ids):
+def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True):
     """
     Decode generated tokens, handling <|linebreak|> which decodes to empty
     string in ByteLevel BPE. Splits on linebreak token positions.
-    Returns list of line strings.
+    Returns list of line strings. Optionally enforces 6/8 syllable pattern (P3).
     """
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     lines = []
@@ -216,12 +216,18 @@ def decode_doi_tho(tokenizer, new_token_ids):
             chunk.append(t)
     if chunk:
         lines.append(tokenizer.decode(chunk).strip())
+    
+    # P3: Enforce 6/8 syllable pattern
+    if enforce_syllables:
+        targets = [6, 8]
+        for i, line in enumerate(lines):
+            words = line.split()
+            target = targets[i % 2]
+            if len(words) > target:
+                words = words[:target]
+            lines[i] = ' '.join(words)
+    
     return lines
-    """Truncate text to exactly max_syl syllables (words)."""
-    syls = text.split()
-    if len(syls) <= max_syl:
-        return text
-    return ' '.join(syls[:max_syl])
 
 
 @torch.no_grad()
@@ -246,6 +252,10 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
 
         # Suppress <|pad|> — never sample it
         logits[:, pad_id] = float("-inf")
+
+        # P2: Repetition penalty — penalize tokens from recent output
+        for prev in new_tokens[-16:]:
+            logits[:, prev] -= 1.2
 
         # Top-k filtering
         if top_k:
