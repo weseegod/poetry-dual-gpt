@@ -124,22 +124,9 @@ class ChatResponse(BaseModel):
     prompt: str
 
 
-def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
-    """Wrap multi-line input as [DOI_THO] đối thơ format."""
+def _parse_couplets(user_input: str):
+    """Parse user input into (couplets_list, num_input_couplets)."""
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
-    if len(lines) == 1:
-        # Single line: wrap as [DOI_THO] with duplicate for rhyme extraction
-        line = lines[0]
-        syls = line.split()
-        if len(syls) >= 6:
-            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
-        else:
-            rhyme_tag, tone_tag = "", ""
-        tags = f"{rhyme_tag} {tone_tag}".strip()
-        tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
-        return f"<|start|> {tag_part} {line} <|reply|>"
-    
-    # Group into (6,8) couplets
     couplets = []
     i = 0
     while i + 1 < len(lines):
@@ -149,63 +136,121 @@ def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
             i += 2
         else:
             i += 1
-    
+    if not couplets and lines:
+        # Single line without a pair — treat as 1-couplet input
+        return [], 0
+    return couplets, len(couplets)
+
+
+def _build_doi_tho_prompt(couplets, max_context=1):
+    """Build [DOI_THO] prompt from last N couplets."""
     if not couplets:
-        return lines[-1]
-    
-    couplets = couplets[-max_context:]
-    last_6, last_8 = couplets[-1]
+        return ""
+    ctx = couplets[-max_context:]
+    last_6, last_8 = ctx[-1]
     rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
-    
     input_lines = []
-    for six, eight in couplets:
+    for six, eight in ctx:
         input_lines.append(six)
         input_lines.append(eight)
     input_str = " <|linebreak|> ".join(input_lines)
-    
     tags = f"{rhyme_tag} {tone_tag}".strip()
     tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
+def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
+    """Backward-compat: wrap input as [DOI_THO] prompt."""
+    couplets, _ = _parse_couplets(user_input)
+    if not couplets:
+        lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
+        if lines:
+            line = lines[-1]
+            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+            tags = f"{rhyme_tag} {tone_tag}".strip()
+            tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+            return f"<|start|> {tag_part} {line} <|reply|>"
+        return ""
+    return _build_doi_tho_prompt(couplets, max_context)
+
+
 @torch.no_grad()
 def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64, is_doi_tho=False):
-    """Autoregressive generation — supports single-couplet and đối thơ modes."""
+    """
+    Generate đối thơ response. Mirrors input length:
+      1 couplet in → 1 couplet out  (2 lines)
+      2 couplets in → 2 couplets out (4 lines)
+      N couplets in → N couplets out
+    """
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
-
-    # Auto-wrap: always use đối thơ format (handles single + multi-line)
-    prompt = _auto_tag_doi_tho(prompt)
-
-    ids = tokenizer.encode(prompt).ids
-    idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)
-
-    new_tokens = []
-    for _ in range(max_tokens):
-        logits, _ = model(idx[:, -model.block_size:])
-        logits = logits[:, -1, :] / temperature
-        logits[:, pad_id] = float("-inf")
-
-        if top_k:
-            v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-            logits[logits < v[:, -1:]] = float("-inf")
-
-        if top_p is not None:
-            probs = F.softmax(logits, dim=-1)
-            sorted_probs, sorted_idx = torch.sort(probs, descending=True)
-            cumsum = torch.cumsum(sorted_probs, dim=-1)
-            mask = cumsum > top_p
-            mask[..., 1:] = mask[..., :-1].clone()
-            mask[..., 0] = False
-            logits[:, sorted_idx[mask]] = float("-inf")
-
-        next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
-        if next_id == end_id:
+    lb_id = tokenizer.token_to_id("<|linebreak|>")
+    
+    # Parse input
+    couplets, num_input = _parse_couplets(prompt)
+    if num_input == 0:
+        num_input = 1  # single line = 1 couplet
+    
+    # Collect all input lines for tracking
+    all_lines = []
+    for six, eight in couplets:
+        all_lines.extend([six, eight])
+    if not all_lines:
+        lines_raw = [l.strip() for l in prompt.strip().split('\n') if l.strip()]
+        all_lines = lines_raw
+    
+    # Generate N couplets (one per turn)
+    all_new_tokens = []
+    for turn in range(num_input):
+        # Build prompt from recent couplets (up to 1 context couplet)
+        recent_couplets = []
+        for i in range(0, len(all_lines) - 1, 2):
+            if i + 1 < len(all_lines):
+                recent_couplets.append((all_lines[i], all_lines[i+1]))
+        if not recent_couplets and all_lines:
+            # single line
+            recent_couplets = [(all_lines[-1], all_lines[-1])]
+        
+        prompt_str = _build_doi_tho_prompt(recent_couplets, max_context=1)
+        if not prompt_str:
             break
-        new_tokens.append(next_id)
-        idx = torch.cat((idx, torch.tensor([[next_id]], device=DEVICE)), dim=1)
-
-    return new_tokens
+        
+        # Encode and generate
+        ids = tokenizer.encode(prompt_str).ids
+        idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)
+        
+        new_tokens = []
+        for _ in range(max_tokens):
+            logits, _ = model(idx[:, -model.block_size:])
+            logits = logits[:, -1, :] / temperature
+            logits[:, pad_id] = float("-inf")
+            if top_k:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, -1:]] = float("-inf")
+            if top_p is not None:
+                probs = F.softmax(logits, dim=-1)
+                sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+                cumsum = torch.cumsum(sorted_probs, dim=-1)
+                mask = cumsum > top_p
+                mask[..., 1:] = mask[..., :-1].clone()
+                mask[..., 0] = False
+                logits[:, sorted_idx[mask]] = float("-inf")
+            next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
+            if next_id == end_id:
+                break
+            new_tokens.append(next_id)
+            idx = torch.cat((idx, torch.tensor([[next_id]], device=DEVICE)), dim=1)
+        
+        all_new_tokens.extend(new_tokens)
+        
+        # Decode and append to context for next turn
+        out_lines = _decode_doi_tho(tokenizer, new_tokens)
+        all_lines.extend(out_lines)
+        # Add linebreak between turns
+        if turn < num_input - 1:
+            all_new_tokens.append(lb_id)
+    
+    return all_new_tokens
 
 
 def _decode_doi_tho(tok, new_token_ids):
@@ -255,15 +300,9 @@ def chat(req: ChatRequest):
         is_doi_tho=is_doi_tho,
     )
 
-    # Decode only the NEW tokens, strip punctuation artifacts
-    response = tokenizer.decode(new_ids)
-    response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
-    response = response.lstrip(", .;:-")
-    
-    # For đối thơ, join decoded lines with newline for frontend display
-    if is_doi_tho:
-        lines = _decode_doi_tho(tokenizer, new_ids)
-        response = "\n".join(lines)
+    # Decode with proper linebreak handling
+    lines = _decode_doi_tho(tokenizer, new_ids)
+    response = "\n".join(lines)
     else:
         response = tokenizer.decode(new_ids)
         response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
