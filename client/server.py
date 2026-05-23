@@ -303,10 +303,6 @@ def chat(req: ChatRequest):
     # Decode with proper linebreak handling
     lines = _decode_doi_tho(tokenizer, new_ids)
     response = "\n".join(lines)
-    else:
-        response = tokenizer.decode(new_ids)
-        response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
-        response = response.lstrip(", .;:-")
 
     return ChatResponse(response=response, prompt=req.prompt)
 
