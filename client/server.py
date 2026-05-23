@@ -302,8 +302,9 @@ def chat(req: ChatRequest):
         is_doi_tho=is_doi_tho,
     )
 
-    # Decode with proper linebreak handling
+    # Decode with proper linebreak handling, capitalize first letter
     lines = _decode_doi_tho(tokenizer, new_ids)
+    lines = [l[0].upper() + l[1:] if l else l for l in lines]
     response = "\n".join(lines)
 
     return ChatResponse(response=response, prompt=req.prompt)
