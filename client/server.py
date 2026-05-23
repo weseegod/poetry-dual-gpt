@@ -128,7 +128,16 @@ def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
     """Wrap multi-line input as [DOI_THO] đối thơ format."""
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     if len(lines) == 1:
-        return lines[0]  # fall back to single
+        # Single line: wrap as [DOI_THO] with duplicate for rhyme extraction
+        line = lines[0]
+        syls = line.split()
+        if len(syls) >= 6:
+            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+        else:
+            rhyme_tag, tone_tag = "", ""
+        tags = f"{rhyme_tag} {tone_tag}".strip()
+        tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+        return f"<|start|> {tag_part} {line} <|reply|>"
     
     # Group into (6,8) couplets
     couplets = []
@@ -165,20 +174,8 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
 
-    # Auto-wrap: detect multi-line (đối thơ) vs single-line
-    if is_doi_tho:
-        prompt = _auto_tag_doi_tho(prompt)
-    elif not prompt.startswith("["):
-        syl = len(prompt.split())
-        if syl == 7:
-            link2, doi_am = get_that_ngon_tags(prompt)
-            extras_parts = [t for t in [link2, doi_am] if t]
-            tag = f"[THAT_NGON] {' '.join(extras_parts)}" if extras_parts else "[THAT_NGON]"
-        else:
-            rhyme, tone = get_luc_bat_tags(prompt)
-            extras = f"{rhyme} {tone}".strip()
-            tag = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
-        prompt = f"{tag} {prompt}"
+    # Auto-wrap: always use đối thơ format (handles single + multi-line)
+    prompt = _auto_tag_doi_tho(prompt)
 
     ids = tokenizer.encode(prompt).ids
     idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)

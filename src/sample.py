@@ -150,7 +150,15 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     
     # Single line → delegate to existing auto_tag
     if len(lines) == 1:
-        return auto_tag(lines[0])
+        line = lines[0]
+        syls = line.split()
+        if len(syls) >= 6:
+            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+        else:
+            rhyme_tag, tone_tag = "", ""
+        tags = f"{rhyme_tag} {tone_tag}".strip()
+        tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+        return f"<|start|> {tag_part} {line} <|reply|>"
     
     # Group into (6-syl, 8-syl) pairs
     couplets = []
