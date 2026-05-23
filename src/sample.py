@@ -136,7 +136,7 @@ def auto_tag(prompt):
     return f"{tag} {p}"
 
 
-def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 2) -> str:
+def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     """
     Detect multi-line input → wrap as [DOI_THO] đối thơ format.
     
@@ -186,7 +186,7 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 2) -> str:
     tags = f"{rhyme_tag} {tone_tag}".strip()
     tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
     
-    return f"{tag_part} {input_str} <|reply|>"
+    return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
 def decode_doi_tho(tokenizer, new_token_ids):

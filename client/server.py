@@ -124,7 +124,7 @@ class ChatResponse(BaseModel):
     prompt: str
 
 
-def _auto_tag_doi_tho(user_input: str, max_context: int = 2) -> str:
+def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
     """Wrap multi-line input as [DOI_THO] đối thơ format."""
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     if len(lines) == 1:
@@ -156,7 +156,7 @@ def _auto_tag_doi_tho(user_input: str, max_context: int = 2) -> str:
     
     tags = f"{rhyme_tag} {tone_tag}".strip()
     tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
-    return f"{tag_part} {input_str} <|reply|>"
+    return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
 @torch.no_grad()
