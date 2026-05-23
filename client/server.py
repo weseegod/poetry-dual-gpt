@@ -125,7 +125,9 @@ class ChatResponse(BaseModel):
 
 
 def _parse_couplets(user_input: str):
-    """Parse user input into (couplets_list, num_input_couplets)."""
+    """Parse user input into (couplets_list, num_input_couplets).
+    Normalizes to lowercase to match training data."""
+    user_input = user_input.lower()
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     couplets = []
     i = 0

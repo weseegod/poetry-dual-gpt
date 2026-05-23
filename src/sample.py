@@ -146,6 +146,7 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     
     Returns formatted prompt with <|linebreak|> separators and <|reply|>.
     """
+    user_input = user_input.lower()
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     
     # Single line → delegate to existing auto_tag
