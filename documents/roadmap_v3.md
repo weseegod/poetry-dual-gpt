@@ -18,17 +18,25 @@
 | Lexical diversity | Low (repeats phrases) |
 | BPE collapse rate | ~15% on rare vocab |
 
+### Training Data Quality Issues (found in v3 audit)
+
+| Issue | Current | Problem |
+|-------|---------|---------|
+| Loss on control tokens | 30% of tokens are `<\|\|>`, `[...]` | Model wastes capacity predicting structural tokens |
+| Cross-boundary windows | 98% start mid-poem | Spurious correlations (predicts `<\|\reply\|>` after random words) |
+| Window=2 data | 457K pairs (46%) | Format `C1+C2→C3` never used at inference |
+| Dataset structure | Flat tensor, no boundaries | No example-level alignment |
+
 ---
 
 ## 🎯 v3 Priorities
 
 ### 🔴 P1: Resume Training (complete 10K steps)
-**Status: Ready to run**
+**Status: Ready to run | Effort: Run Colab**
 
-Model stopped at step 4400 (44%). Patience already 10 (good). Resume from `checkpoints/doi_tho_step_5000.pt` to complete 10K steps. This alone should reduce BPE collapses, improve rhyme, and push stress test > 90%.
+Model stopped at step 4400 (44%). Patience=10 (set, good). Resume to 10K steps.
 
 ```bash
-# Colab (cell 3):
 !python src/train.py --mode train --name doi_tho_ --corpus data/doi_tho_corpus.txt \
   --resume checkpoints/doi_tho_step_5000.pt
 ```
@@ -37,120 +45,189 @@ Model stopped at step 4400 (44%). Patience already 10 (good). Resume from `check
 
 ---
 
-### 🔴 P2: Repetition Penalty ✅ IMPLEMENTED
-**Status: Done in v3**
+### 🔴 P2: Repetition Penalty ✅ DONE
+**Status: Implemented | File: `client/server.py`, `src/sample.py`**
 
-The model repeats phrases across consecutive tokens ("nhớ ai giọng hát", "quê hương yêu dấu" spam). A repetition penalty during sampling reduces this:
-
-```python
-# During token generation loop:
-for prev in new_tokens[-16:]:
-    logits[:, prev] -= 1.2  # penalize recent tokens
-```
-
-**Impact:** Lexical diversity ↑, fewer repeats, more natural poetry.
+Penalizes tokens from last 16 output positions (-1.2 penalty). Eliminates phrase repetition.  
+**Result:** 30-52 unique words per 3 samples (was ~15).
 
 ---
 
-### 🔴 P3: Syllable Enforcement ✅ IMPLEMENTED
-**Status: Done in v3**
+### 🔴 P3: Syllable Enforcement ✅ DONE
+**Status: Implemented | File: `client/server.py`, `src/sample.py`**
 
-When the model generates wrong syllable counts, enforce 6/8:
-- 6-syl line: truncate/pad to exactly 6 syllables
-- 8-syl line: truncate/pad to exactly 8 syllables
-
-```python
-# Post-decode: ensure correct syllable counts
-targets = [6, 8]  # alternating
-for i, line in enumerate(lines):
-    words = line.split()
-    target = targets[i % 2]
-    if len(words) > target:
-        words = words[:target]
-    elif len(words) < target:
-        words.extend(['…'] * (target - len(words)))
-    lines[i] = ' '.join(words)
-```
-
-**Impact:** Syllable accuracy 71% → 100%.
+Truncates each line to exact 6/8 syllable pattern.  
+**Result:** 100% syllable accuracy (was ~71%).
 
 ---
 
-### 🟡 P4: Beam Search for Rhyme Quality
-**Status: Planned**
+### 🟡 P2.5: Loss Masking — Skip Control Tokens
+**Status: Planned | Effort: ~5 lines in `train.py`**
 
-Current top-k sampling picks randomly among candidates. A small beam (k=3) constrained to the target rhyme group would boost rhyme from 50% → 70%+:
+**Problem:** 30% of training tokens are structural (`<|start|>`, `<|reply|>`, `<|end|>`, `[DOI_THO]`, `[RHYME:X]`, `[TONE:XXXXXX]`, `<|linebreak|>`). The model wastes 30% of gradient signal learning to predict these, but at inference we inject them ourselves.
 
-```python
-# At pos 6 of 8-syl line: only allow tokens in target_rhyme_group
-candidate_ids = [tid for tid in topk_ids 
-                 if get_rhyme_group(tok.id_to_token(tid)) == target_rhyme]
+**What it looks like:**
+```
+Target:  <|start|> [DOI_THO] [RHYME:a] khóc than kể hết ... <|reply|> kiều nhi ...
+          └─MASKED──┘└MASKED─┘└MASKED──┘└─── POETRY (kept) ───┘└MASKED─┘└ POETRY ...
 ```
 
-**Effort:** ~30 lines in `generate()`
+**How it works:** The tags condition through **attention** (they're in context the model attends to), not through being predicted. Masking their loss just stops wasting gradient on predicting tokens we inject at inference.
+
+```python
+# In train.py, training loop — add loss_mask:
+control_ids = torch.tensor([0,1,2,3,8,9], device=device)  # pad,start,reply,end,DOI_THO,linebreak
+loss_mask = ~torch.isin(targets, control_ids)
+loss = (F.cross_entropy(logits, targets, reduction='none') * loss_mask).sum() / loss_mask.sum()
+```
+
+| | Before | After |
+|---|---|---|
+| Effective training signal | 70% poetry | 100% poetry |
+| Rule conditioning | Via attention (unchanged) | Via attention (unchanged) |
+| Model learns to predict | `<|reply|>` after "chưa" | poetically coherent continuation |
+| Effective capacity | 30% wasted | **+30% free** |
+
+**Tradeoff:** None. We control all structural tokens at inference via prompt templates. The model never needs to generate them.
 
 ---
 
-### 🟡 P5: Expand Training Data
-**Status: Planned**
+### 🟡 P2.6: Example-Aligned Training Windows
+**Status: Planned | Effort: ~30 lines in `dataset.py`**
 
-Current 998K pairs come from `poems_dataset_clean.csv` only (mostly Truyện Kiều). Adding 8 canonical poets from `data_service/scraper.py` would:
+**Problem:** The current `PoetryDataset` concatenates all 998K examples into one flat 53M-token list, then samples random 256-token windows. Only 2% of windows start at `<|start|>` — the other 98% start mid-poem and span across unrelated poems.
 
-| Poet | Style | Lines |
-|------|-------|-------|
-| Nguyễn Du | Truyện Kiều (full) | 3,254 |
-| Hồ Xuân Hương | Humorous, double-entendre | ~500 |
-| Hàn Mặc Tử | Symbolist, surreal | ~800 |
-| Xuân Diệu | Romantic, modern | ~1,600 |
-| Huy Cận | Philosophical | ~800 |
-| Nguyễn Bính | Folk, rural | ~800 |
-| Tố Hữu | Revolutionary | ~1,000 |
-| Nguyễn Khuyến | Classical, nature | ~1,000 |
+**What it looks like:**
+```
+Current (flat tensor, 98% dirty):
+  Window at pos 20: "...nước này cho chưa <|reply|> kiều nhi phận mỏng..."
+                     └── end of poem 1 ──┘└── start of poem 2 ──┘
+  Model learns: "after 'chưa' comes '<|reply|>'" — WRONG! 'chưa' means "not yet"
 
-**Impact:** Richer vocabulary, diverse styles, fewer BPE collapses on rare words.
+Proposed (example-aligned, 100% clean):
+  Window i: [<|start|> [DOI_THO] [RHYME:a] ... complete poem ... <|end|> 0 0 ... 0]
+  Every window starts at <|start|>, ends at <|end|>. No cross-poem noise.
+```
+
+**How it works:** Replace the flat-tensor `PoetryDataset` with an `ExampleDataset` that stores each example as a separate padded row. Each `__getitem__` returns a clean, complete example.
+
+```python
+class ExampleDataset(Dataset):
+    def __init__(self, examples, block_size, pad_id=0):
+        self.data = []
+        for ex in examples:
+            ids = tokenizer.encode(ex).ids
+            padded = ids[:block_size] + [pad_id] * max(0, block_size - len(ids))
+            self.data.append(torch.tensor(padded))
+    
+    def __getitem__(self, idx):
+        row = self.data[idx]
+        return row[:block_size], row[1:block_size+1]  # x, y shifted
+```
+
+| | Flat tensor (current) | Example-aligned |
+|---|---|---|
+| Windows that start at `<\|start\|>` | 2% | **100%** |
+| Cross-poem noise | 98% | **0%** |
+| Unique windows seen (at step 4400) | ~563K | **~998K** |
+| Training signal quality | Diluted | **Pure** |
+| Padding overhead | None | ~30% (43-74 tok examples in 256-tok blocks) |
+
+**Tradeoff:** ~30% padding means ~30% fewer effective tokens per batch. Compensated by much higher signal quality per token. Given the model has only seen 563K windows out of 998K available, example-aligned actually provides MORE variety.
+
+---
+
+### 🟡 P2.7: Drop Window=2, Regenerate Corpus
+**Status: Planned | Effort: Regenerate corpus (2 min)**
+
+**Problem:** 457K of 998K training pairs (46%) use window=2 format: `C1+C2 → C3`. The model learns to respond with couplet_{k+2} given 2 input couplets. But at inference, the server chains turn-by-turn: `C1 → C2 → C3 → C4`, always using `max_context=1` (last couplet only). The window=2 format is **never used at inference**, creating a train/inference mismatch.
+
+| | Format | Training | Inference |
+|---|---|---|---|
+| Window=1 | `Ck → C{k+1}` | 541K (54%) | ✅ Used (chained) |
+| Window=2 | `Ck+C{k+1} → C{k+2}` | 457K (46%) | ❌ Never used |
+
+**How inference works with window=1 only:**
+```
+Input: C1 + C2 (4 lines)
+  Turn 1: context=C2 → model generates C3  (matches training: C2→C3 ✅)
+  Turn 2: context=C3 → model generates C4  (matches training: C3→C4 ✅)
+  Output: C3 + C4 ✅
+```
+
+Each turn is a clean `last_couplet → next_couplet`, exactly matching window=1 training. The rhyme chain flows naturally: C2_rhyme → C3_pos6, C3_rhyme → C4_pos6.
+
+**Regenerate:**
+```bash
+python src/preprocess_doi_tho.py --window 1
+```
+
+**Tradeoff:** Lose 457K examples, but they teach a dead format. Better 541K aligned examples than 998K with 46% mismatch. Rule tags (`[RHYME:X]`, `[TONE:XXXXXX]`) are identical in both formats — no rule conditioning is lost.
+
+---
+
+### 🟢 P4: Beam Search for Rhyme Quality
+**Status: Planned | Effort: ~30 lines**
+
+Constrained beam search that forces rhyme group matching at position 6. Boosts rhyme from 50% → 70%+.
+
+---
+
+### 🟢 P5: Expand Training Data
+**Status: Planned | Effort: Scrape + preprocess**
+
+Add 8 canonical Vietnamese poets via `data_service/scraper.py` for vocabulary diversity and varied literary styles.
 
 ---
 
 ### 🟢 P6: Rule Evaluation Dashboard
 **Status: Planned**
 
-Replace ad-hoc evaluate/ scripts with a unified dashboard:
-- Chain rhyme between couplets
-- Per-position tone accuracy
-- Semantic coherence score (embedding cosine similarity)
-- Lexical diversity (unique n-gram ratio)
+Unified eval: chain rhyme, per-position tone accuracy, lexical diversity, BPE collapse rate.
 
 ---
 
 ### ⚪ P7: Qwen2.5-1.5B QLoRA — PAUSED ⏸️
 **Status: Deferred**
 
-The 31M model still has headroom (44% trained). Max out the small model first, then migrate to Qwen for the content quality ceiling. Qwen brings:
-- Rich Vietnamese vocabulary (150K+ tokens vs 12K)
-- Grammatical correctness
-- Cultural knowledge
-- Coherent multi-sentence generation
+Max out the 31M model first. Qwen is the ceiling-raiser for content quality after all other optimizations.
 
 ---
 
 ## 📋 v3 Implementation Status
 
-| # | Item | Status | File |
-|---|------|--------|------|
-| P1 | Resume training to 10K | ⏳ Run on Colab | `colab/colab_train.ipynb` |
-| P2 | Repetition penalty | ✅ Done | `client/server.py`, `src/sample.py` |
-| P3 | Syllable enforcement | ✅ Done | `client/server.py`, `src/sample.py` |
-| P4 | Beam search rhyme | 📋 Planned | — |
-| P5 | Expand data | 📋 Planned | `data_service/scraper.py` |
-| P6 | Eval dashboard | 📋 Planned | `evaluate/` |
-| P7 | Qwen QLoRA | ⏸️ Paused | — |
+| # | Item | Status | Effort | Blocks |
+|---|------|--------|--------|--------|
+| P1 | Resume training to 10K | ⏳ Run Colab | 3 hr | — |
+| P2 | Repetition penalty | ✅ Done | — | — |
+| P3 | Syllable enforcement | ✅ Done | — | — |
+| P2.5 | Loss mask control tokens | 📋 Planned | 5 lines | — |
+| P2.6 | Example-aligned batching | 📋 Planned | 30 lines | P2.7 (needs new corpus) |
+| P2.7 | Drop window=2, regenerate | 📋 Planned | Regenerate | P2.6 |
+| P4 | Beam search rhyme | 📋 Planned | 30 lines | — |
+| P5 | Expand data | 📋 Planned | 1 day | — |
+| P6 | Eval dashboard | 📋 Planned | 1 day | — |
+| P7 | Qwen QLoRA | ⏸️ Paused | — | — |
+
+### Recommended v3 Build Order
+
+```
+1. P2.7: Regenerate corpus (--window 1)       ← 2 min, unblocks P2.6
+2. P2.6: Example-aligned dataset                ← 30 min, depends on P2.7
+3. P2.5: Loss masking                           ← 5 min, independent
+4. P1:   Retrain on Colab with new dataset      ← 3 hr, combines all above
+5. P4:   Beam search rhyme (optional)            ← 30 min, quality polish
+```
 
 ---
 
 ## 🔄 v3 Retrain Checklist
 
-1. Upload `data.zip` to Google Drive (already done — 58MB)
-2. Upload any new checkpoint if resuming: `checkpoints/doi_tho_step_5000.pt`
-3. Run `colab/colab_train.ipynb` cells 1-7
-4. Download new `checkpoints/doi_tho_best.pt` → `final.pt`
-5. Run `python evaluate/eval_doi_tho.py` to verify
+1. Run `python src/preprocess_doi_tho.py --window 1` to regenerate corpus
+2. Implement P2.6 (ExampleDataset) in `src/dataset.py`
+3. Implement P2.5 (loss mask) in `src/train.py`
+4. Re-zip data: `zip -r data.zip data/`
+5. Upload `data.zip` to Google Drive
+6. Run `colab/colab_train.ipynb` (full 10K steps, fresh training)
+7. Download new `checkpoints/doi_tho_best.pt` → `final.pt`
+8. Run `python evaluate/eval_doi_tho.py` to verify
