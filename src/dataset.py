@@ -197,23 +197,6 @@ def get_dataloaders_aligned(lines: List[str], tokenizer, block_size: int = 256,
     return train_loader, val_loader
 
 
-def build_loss_mask(tokenizer, device: str = "cpu") -> torch.Tensor:
-    """
-    Build a vocab-sized boolean mask: True = compute loss, False = skip.
-    Only masks <|pad|> (id=0). All other tokens get loss — control tokens
-    are essential structure the model must learn (when to stop, how to
-    format responses, where rhyme/tone tags appear).
-    
-    Returns (vocab_size,) boolean tensor.
-    """
-    V = tokenizer.get_vocab_size()
-    mask = torch.ones(V, dtype=torch.bool, device=device)
-    mask[0] = False  # <|pad|> only
-    
-    print(f"Loss mask: {V-1:,}/{V:,} tokens — only pad (id=0) masked")
-    return mask
-
-
 # ═══════════════════════════════════════════════════════════════
 #  TOKENIZE HELPER
 # ═══════════════════════════════════════════════════════════════

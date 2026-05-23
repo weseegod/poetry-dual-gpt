@@ -61,34 +61,19 @@ Truncates each line to exact 6/8 syllable pattern.
 
 ---
 
-### 🟡 P2.5: Loss Masking — Skip Control Tokens
-**Status: Planned | Effort: ~5 lines in `train.py`**
+### ❌ P2.5: Loss Masking — REVERTED (unnecessary)
+**Status: Removed — ignore_index=0 already handles pad**
 
-**Problem:** 30% of training tokens are structural (`<|start|>`, `<|reply|>`, `<|end|>`, `[DOI_THO]`, `[RHYME:X]`, `[TONE:XXXXXX]`, `<|linebreak|>`). The model wastes 30% of gradient signal learning to predict these, but at inference we inject them ourselves.
+**What we thought:** Mask control tokens from loss to free 30% capacity.
 
-**What it looks like:**
-```
-Target:  <|start|> [DOI_THO] [RHYME:a] khóc than kể hết ... <|reply|> kiều nhi ...
-          └─MASKED──┘└MASKED─┘└MASKED──┘└─── POETRY (kept) ───┘└MASKED─┘└ POETRY ...
-```
+**Why it was wrong:** in model.py already skips pad via `ignore_index=0`.
+The loss mask additionally blocked gradient for `<|end|>`, `<|reply|>`, and
+rhyme/tone tags — which the model NEEDS to learn (where to stop, how to
+format, where tags appear). Result: garbled output with control tokens
+leaking into response.
 
-**How it works:** The tags condition through **attention** (they're in context the model attends to), not through being predicted. Masking their loss just stops wasting gradient on predicting tokens we inject at inference.
-
-```python
-# In train.py, training loop — add loss_mask:
-control_ids = torch.tensor([0,1,2,3,8,9], device=device)  # pad,start,reply,end,DOI_THO,linebreak
-loss_mask = ~torch.isin(targets, control_ids)
-loss = (F.cross_entropy(logits, targets, reduction='none') * loss_mask).sum() / loss_mask.sum()
-```
-
-| | Before | After |
-|---|---|---|
-| Effective training signal | 70% poetry | 100% poetry |
-| Rule conditioning | Via attention (unchanged) | Via attention (unchanged) |
-| Model learns to predict | `<|reply|>` after "chưa" | poetically coherent continuation |
-| Effective capacity | 30% wasted | **+30% free** |
-
-**Tradeoff:** None. We control all structural tokens at inference via prompt templates. The model never needs to generate them.
+**Lesson:** Control tokens ARE structure. The model must learn them.
+Pad is the only safe token to skip (it's artificial, added for batching).
 
 ---
 
@@ -201,7 +186,7 @@ Max out the 31M model first. Qwen is the ceiling-raiser for content quality afte
 | P1 | Resume training to 10K | ⏳ Run Colab | 3 hr | — |
 | P2 | Repetition penalty | ✅ Done | — | — |
 | P3 | Syllable enforcement | ✅ Done | — | — |
-| P2.5 | Loss mask control tokens | ✅ Done | 5 lines | — |
+| P2.5 | Loss mask control tokens | ❌ Reverted — unnecessary, ignore_index=0 handles pad | — |
 | P2.6 | Example-aligned batching | ✅ Done | 30 lines | P2.7 |
 | P2.7 | Drop window=2, regenerate | ✅ Done | Regenerate | — |
 | P4 | Beam search rhyme | 📋 Planned | 30 lines | — |
@@ -222,11 +207,8 @@ Max out the 31M model first. Qwen is the ceiling-raiser for content quality afte
 
 ## 🔄 v3 Retrain Checklist
 
-1. Run `python src/preprocess_doi_tho.py --window 1` to regenerate corpus
-2. Implement P2.6 (ExampleDataset) in `src/dataset.py`
-3. Implement P2.5 (loss mask) in `src/train.py`
-4. Re-zip data: `zip -r data.zip data/`
-5. Upload `data.zip` to Google Drive
-6. Run `colab/colab_train.ipynb` (full 10K steps, fresh training)
-7. Download new `checkpoints/doi_tho_best.pt` → `final.pt`
-8. Run `python evaluate/eval_doi_tho.py` to verify
+1. Run `python src/preprocess_doi_tho.py --window 1` (already done — corpus at `data/doi_tho_corpus.txt`)
+2. Upload `data.zip` (23MB) to Google Drive
+3. Run `colab/colab_train.ipynb` (full 10K steps, fresh training)
+4. Download new `checkpoints/doi_tho_best.pt` → `final.pt`
+5. Run `python evaluate/eval_doi_tho.py` to verify

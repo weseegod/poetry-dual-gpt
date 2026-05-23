@@ -18,8 +18,7 @@ from tqdm import tqdm
 
 from model import PoetryDuelGPT
 from dataset import (PoetryDataset, tokenize_corpus, get_dataloaders,
-                      CurriculumDataset, ExampleDataset, get_dataloaders_aligned,
-                      build_loss_mask)
+                      CurriculumDataset, ExampleDataset, get_dataloaders_aligned)
 
 ROOT = Path(__file__).parent.parent
 
@@ -162,9 +161,6 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         train_loader, val_loader = get_dataloaders_aligned(
             lines, tok, cfg["block_size"], batch_size,
             val_fraction=0.05, num_workers=2 if dev == "cuda" else 0)
-
-    # ── Loss mask (P2.5: skip control tokens) ──
-    loss_mask = build_loss_mask(tok, dev)
 
     # ── Model ──
     model = PoetryDuelGPT(V, cfg["n_embd"], cfg["n_head"], cfg["n_layer"],
