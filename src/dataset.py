@@ -200,23 +200,17 @@ def get_dataloaders_aligned(lines: List[str], tokenizer, block_size: int = 256,
 def build_loss_mask(tokenizer, device: str = "cpu") -> torch.Tensor:
     """
     Build a vocab-sized boolean mask: True = compute loss, False = skip.
-    Masks out all control/special tokens that decode to empty string.
-    ByteLevel BPE cannot decode added single-tokens → empty = control.
-    Only poetry content tokens (non-empty decode) get loss.
+    Only masks <|pad|> (id=0). All other tokens get loss — control tokens
+    are essential structure the model must learn (when to stop, how to
+    format responses, where rhyme/tone tags appear).
     
     Returns (vocab_size,) boolean tensor.
     """
     V = tokenizer.get_vocab_size()
     mask = torch.ones(V, dtype=torch.bool, device=device)
+    mask[0] = False  # <|pad|> only
     
-    masked = 0
-    for tid in range(V):
-        if tokenizer.decode([tid]) == '':
-            mask[tid] = False
-            masked += 1
-    
-    kept = V - masked
-    print(f"Loss mask: {kept:,}/{V:,} tokens ({kept/V*100:.0f}%) — {masked} control tokens masked")
+    print(f"Loss mask: {V-1:,}/{V:,} tokens — only pad (id=0) masked")
     return mask
 
 
