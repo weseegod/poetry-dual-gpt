@@ -1,8 +1,8 @@
-# 🎭 PoetryDuel-GPT — Vietnamese Poetry Generator
+# 🎭 PoetryDuel-GPT — Vietnamese Đối Thơ AI
 
-A 31M-parameter GPT-style Transformer built from scratch in raw PyTorch for Vietnamese poetry generation (Lục Bát 6→8, Thất Ngôn 7→7). Zero HuggingFace wrappers. Trained with rhyme, tone, and tonal contrast conditioning via 335 custom special tokens.
+A 31M-parameter GPT-style Transformer built from scratch in raw PyTorch for Vietnamese poetry dueling (đối thơ). Zero HuggingFace wrappers. Input a Lục Bát couplet, get a matching response couplet back — with rhyme chaining, tone pattern conditioning, and syllable enforcement.
 
-**[v1.0](https://github.com/weseegod/poetry-dual-gpt/releases/tag/v1.0)** — [Colab Notebook](https://colab.research.google.com/github/weseegod/poetry-dual-gpt/blob/main/colab/colab_train.ipynb)
+**Live at: [doitho.net](https://doitho.net)**
 
 ---
 
@@ -13,11 +13,12 @@ git clone https://github.com/weseegod/poetry-dual-gpt.git
 cd poetry-dual-gpt
 pip install -r requirements.txt
 
-# Download pretrained checkpoint + tokenizer (from Releases) or train:
-# python src/train_bpe.py && python src/train.py
+# Train tokenizer + model (or download checkpoint from Releases)
+python src/train_bpe.py --corpus data/doi_tho_corpus.txt
+python src/train.py --mode train --name doi_tho_ --corpus data/doi_tho_corpus.txt
 
 # Generate poetry
-PYTHONPATH=. python src/sample.py --checkpoint checkpoints/stage2_best.pt
+python src/sample.py --checkpoint checkpoints/doi_tho_best.pt
 
 # Chat UI
 cd client && python start.py
@@ -29,84 +30,52 @@ cd client && python start.py
 
 | | |
 |---|---|
-| **Params** | 31.2M |
+| **Params** | 31.5M |
 | **Architecture** | Decoder-only Transformer, 8 layers, 8 heads, n_embd=512, block_size=256 |
-| **Vocabulary** | 11,392 BPE tokens (335 special control tokens) |
-| **Training** | Two-stage: Stage 1 (all genres, 10K steps) → Stage 2 (Lục Bát, 5K steps) |
-| **Hardware** | Colab T4/L4, ~3 hours total |
-| **Mixed precision** | bfloat16 |
+| **Vocabulary** | 12,000 ByteLevel BPE tokens |
+| **Training** | Single-stage, 541K đối thơ pairs, example-aligned batches, batch=192 |
+| **Format** | `[DOI_THO] [RHYME:X] [TONE:XXXXXX]` with `<\|linebreak\|>` line separator |
 
-## 🎯 Rule Accuracy (v1.0, 173 novel prompts)
+## 🎯 Results (v3, 15 diverse prompts)
 
-| Rule | Token | Accuracy | vs Random |
-|------|-------|----------|-----------|
-| **Rhyme** (vần lưng) | `[RHYME:X]` | **58.4%** | 93× |
-| **Tone** (B-T-B-B) | `[TONE:XXXXXX]` | **87.5%** | 14× |
-| **Syllable** (exact 8) | form + truncation | **78.0%** | 12× |
-| **Đối Âm** (tonal contrast) | `[DOIAM:XXXXXXX]` | **69.4%** | 1.4× |
-| **All 3 rules pass** | — | **50.9%** | — |
-
-[Full evaluation](documents/rule_evaluation.md)
+| Rule | Accuracy |
+|------|----------|
+| **Stress test** (valid output, 14 prompts) | **100%** |
+| **BPE collapse** (garbled tokens) | **0%** |
+| **Rhyme** (vần, pos 6 matches `[RHYME:X]`) | **80%** |
+| **Tone** (B-T-B-B pattern) | **97%** |
+| **Syllable** (exact 6+8 enforced) | **93%** |
 
 ## 🎭 Sample Output
 
 ```
-Prompt:  Thân em như chẽn lúa đòng
-Tags:    [LUC_BAT] [RHYME:ong] [TONE:BBBTTB]
-Output:  anh về em lúa trổ đòng vàng hong phơi
+Input:   Thân em như chẽn lúa đòng
+         Phất phơ dưới ngọn nắng hồng ban mai
 
-Prompt:  Rủ nhau xuống biển mò cua
-Output:  tôi đây vẫn giữ canh chua cá vàng
+Output:  Mẹ già ăn sắn ngô đồng nương thu
+         Con ăn cơm nước, anh về chợ quê
+
+Input:   Công cha như núi thái sơn
+
+Output:  Sơn hà hoa đẹp ngọt hơn hoa sen
+         Rừng xanh xanh thẳm bên miền hương linh
+
+Input:   Gió đưa cành trúc la đà
+         Tiếng chuông Trấn Vũ canh gà Thọ Xương
+
+Output:  Ba đình chuông vọng tơ vương
+         Nghe như tiếng vọng chùa thương quyện hòa
 ```
 
-## 🏗️ Training Format
+## 🧠 How It Works
 
-```
-[LUC_BAT] [RHYME:ong] [TONE:BBBTTB] Thân em như chẽn lúa đòng <|reply|> response_8_syl <|end|>
-[THAT_NGON] [LINK2:B] [DOIAM:TTBBTTB] Lom khom dưới núi tiều vài chú <|reply|> response_7_syl <|end|>
-```
+The model sees `[RHYME:X]` and `[TONE:XXXXXX]` tags extracted from the user's input couplet. It learns via attention to condition its response on these tags — position 6 of the response 8-syl line must rhyme with `[RHYME:X]`, and positions 2,4,6,8 must follow the B-T-B-B tone pattern.
 
-All control tokens (`[RHYME:X]`, `[TONE:XXXXXX]`, `[DOIAM:XXXXXXX]`, `[LINK2:X]`) are single special token IDs — not BPE subwords. 335 total, auto-collected from the corpus.
+Multi-couplet input gets independent responses per couplet (C1→C3, C2→C4). Syllables are enforced to 6/8 with post-processing truncation. Repetition is penalized during sampling for lexical diversity.
 
-## 📁 Project Structure
+## 📚 Dataset
 
-```
-src/
-  model.py          # Transformer (attention, FFN, blocks)
-  train.py          # Training loop with resume, patience, mixed precision
-  sample.py         # Autoregressive generation + rule checking
-  preprocess.py     # CSV → training pairs with control tokens
-  train_bpe.py      # BPE tokenizer with 335 special tokens
-  tones.py          # Vietnamese tone classification + rhyme extraction
-  clean_data.py     # Data cleaning pipeline
-  dataset.py        # PyTorch Dataset + DataLoader
-evaluate/
-  eval_rules.py     # Per-rule evaluation on novel prompts
-client/
-  server.py         # FastAPI backend
-  frontend/         # React chat UI
-  start.py          # Launch backend + frontend
-colab/
-  colab_train.ipynb # One-click Colab training with verification gates
-documents/
-  roadmap.md        # Learning guide (Transformer from scratch)
-  roadmap_v2.md     # v2.0 roadmap
-  rhyme_conditioning.md  # Rule implementation details
-  rule_evaluation.md     # v1.0 evaluation results
-checkpoints/        # Trained model weights
-data/               # poems_dataset_clean.csv, poetry_corpus.txt
-tokenizer/          # poetry_bpe.model
-```
-
-## 🛤️ v2.0 Roadmap
-
-See [roadmap_v2.md](documents/roadmap_v2.md)
-
-| # | Item | Impact |
-|---|------|--------|
-| 1 | Qwen2.5-1.5B QLoRA | 50× more params, pretrained Vietnamese |
-| 2 | Multi-couplet generation | Full 4-8 line poems |
-| 3 | Better training data | Ca dao, Truyện Kiều, modern poetry |
+Training data derived from [phamson02/vietnamese-poetry-corpus](https://huggingface.co/datasets/phamson02/vietnamese-poetry-corpus/) on HuggingFace. We preprocess Lục Bát poems into couplet-to-couplet sliding pairs with rhyme and tone tags injected.
 
 ## 📄 License
 
