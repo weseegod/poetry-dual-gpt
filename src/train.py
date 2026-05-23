@@ -17,7 +17,9 @@ from tokenizers import Tokenizer
 from tqdm import tqdm
 
 from model import PoetryDuelGPT
-from dataset import PoetryDataset, tokenize_corpus, get_dataloaders, CurriculumDataset
+from dataset import (PoetryDataset, tokenize_corpus, get_dataloaders,
+                      CurriculumDataset, ExampleDataset, get_dataloaders_aligned,
+                      build_loss_mask)
 
 ROOT = Path(__file__).parent.parent
 
@@ -140,31 +142,29 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
     with open(corpus, encoding="utf-8") as f:
         lines = [l.strip() for l in f if l.strip()]
     if max_lines: lines = lines[:max_lines]
-    print(f"    Lines: {len(lines):,}")
-    data = tokenize_corpus(lines, tok)
+    print(f"    Examples: {len(lines):,}")
 
-    # ── DataLoaders ──
+    # ── DataLoaders (v3: example-aligned — no cross-boundary noise) ──
     if curriculum:
-        # Curriculum learning: start with first curriculum_rate of sorted data,
-        # progressively expand window during training.
-        split = int(len(data) * 0.05)  # val always from last 5%
+        # Curriculum: fall back to flat tensor for now
+        data = tokenize_corpus(lines, tok)
+        split = int(len(data) * 0.05)
         train_data, val_data = data[:-split], data[-split:]
-
         train_ds = CurriculumDataset(train_data, cfg["block_size"], max_fraction=curriculum_rate)
         val_ds = PoetryDataset(val_data, cfg["block_size"])
-
-        print(f"Train: {len(train_ds):,} samples ({curriculum_rate:.0%} of {len(train_data) - cfg['block_size']:,}) | Val: {len(val_ds):,}")
-
+        print(f"Train: {len(train_ds):,} samples ({curriculum_rate:.0%}) | Val: {len(val_ds):,}")
         train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
                                    pin_memory=True, num_workers=2 if dev == "cuda" else 0,
                                    drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
                                  pin_memory=True, num_workers=2 if dev == "cuda" else 0)
-        print(f"   📈  Curriculum: starts at {curriculum_rate:.0%} → 100% over training")
     else:
-        train_loader, val_loader = get_dataloaders(data, cfg["block_size"], batch_size,
-                                                    val_fraction=0.05,
-                                                    num_workers=2 if dev == "cuda" else 0)
+        train_loader, val_loader = get_dataloaders_aligned(
+            lines, tok, cfg["block_size"], batch_size,
+            val_fraction=0.05, num_workers=2 if dev == "cuda" else 0)
+
+    # ── Loss mask (P2.5: skip control tokens) ──
+    loss_mask = build_loss_mask(tok, dev)
 
     # ── Model ──
     model = PoetryDuelGPT(V, cfg["n_embd"], cfg["n_head"], cfg["n_layer"],

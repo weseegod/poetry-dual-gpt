@@ -144,6 +144,83 @@ def get_dataloaders(data, block_size=256, batch_size=64, val_fraction=0.05, num_
 
 
 # ═══════════════════════════════════════════════════════════════
+#  EXAMPLE-ALIGNED DATASET (v3 — one row = one complete example)
+# ═══════════════════════════════════════════════════════════════
+
+class ExampleDataset(Dataset):
+    """
+    Each row is one complete training example, padded to block_size.
+    Every training window starts at <|start|> — no cross-poem boundary noise.
+    
+    x = tokens[:block_size-1]       y = tokens[1:block_size]
+    """
+    def __init__(self, lines: List[str], tokenizer, block_size: int, pad_id: int = 0):
+        rows = []
+        for line in tqdm(lines, desc="Tokenizing examples"):
+            if not line:
+                continue
+            ids = tokenizer.encode(line).ids
+            ids = ids[:block_size]  # truncate (shouldn't happen — max ~74 tokens)
+            padded = ids + [pad_id] * (block_size - len(ids))
+            rows.append(padded)
+        self.data = torch.tensor(rows, dtype=torch.long)
+        self.block_size = block_size
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        row = self.data[idx]
+        return row[:-1], row[1:]  # x (input), y (target, shifted by 1)
+
+
+def get_dataloaders_aligned(lines: List[str], tokenizer, block_size: int = 256,
+                             batch_size: int = 64, val_fraction: float = 0.05,
+                             num_workers: int = 0):
+    """
+    Example-aligned training: each example is one row → no cross-boundary noise.
+    Splits into train/val → wraps in DataLoader.
+    """
+    ds = ExampleDataset(lines, tokenizer, block_size)
+    split = int(len(ds) * val_fraction)
+    train_ds, val_ds = torch.utils.data.random_split(
+        ds, [len(ds) - split, split],
+        generator=torch.Generator().manual_seed(42)
+    )
+    
+    print(f"Train: {len(train_ds):,} examples | Val: {len(val_ds):,} | Batch: {batch_size}")
+    
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                               pin_memory=True, num_workers=num_workers, drop_last=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                             pin_memory=True, num_workers=num_workers)
+    return train_loader, val_loader
+
+
+def build_loss_mask(tokenizer, device: str = "cpu") -> torch.Tensor:
+    """
+    Build a vocab-sized boolean mask: True = compute loss, False = skip.
+    Masks out all control/special tokens that decode to empty string.
+    ByteLevel BPE cannot decode added single-tokens → empty = control.
+    Only poetry content tokens (non-empty decode) get loss.
+    
+    Returns (vocab_size,) boolean tensor.
+    """
+    V = tokenizer.get_vocab_size()
+    mask = torch.ones(V, dtype=torch.bool, device=device)
+    
+    masked = 0
+    for tid in range(V):
+        if tokenizer.decode([tid]) == '':
+            mask[tid] = False
+            masked += 1
+    
+    kept = V - masked
+    print(f"Loss mask: {kept:,}/{V:,} tokens ({kept/V*100:.0f}%) — {masked} control tokens masked")
+    return mask
+
+
+# ═══════════════════════════════════════════════════════════════
 #  TOKENIZE HELPER
 # ═══════════════════════════════════════════════════════════════
 

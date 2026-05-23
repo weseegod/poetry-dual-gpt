@@ -201,23 +201,22 @@ Max out the 31M model first. Qwen is the ceiling-raiser for content quality afte
 | P1 | Resume training to 10K | ⏳ Run Colab | 3 hr | — |
 | P2 | Repetition penalty | ✅ Done | — | — |
 | P3 | Syllable enforcement | ✅ Done | — | — |
-| P2.5 | Loss mask control tokens | 📋 Planned | 5 lines | — |
-| P2.6 | Example-aligned batching | 📋 Planned | 30 lines | P2.7 (needs new corpus) |
-| P2.7 | Drop window=2, regenerate | 📋 Planned | Regenerate | P2.6 |
+| P2.5 | Loss mask control tokens | ✅ Done | 5 lines | — |
+| P2.6 | Example-aligned batching | ✅ Done | 30 lines | P2.7 |
+| P2.7 | Drop window=2, regenerate | ✅ Done | Regenerate | — |
 | P4 | Beam search rhyme | 📋 Planned | 30 lines | — |
 | P5 | Expand data | 📋 Planned | 1 day | — |
 | P6 | Eval dashboard | 📋 Planned | 1 day | — |
 | P7 | Qwen QLoRA | ⏸️ Paused | — | — |
 
-### Recommended v3 Build Order
+### v3 Changes Summary
 
-```
-1. P2.7: Regenerate corpus (--window 1)       ← 2 min, unblocks P2.6
-2. P2.6: Example-aligned dataset                ← 30 min, depends on P2.7
-3. P2.5: Loss masking                           ← 5 min, independent
-4. P1:   Retrain on Colab with new dataset      ← 3 hr, combines all above
-5. P4:   Beam search rhyme (optional)            ← 30 min, quality polish
-```
+| Change | Before | After |
+|--------|--------|-------|
+| Corpus | 998K pairs (54% W1 + 46% W2) | 541K pairs (100% W1) |
+| Batches | Flat tensor, 98% cross-boundary | Example-aligned, 0% noise |
+| Loss | 100% of tokens (incl. control) | 98.2% poetry-only (213 masked) |
+| Batch size | 128 | 192 |
 
 ---
 

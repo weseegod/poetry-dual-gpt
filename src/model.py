@@ -148,7 +148,7 @@ class PoetryDuelGPT(nn.Module):
         elif isinstance(m, nn.Embedding):
             torch.nn.init.normal_(m.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, loss_mask=None):
         B, T = idx.shape
         assert T <= self.block_size
 
@@ -165,9 +165,16 @@ class PoetryDuelGPT(nn.Module):
 
         loss = None
         if targets is not None:
-            # Cross-entropy on EVERY position simultaneously
-            loss = F.cross_entropy(logits.view(-1, self.vocab_size),
-                                   targets.view(-1), ignore_index=-1)
+            if loss_mask is not None:
+                # P2.5: compute loss only on non-control tokens
+                ce = F.cross_entropy(logits.reshape(-1, self.vocab_size),
+                                     targets.reshape(-1), reduction='none')
+                # loss_mask is vocab-sized; index by target token ids
+                mask = loss_mask[targets.reshape(-1)]
+                loss = (ce * mask).sum() / mask.sum().clamp(min=1)
+            else:
+                loss = F.cross_entropy(logits.reshape(-1, self.vocab_size),
+                                       targets.reshape(-1), ignore_index=0)
         return logits, loss
 
     @torch.no_grad()
