@@ -179,9 +179,9 @@ def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
 @torch.no_grad()
 def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64, is_doi_tho=False):
     """
-    Generate đối thơ response. Mirrors input length:
+    Generate đối thơ response. Each input couplet gets its own independent response:
       1 couplet in → 1 couplet out  (2 lines)
-      2 couplets in → 2 couplets out (4 lines)
+      2 couplets in → 2 couplets out (4 lines, C1→C3, C2→C4)
       N couplets in → N couplets out
     """
     end_id = tokenizer.token_to_id("<|end|>")
@@ -193,27 +193,25 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     if num_input == 0:
         num_input = 1  # single line = 1 couplet
     
-    # Collect all input lines for tracking
-    all_lines = []
+    # Collect input lines
+    input_lines = []
     for six, eight in couplets:
-        all_lines.extend([six, eight])
-    if not all_lines:
-        lines_raw = [l.strip() for l in prompt.strip().split('\n') if l.strip()]
-        all_lines = lines_raw
+        input_lines.extend([six, eight])
+    if not input_lines:
+        input_lines = [l.strip() for l in prompt.strip().split('\n') if l.strip()]
     
-    # Generate N couplets (one per turn)
+    # Generate one response per input couplet (independent duels)
     all_new_tokens = []
     for turn in range(num_input):
-        # Build prompt from recent couplets (up to 1 context couplet)
-        recent_couplets = []
-        for i in range(0, len(all_lines) - 1, 2):
-            if i + 1 < len(all_lines):
-                recent_couplets.append((all_lines[i], all_lines[i+1]))
-        if not recent_couplets and all_lines:
-            # single line
-            recent_couplets = [(all_lines[-1], all_lines[-1])]
+        # Get this turn's input couplet
+        if turn < len(couplets):
+            c6, c8 = couplets[turn]
+        else:
+            # Single line: use it as both
+            c6 = c8 = input_lines[-1]
         
-        prompt_str = _build_doi_tho_prompt(recent_couplets, max_context=1)
+        # Build prompt for just this couplet
+        prompt_str = _build_doi_tho_prompt([(c6, c8)], max_context=1)
         if not prompt_str:
             break
         
@@ -249,11 +247,7 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
             idx = torch.cat((idx, torch.tensor([[next_id]], device=DEVICE)), dim=1)
         
         all_new_tokens.extend(new_tokens)
-        
-        # Decode and append to context for next turn
-        out_lines = _decode_doi_tho(tokenizer, new_tokens)
-        all_lines.extend(out_lines)
-        # Add linebreak between turns
+        # Add linebreak between turns (separates responses in final output)
         if turn < num_input - 1:
             all_new_tokens.append(lb_id)
     
