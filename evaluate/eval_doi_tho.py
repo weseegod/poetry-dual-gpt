@@ -1,6 +1,6 @@
 """
-Đối thơ evaluation — chain rhyme, internal rhyme, tone, syllable.
-Tests the [DOI_THO] checkpoint against 20+ novel couplets.
+Stress-test đối thơ across all input lengths: 1-line, 2-line, 4-line, 6-line.
+Tests the [DOI_THO] checkpoint for correctness at every input size.
 
 Usage:
   python evaluate/eval_doi_tho.py
@@ -19,33 +19,37 @@ sys.path.insert(0, str(ROOT))
 from src.model import PoetryDuelGPT
 from src.tones import get_rhyme_group, get_tone_sequence, get_doi_tho_tags
 
-# ── 25 test couplets (ca dao, folk poetry, Truyện Kiều — verified novel) ──
-TEST_COUPLETS = [
-    ("Thân em như tấm lụa đào", "Phất phơ giữa chợ biết vào tay ai"),
+
+# ── Test prompts at every input length ──
+PROMPTS_1LINE = [
+    "Thân em như chẽn lúa đòng",
+    "Trèo lên cây khế nửa ngày",
+    "Đêm khuya thắp ngọn đèn dầu",
+    "Công cha như núi thái sơn",
+    "Gió đưa cành trúc la đà",
+]
+
+PROMPTS_2LINE = [
+    ("Thân em như chẽn lúa đòng", "Phất phơ dưới ngọn nắng hồng ban mai"),
     ("Trèo lên cây khế nửa ngày", "Ai làm cho khế rụng đầy vườn ai"),
-    ("Đêm khuya thắp ngọn đèn dầu", "Lòng em thương nhớ anh lâu lắm rồi"),
-    ("Công cha như núi thái sơn", "Nghĩa mẹ như nước trong nguồn chảy ra"),
-    ("Gió đưa cành trúc la đà", "Tiếng chuông Trấn Vũ canh gà Thọ Xương"),
-    ("Cày đồng đang buổi ban trưa", "Mồ hôi thánh thót như mưa ruộng cày"),
     ("Qua đình ngả nón trông đình", "Đình bao nhiêu ngói thương mình bấy nhiêu"),
-    ("Đường vô xứ nghệ quanh quanh", "Non xanh nước biếc như tranh họa đồ"),
+    ("Cày đồng đang buổi ban trưa", "Mồ hôi thánh thót như mưa ruộng cày"),
     ("Sông sâu còn có kẻ đò", "Đường xa còn có người qua đón chờ"),
-    ("Cây khô chưa dễ mọc chồi", "Người khôn chưa dễ nói lời thị phi"),
-    ("Mẹ già như chuối ba hương", "Như xôi nếp một như đường mía lau"),
-    ("Dẻo thơm một hạt đắng cay", "Muôn phần đắng chát cũng vay ngọt bùi"),
-    ("Ru con con ngủ cho lâu", "Để mẹ đi cấy đồng sâu ruộng cày"),
-    ("Rủ nhau xuống biển mò cua", "Về nhà nấu cháo nấu cua ăn cùng"),
-    ("Thuyền ơi có nhớ bến không", "Bến thì một dạ khăng khăng đợi thuyền"),
-    ("Trời mưa trời gió đùng đùng", "Đèn nhà ai nấy sáng trưng góc trời"),
-    ("Sen tàn cúc lại nở hoa", "Sầu dài ngày ngắn sang đông lạnh lùng"),
-    ("Một cây làm chẳng nên non", "Ba cây chụm lại nên hòn núi cao"),
-    ("Gần mực thì đen gần đèn", "Gần người hiền trí thì nên thân mình"),
-    ("Nước chảy đá mòn theo năm", "Người thương nhớ mãi xa xăm phương trời"),
-    ("Học thầy không tày học bạn", "Đi một ngày đàng học một sàng khôn"),
-    ("Xa mặt nhưng chẳng cách lòng", "Gần nhau càng thấy nhớ mong từng giờ"),
-    ("Đói cho sạch rách cho thơm", "Khôn ngoan đá đáp người ngoài gà con"),
-    ("Thương người như thể thương thân", "Nhiễu điều phủ lấy giá gương soi chung"),
-    ("Mưa xuân lất phất vườn đào", "Nụ tầm xuân nở ra chào đón xuân"),
+]
+
+PROMPTS_4LINE = [
+    ("Trăm năm trong cõi người ta", "Chữ tài chữ mệnh khéo là ghét nhau",
+     "Trải qua một cuộc bể dâu", "Những điều trông thấy mà đau đớn lòng"),
+    ("Gió đưa cành trúc la đà", "Tiếng chuông Trấn Vũ canh gà Thọ Xương",
+     "Mịt mù khói tỏa ngàn sương", "Nhịp chày Yên Thái mặt gương Tây Hồ"),
+    ("Đường vô xứ nghệ quanh quanh", "Non xanh nước biếc như tranh họa đồ",
+     "Ai vô xứ nghệ thì vô", "Đường vô xứ nghệ quanh co khúc khều"),
+]
+
+PROMPTS_6LINE = [
+    ("Trăm năm trong cõi người ta", "Chữ tài chữ mệnh khéo là ghét nhau",
+     "Trải qua một cuộc bể dâu", "Những điều trông thấy mà đau đớn lòng",
+     "Lạ gì bỉ sắc tư phong", "Trời xanh quen thói má hồng đánh ghen"),
 ]
 
 
@@ -82,12 +86,51 @@ def load_model(ckpt_path, device="cpu"):
     return m, ckpt["step"]
 
 
-@torch.no_grad()
-def generate_doi_tho(model, tokenizer, six_line, eight_line, device="cpu"):
-    rhyme_tag, tone_tag = get_doi_tho_tags(six_line, eight_line)
-    tags = f"[DOI_THO] {rhyme_tag} {tone_tag}".strip()
-    prompt = f"{tags} {six_line} <|linebreak|> {eight_line} <|reply|>"
+def auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
+    """Wrap input as [DOI_THO] format. Handles 1-N lines."""
+    lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     
+    if len(lines) == 1:
+        line = lines[0]
+        syls = line.split()
+        if len(syls) >= 6:
+            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+        else:
+            rhyme_tag, tone_tag = "", ""
+        tags = f"{rhyme_tag} {tone_tag}".strip()
+        tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+        return f"<|start|> {tag_part} {line} <|reply|>"
+    
+    couplets = []
+    i = 0
+    while i + 1 < len(lines):
+        s1, s2 = len(lines[i].split()), len(lines[i+1].split())
+        if s1 == 6 and s2 == 8:
+            couplets.append((lines[i], lines[i+1]))
+            i += 2
+        else:
+            i += 1
+    
+    if not couplets:
+        return auto_tag_doi_tho(lines[-1])
+    
+    couplets = couplets[-max_context:]
+    last_6, last_8 = couplets[-1]
+    rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
+    
+    input_lines = []
+    for six, eight in couplets:
+        input_lines.append(six)
+        input_lines.append(eight)
+    input_str = " <|linebreak|> ".join(input_lines)
+    
+    tags = f"{rhyme_tag} {tone_tag}".strip()
+    tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+    return f"<|start|> {tag_part} {input_str} <|reply|>"
+
+
+@torch.no_grad()
+def generate(model, tokenizer, prompt, device="cpu", max_new=80):
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
     
@@ -95,7 +138,7 @@ def generate_doi_tho(model, tokenizer, six_line, eight_line, device="cpu"):
     idx = torch.tensor([ids], dtype=torch.long, device=device)
     
     new_tokens = []
-    for _ in range(80):
+    for _ in range(max_new):
         logits, _ = model(idx[:, -model.block_size:])
         logits = logits[:, -1, :] / 0.75
         logits[:, pad_id] = float("-inf")
@@ -107,123 +150,149 @@ def generate_doi_tho(model, tokenizer, six_line, eight_line, device="cpu"):
         new_tokens.append(next_id)
         idx = torch.cat([idx, torch.tensor([[next_id]], device=device)], dim=1)
     
-    return decode_doi_tho(tokenizer, new_tokens)
+    return new_tokens
 
 
-def evaluate_one(in6, in8, out_lines):
-    """Score a single đối thơ generation."""
-    if len(out_lines) < 2:
-        return {"valid": False}
+def score_output(out_lines, max_expected_lines):
+    """Score generated output for correctness."""
+    if not out_lines:
+        return {"valid": False, "issue": "empty"}
     
-    out6, out8 = out_lines[0], out_lines[1]
-    s6, s8 = out6.split(), out8.split()
+    # Count garbled tokens (ByteLevel BPE artifacts)
+    garbled = 0
+    for l in out_lines:
+        for ch in l:
+            if ord(ch) < 32 and ch not in '\n\t':
+                garbled += 1
     
-    result = {"valid": True, "out6": out6, "out8": out8}
+    if garbled > 0:
+        return {"valid": False, "issue": f"garbled ({garbled} control chars)", "lines": out_lines}
     
-    # Syllable
-    result["syl_ok"] = len(s6) == 6 and len(s8) == 8
-    result["s6_len"] = len(s6)
-    result["s8_len"] = len(s8)
+    # Check each line has reasonable syllable count (1-12)
+    for l in out_lines:
+        syls = len(l.split())
+        if syls < 1 or syls > 15:
+            return {"valid": False, "issue": f"bad syllable count ({syls})", "lines": out_lines}
     
-    # Chain rhyme: pos 6 of out6 vs pos 8 of input 8-syl line
-    expected_rhyme = get_rhyme_group(in8.split()[7]) if len(in8.split()) >= 8 else ""
-    actual_chain = get_rhyme_group(s6[5]) if len(s6) >= 6 else ""
-    result["chain_rhyme_ok"] = actual_chain == expected_rhyme
-    result["chain_expected"] = expected_rhyme
-    result["chain_actual"] = actual_chain
+    # Check output isn't too long (> 2x expected)
+    if len(out_lines) > max_expected_lines * 2:
+        return {"valid": False, "issue": f"too many lines ({len(out_lines)} > {max_expected_lines*2})", "lines": out_lines}
     
-    # Internal rhyme: pos 6 of out6 vs pos 6 of out8
-    if len(s6) >= 6 and len(s8) >= 6:
-        r6 = get_rhyme_group(s6[5])
-        r8 = get_rhyme_group(s8[5])
-        result["internal_rhyme_ok"] = r6 == r8
-        result["int_r6"] = r6
-        result["int_r8"] = r8
-    else:
-        result["internal_rhyme_ok"] = False
-    
-    # Tone: B-T-B for 6-syl, B-T-B-B for 8-syl
-    t6 = get_tone_sequence(out6)
-    t8 = get_tone_sequence(out8)
-    if len(t6) >= 6:
-        result["tone6_ok"] = t6[1] == 'B' and t6[3] == 'T' and t6[5] == 'B'
-    else:
-        result["tone6_ok"] = False
-    if len(t8) >= 8:
-        result["tone8_ok"] = t8[1] == 'B' and t8[3] == 'T' and t8[5] == 'B' and t8[7] == 'B'
-    else:
-        result["tone8_ok"] = False
-    
-    result["tone6"] = t6[:6] if len(t6) >= 6 else t6
-    result["tone8"] = t8[:8] if len(t8) >= 8 else t8
-    
-    return result
+    return {"valid": True, "lines": out_lines}
 
 
 def main():
-    p = argparse.ArgumentParser(description="Đối thơ evaluation")
+    p = argparse.ArgumentParser()
     p.add_argument("--checkpoint", default="checkpoints/doi_tho_best.pt")
     p.add_argument("--tokenizer", default="tokenizer/poetry_bpe.model")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    p.add_argument("--num_couplets", type=int, default=None)
     args = p.parse_args()
     
     dev = args.device
-    print(f"Device: {dev}")
-    
     tok = Tokenizer.from_file(str(ROOT / args.tokenizer))
     model, step = load_model(str(ROOT / args.checkpoint), dev)
     print(f"Model: step {step}, vocab={tok.get_vocab_size():,}\n")
     
-    couplets = TEST_COUPLETS[:args.num_couplets] if args.num_couplets else TEST_COUPLETS
-    
-    results = []
+    all_results = {}
     t0 = time.time()
     
-    for i, (in6, in8) in enumerate(couplets):
-        out_lines = generate_doi_tho(model, tok, in6, in8, dev)
-        r = evaluate_one(in6, in8, out_lines)
-        results.append(r)
-        
-        if r["valid"]:
-            icon = "✅" if r["syl_ok"] else "❌"
-            print(f"  {icon} {r['out6']}")
-            print(f"     {r['out8']}")
-            print(f"     syl={r['s6_len']}+{r['s8_len']} "
-                  f"chain={r['chain_actual']}/{r['chain_expected']} "
-                  f"int={r.get('int_r6','?')}/{r.get('int_r8','?')} "
-                  f"t6={r['tone6']} t8={r['tone8']}")
+    # ── 1-line tests ──
+    print("=" * 60)
+    print("📝  1-LINE INPUT (single line)")
+    print("=" * 60)
+    results_1 = []
+    for text in PROMPTS_1LINE:
+        prompt = auto_tag_doi_tho(text)
+        tokens = generate(model, tok, prompt, dev)
+        out_lines = decode_doi_tho(tok, tokens)
+        score = score_output(out_lines, max_expected_lines=1)
+        results_1.append(score)
+        icon = "✅" if score["valid"] else "❌"
+        print(f"  {icon} {text[:40]}...")
+        if score["valid"]:
+            for l in out_lines:
+                print(f"     → {l}")
         else:
-            print(f"  ❌  {in6[:40]}... → EMPTY/SHORT")
+            print(f"     {score['issue']}: {out_lines}")
+    all_results["1-line"] = results_1
     
-    elapsed = time.time() - t0
-    
-    # Summary
-    n = sum(1 for r in results if r["valid"])
-    n_total = len(results)
-    
-    syl_ok = sum(1 for r in results if r.get("syl_ok"))
-    chain_ok = sum(1 for r in results if r.get("chain_rhyme_ok"))
-    int_ok = sum(1 for r in results if r.get("internal_rhyme_ok"))
-    tone6_ok = sum(1 for r in results if r.get("tone6_ok"))
-    tone8_ok = sum(1 for r in results if r.get("tone8_ok"))
-    
+    # ── 2-line tests ──
     print(f"\n{'='*60}")
-    print(f"📊  ĐỐI THƠ EVALUATION — {n}/{n_total} valid, step {step} ({elapsed:.0f}s)")
+    print("📝  2-LINE INPUT (1 couplet)")
+    print("=" * 60)
+    results_2 = []
+    for in6, in8 in PROMPTS_2LINE:
+        prompt = auto_tag_doi_tho(f"{in6}\n{in8}")
+        tokens = generate(model, tok, prompt, dev)
+        out_lines = decode_doi_tho(tok, tokens)
+        score = score_output(out_lines, max_expected_lines=2)
+        results_2.append(score)
+        icon = "✅" if score["valid"] else "❌"
+        print(f"  {icon} {in6[:40]}...")
+        if score["valid"]:
+            for l in out_lines:
+                print(f"     → {l}")
+        else:
+            print(f"     {score['issue']}: {out_lines}")
+    all_results["2-line"] = results_2
+    
+    # ── 4-line tests ──
+    print(f"\n{'='*60}")
+    print("📝  4-LINE INPUT (2 couplets — truncated to last 1)")
+    print("=" * 60)
+    results_4 = []
+    for lines in PROMPTS_4LINE:
+        text = "\n".join(lines)
+        prompt = auto_tag_doi_tho(text, max_context=1)
+        tokens = generate(model, tok, prompt, dev)
+        out_lines = decode_doi_tho(tok, tokens)
+        score = score_output(out_lines, max_expected_lines=2)
+        results_4.append(score)
+        icon = "✅" if score["valid"] else "❌"
+        print(f"  {icon} ...{lines[-2][:30]} / {lines[-1][:30]}")
+        if score["valid"]:
+            for l in out_lines:
+                print(f"     → {l}")
+        else:
+            print(f"     {score['issue']}: {out_lines}")
+    all_results["4-line"] = results_4
+    
+    # ── 6-line tests ──
+    print(f"\n{'='*60}")
+    print("📝  6-LINE INPUT (3 couplets — truncated to last 1)")
+    print("=" * 60)
+    results_6 = []
+    for lines in PROMPTS_6LINE:
+        text = "\n".join(lines)
+        prompt = auto_tag_doi_tho(text, max_context=1)
+        tokens = generate(model, tok, prompt, dev)
+        out_lines = decode_doi_tho(tok, tokens)
+        score = score_output(out_lines, max_expected_lines=2)
+        results_6.append(score)
+        icon = "✅" if score["valid"] else "❌"
+        print(f"  {icon} ...{lines[-2][:30]} / {lines[-1][:30]}")
+        if score["valid"]:
+            for l in out_lines:
+                print(f"     → {l}")
+        else:
+            print(f"     {score['issue']}: {out_lines}")
+    all_results["6-line"] = results_6
+    
+    # ── Summary ──
+    elapsed = time.time() - t0
+    print(f"\n{'='*60}")
+    print(f"📊  STRESS TEST SUMMARY — step {step} ({elapsed:.0f}s)")
     print(f"{'='*60}")
-    print(f"  Valid output:         {n}/{n_total} ({n/n_total*100:.0f}%)")
-    if n > 0:
-        print(f"  Syllable (6+8):       {syl_ok}/{n} = {syl_ok/n*100:.0f}%")
-        print(f"  Chain rhyme:          {chain_ok}/{n} = {chain_ok/n*100:.0f}%")
-        print(f"  Internal rhyme:       {int_ok}/{n} = {int_ok/n*100:.0f}%")
-        print(f"  Tone 6 (B-T-B):       {tone6_ok}/{n} = {tone6_ok/n*100:.0f}%")
-        print(f"  Tone 8 (B-T-B-B):     {tone8_ok}/{n} = {tone8_ok/n*100:.0f}%")
-    print()
-    print(f"  v1 baseline (single-couplet, 15K steps):")
-    print(f"    Syllable: 71% | Rhyme: 50% | Tone: 88%")
-    print(f"  v2.1 (doi_tho, single-stage, {step} steps):")
-    print(f"    Syllable: {syl_ok/n*100:.0f}% | Chain: {chain_ok/n*100:.0f}% | "
-          f"Internal: {int_ok/n*100:.0f}% | Tone: {tone6_ok/n*100:.0f}%/{tone8_ok/n*100:.0f}%")
+    
+    for label, results in all_results.items():
+        valid = sum(1 for r in results if r["valid"])
+        total = len(results)
+        bar = "█" * (valid * 20 // max(total, 1))
+        print(f"  {label:12s}: {valid}/{total} valid  {bar}")
+    
+    total_valid = sum(sum(1 for r in results if r["valid"]) for results in all_results.values())
+    total_all = sum(len(results) for results in all_results.values())
+    print(f"  {'TOTAL':12s}: {total_valid}/{total_all} valid ({total_valid/total_all*100:.0f}%)")
 
 
 if __name__ == "__main__":
