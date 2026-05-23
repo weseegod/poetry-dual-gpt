@@ -3,7 +3,7 @@ import './App.css'
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Chào bạn! Gửi cho tôi một câu lục bát, tôi sẽ đối lại. 🎭' }
+    { role: 'bot', text: 'Chào bạn! Gửi cho tôi một cặp lục bát (Shift+Enter xuống dòng), tôi sẽ đối lại. 🎭' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,11 +53,19 @@ function App() {
     }
   }
 
-  // Quick prompt buttons
+  // Enter to submit, Shift+Enter for newline
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send(e)
+    }
+  }
+
+  // Quick prompt buttons — now couplets
   const quickPrompts = [
-    'Thân em như chẽn lúa đòng đòng',
-    'Trăm năm trong cõi người ta',
-    'Gió đưa cành trúc la đà',
+    'Thân em như chẽn lúa đòng\nPhất phơ dưới ngọn nắng hồng ban mai',
+    'Trăm năm trong cõi người ta\nChữ tài chữ mệnh khéo là ghét nhau',
+    'Gió đưa cành trúc la đà\nTiếng chuông Trấn Vũ canh gà Thọ Xương',
   ]
 
   return (
@@ -68,7 +76,7 @@ function App() {
           <span className="header-avatar">🎭</span>
           <div>
             <h1>Poetry Duel</h1>
-            <p className="header-sub">Lục Bát GPT</p>
+            <p className="header-sub">Đối Thơ Lục Bát</p>
           </div>
         </div>
         <button
@@ -138,19 +146,20 @@ function App() {
       <div className="quick-prompts">
         {quickPrompts.map(p => (
           <button key={p} onClick={() => setInput(p)}
-            className="quick-btn">{p}</button>
+            className="quick-btn">{p.replace('\n', ' ⏎ ')}</button>
         ))}
       </div>
 
-      {/* Input */}
+      {/* Input — textarea for multi-line */}
       <form className="chat-input" onSubmit={send}>
-        <input
-          type="text"
+        <textarea
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Nhập câu lục bát..."
+          onKeyDown={handleKeyDown}
+          placeholder="Nhập cặp lục bát... (Enter=gửi, Shift+Enter=xuống dòng)"
           disabled={loading}
           autoFocus
+          rows={2}
         />
         <button type="submit" disabled={loading || !input.trim()}>
           Gửi

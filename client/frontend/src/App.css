@@ -225,6 +225,10 @@ body {
   background: #f0f7f2;
 }
 
+.message-text {
+  white-space: pre-line;
+}
+
 /* ── Input area ── */
 .chat-input {
   display: flex;
@@ -233,20 +237,26 @@ body {
   background: white;
   border-top: 1px solid #e0d8cf;
   flex-shrink: 0;
+  align-items: flex-end;
 }
 
-.chat-input input {
+.chat-input textarea {
   flex: 1;
   padding: 10px 16px;
   border: 1px solid #ddd;
-  border-radius: 24px;
+  border-radius: 18px;
   font-size: 15px;
   outline: none;
   background: #f8f6f3;
   transition: border 0.2s;
+  font-family: inherit;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+  line-height: 1.4;
 }
 
-.chat-input input:focus {
+.chat-input textarea:focus {
   border-color: #4a7c59;
   background: white;
 }

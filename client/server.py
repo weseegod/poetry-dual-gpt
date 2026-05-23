@@ -23,7 +23,9 @@ from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags
 
 # ── Config ──────────────────────────────────────────
 ROOT = Path(__file__).parent.parent
-CHECKPOINT = ROOT / "checkpoints" / "best.pt"
+CHECKPOINT = ROOT / "checkpoints" / "doi_tho_best.pt"
+if not CHECKPOINT.exists():
+    CHECKPOINT = ROOT / "checkpoints" / "best.pt"
 if not CHECKPOINT.exists():
     CHECKPOINT = ROOT / "checkpoints" / "final.pt"
 TOKENIZER_PATH = ROOT / "tokenizer" / "poetry_bpe.model"
