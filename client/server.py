@@ -209,6 +209,23 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     return new_tokens
 
 
+def _decode_doi_tho(tok, new_token_ids):
+    """Decode tokens, splitting on <|linebreak|> positions (id=9 decodes to empty)."""
+    lb_id = tok.token_to_id("<|linebreak|>")
+    lines = []
+    chunk = []
+    for t in new_token_ids:
+        if t == lb_id:
+            if chunk:
+                lines.append(tok.decode(chunk).strip())
+            chunk = []
+        else:
+            chunk.append(t)
+    if chunk:
+        lines.append(tok.decode(chunk).strip())
+    return lines
+
+
 # ── Routes ─────────────────────────────────────────
 
 @app.get("/")
@@ -244,9 +261,14 @@ def chat(req: ChatRequest):
     response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
     response = response.lstrip(", .;:-")
     
-    # For đối thơ, split <|linebreak|> into newlines for frontend display
-    if is_doi_tho and "<|linebreak|>" in response:
-        response = response.replace("<|linebreak|>", "\n")
+    # For đối thơ, join decoded lines with newline for frontend display
+    if is_doi_tho:
+        lines = _decode_doi_tho(tokenizer, new_ids)
+        response = "\n".join(lines)
+    else:
+        response = tokenizer.decode(new_ids)
+        response = response.replace("<|end|>", "").replace("<|start|>", "").strip()
+        response = response.lstrip(", .;:-")
 
     return ChatResponse(response=response, prompt=req.prompt)
 

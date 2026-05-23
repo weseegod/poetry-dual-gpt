@@ -189,7 +189,25 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 2) -> str:
     return f"{tag_part} {input_str} <|reply|>"
 
 
-def truncate_syllables(text, max_syl):
+def decode_doi_tho(tokenizer, new_token_ids):
+    """
+    Decode generated tokens, handling <|linebreak|> which decodes to empty
+    string in ByteLevel BPE. Splits on linebreak token positions.
+    Returns list of line strings.
+    """
+    lb_id = tokenizer.token_to_id("<|linebreak|>")
+    lines = []
+    chunk = []
+    for t in new_token_ids:
+        if t == lb_id:
+            if chunk:
+                lines.append(tokenizer.decode(chunk).strip())
+            chunk = []
+        else:
+            chunk.append(t)
+    if chunk:
+        lines.append(tokenizer.decode(chunk).strip())
+    return lines
     """Truncate text to exactly max_syl syllables (words)."""
     syls = text.split()
     if len(syls) <= max_syl:
@@ -306,20 +324,24 @@ if __name__ == "__main__":
             if "\n" in u:
                 # Multi-line → đối thơ
                 prompt = auto_tag_doi_tho(u)
+                _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
+                out_lines = decode_doi_tho(tok, ids)
+                print(f"Bot: {out_lines[0] if len(out_lines)>0 else '?'}")
+                print(f"     {out_lines[1] if len(out_lines)>1 else '?'}\n")
             elif not u.startswith("["):
                 prompt = auto_tag(u)
+                _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
+                response = tok.decode(ids).replace("<|end|>", "").strip()
+                print(f"Bot: {response}\n")
             else:
                 prompt = u
-            
-            _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
-            response = tok.decode(ids).replace("<|end|>", "").strip()
-            
-            # Display: split <|linebreak|> into separate lines for đối thơ
-            if "<|linebreak|>" in response:
-                out_lines = response.replace("<|linebreak|>", "\n    ")
-                print(f"Bot: {out_lines}\n")
-            else:
-                print(f"Bot: {response}\n")
+                _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
+                response = tok.decode(ids).replace("<|end|>", "").strip()
+                if "<|linebreak|>" in response:
+                    out_lines = response.replace("<|linebreak|>", "\n    ")
+                    print(f"Bot: {out_lines}\n")
+                else:
+                    print(f"Bot: {response}\n")
 
     # Batch generation
     else:
@@ -348,12 +370,12 @@ if __name__ == "__main__":
                               args.temperature, args.top_k, args.top_p, dev)
             response_only = tok.decode(ids).replace("<|end|>", "").strip()
             
-            # Display: split <|linebreak|> for đối thơ
-            if is_doi_tho and "<|linebreak|>" in response_only:
-                out_lines = response_only.replace("<|linebreak|>", "\n           ")
-                print(f"Response: {out_lines}")
-            else:
-                print(f"Response: {response_only}")
+            # Display: use decode_doi_tho for proper linebreak handling
+            if is_doi_tho:
+                out_lines = decode_doi_tho(tok, ids)
+                print(f"Response: {out_lines[0] if len(out_lines)>0 else '?'}")
+                print(f"          {out_lines[1] if len(out_lines)>1 else '?'}")
+                response_only = "\n".join(out_lines)
 
             # Rule check — strip control tokens properly with regex
             prompt_part = re.sub(r'\[(?:RHYME|TONE|LINK2):[^\]]+\]', '', prompt)
@@ -372,9 +394,8 @@ if __name__ == "__main__":
                 print(f"  Response tone: {r['tone_r'][1]}")
                 print(f"{'─'*60}")
             elif is_doi_tho:
-                resp_lines = response_only.split("<|linebreak|>")
-                if len(resp_lines) >= 2:
-                    r6 = resp_lines[0].strip()
-                    r8 = resp_lines[1].strip() if len(resp_lines) > 1 else ""
+                if len(out_lines) >= 2:
+                    r6 = out_lines[0].strip()
+                    r8 = out_lines[1].strip() if len(out_lines) > 1 else ""
                     print(f"\n{'─'*60}\n📏  Đối Thơ (couplet→couplet) Rule Check\n{'─'*60}")
                     print(f"  Output: {len(r6.split())}syl → {len(r8.split()) if r8 else '?'}syl")
