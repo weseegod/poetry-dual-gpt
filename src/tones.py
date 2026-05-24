@@ -166,3 +166,27 @@ def get_doi_tho_tags(six_line: str, eight_line: str) -> tuple:
         tone_tag = f"[TONE:{seq[:6]}]"
     
     return rhyme_tag, tone_tag
+
+
+def get_doi_tho_tags_tn(seven_line: str) -> tuple[str, str]:
+    """
+    Extract [RHYME:X] and [TONE:YYYYYYY] for Thất Ngôn đối thơ.
+    
+    [RHYME:X] — from position 7 (last syllable) of the input 7-syl line
+    [TONE:YYYYYYY] — tone pattern of the 7-syl line (7 chars)
+    
+    Returns (rhyme_tag, tone_tag).
+    """
+    import re
+    rhyme_tag = ""
+    tone_tag = ""
+    
+    syls = seven_line.strip().split()
+    if len(syls) >= 7:
+        syl_7 = re.sub(r'[,.!?;:]+$', '', syls[6])  # pos 7, strip punctuation
+        rhyme = get_rhyme_group(syl_7)
+        rhyme_tag = f"[RHYME:{rhyme}]"
+        seq = get_tone_sequence(seven_line)
+        tone_tag = f"[TONE:{seq[:7]}]"  # 7-char tone sequence
+    
+    return rhyme_tag, tone_tag

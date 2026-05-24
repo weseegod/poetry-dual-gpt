@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from tokenizers import Tokenizer
 
 from model import PoetryDuelGPT
-from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags
+from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags, get_rhyme_group
 
 
 # ── Config ──────────────────────────────────────────
@@ -126,6 +126,7 @@ class ChatResponse(BaseModel):
 
 def _parse_couplets(user_input: str):
     """Parse user input into (couplets_list, num_input_couplets).
+    Supports both Lục Bát (6+8) and Thất Ngôn (7+7).
     Normalizes to lowercase to match training data."""
     user_input = user_input.lower()
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
@@ -133,7 +134,8 @@ def _parse_couplets(user_input: str):
     i = 0
     while i + 1 < len(lines):
         s1, s2 = len(lines[i].split()), len(lines[i+1].split())
-        if s1 == 6 and s2 == 8:
+        # Accept Lục Bát (6+8) or Thất Ngôn (7+7) couplets
+        if (s1 == 6 and s2 == 8) or (s1 == 7 and s2 == 7):
             couplets.append((lines[i], lines[i+1]))
             i += 2
         else:
@@ -183,7 +185,10 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
       1 couplet in → 1 couplet out  (2 lines)
       2 couplets in → 2 couplets out (4 lines, C1→C3, C2→C4)
       N couplets in → N couplets out
+    
+    P1: Rhyme constraint at rhyme position in 2nd output line.
     """
+    import re
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
     lb_id = tokenizer.token_to_id("<|linebreak|>")
@@ -215,6 +220,18 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
         if not prompt_str:
             break
         
+        # P1: Parse target rhyme from prompt
+        target_rhyme = None
+        rhyme_syl_idx = None
+        rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt_str)
+        if rhyme_match:
+            target_rhyme = rhyme_match.group(1)
+            tone_match = re.search(r'\[TONE:([BT]+)\]', prompt_str)
+            if tone_match and len(tone_match.group(1)) == 7:
+                rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable
+            else:
+                rhyme_syl_idx = 5  # Lục Bát: 6th syllable
+        
         # Encode and generate
         ids = tokenizer.encode(prompt_str).ids
         idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)
@@ -225,9 +242,32 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
             logits = logits[:, -1, :] / temperature
             logits[:, pad_id] = float("-inf")
             
-            # P2: Repetition penalty — penalize tokens from recent output
+            # Repetition penalty — penalize tokens from recent output
             for prev in new_tokens[-16:]:
                 logits[:, prev] -= 1.2
+            
+            # P1: Rhyme constraint at rhyme position in 2nd line
+            if target_rhyme is not None and rhyme_syl_idx is not None:
+                if lb_id in new_tokens:
+                    last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
+                    after_lb = new_tokens[last_lb + 1:]
+                    decoded_after = tokenizer.decode(after_lb)
+                    current_syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+                else:
+                    current_syl_count = 0
+                if current_syl_count == rhyme_syl_idx:
+                    candidate_k = min(top_k * 2 if top_k else 100, logits.size(-1))
+                    _, topk_idx = torch.topk(logits, candidate_k)
+                    for tid in topk_idx[0]:
+                        tid_i = tid.item()
+                        if tid_i in (end_id, pad_id, lb_id):
+                            continue
+                        decoded = tokenizer.decode([tid_i]).strip()
+                        if not decoded:
+                            continue
+                        rg = get_rhyme_group(decoded)
+                        if rg != target_rhyme:
+                            logits[:, tid_i] = float("-inf")
             
             if top_k:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
@@ -254,9 +294,10 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     return all_new_tokens
 
 
-def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True):
-    """Decode tokens, splitting on <|linebreak|> positions (id=9 decodes to empty).
-    Optionally enforces 6/8 syllable per line (P3)."""
+def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2):
+    """Decode tokens, splitting on <|linebreak|> positions.
+    Enforces syllable pattern (P3) and fixes overgeneration (P2: > max_lines).
+    Detects genre (Lục Bát vs Thất Ngôn) from first line syllable count."""
     lb_id = tok.token_to_id("<|linebreak|>")
     lines = []
     chunk = []
@@ -270,15 +311,33 @@ def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True):
     if chunk:
         lines.append(tok.decode(chunk).strip())
     
-    # P3: Enforce 6/8 syllable pattern
+    # Detect genre from first line syllable count
+    if lines:
+        s1 = len(lines[0].split())
+        targets = (6, 8) if s1 <= 7 else (7, 7)
+    else:
+        targets = (6, 8)
+    
+    # P3: Enforce syllable count per line
     if enforce_syllables:
-        targets = [6, 8]
         for i, line in enumerate(lines):
             words = line.split()
             target = targets[i % 2]
             if len(words) > target:
                 words = words[:target]
             lines[i] = ' '.join(words)
+    
+    # P2: Fix overgeneration — if too many lines, find first valid couplet
+    if len(lines) > max_lines:
+        t1, t2 = targets
+        for i in range(len(lines) - 1):
+            s1 = len(lines[i].split())
+            s2 = len(lines[i+1].split())
+            if s1 == t1 and s2 == t2:
+                lines = lines[i:i+2]
+                break
+        else:
+            lines = lines[:max_lines]
     
     return lines
 

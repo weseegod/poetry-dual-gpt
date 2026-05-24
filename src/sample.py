@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 from tokenizers import Tokenizer
 from model import PoetryDuelGPT
-from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags
+from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags, get_doi_tho_tags_tn, get_rhyme_group
 
 ROOT = Path(__file__).parent.parent
 
@@ -161,13 +161,13 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
         tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
         return f"<|start|> {tag_part} {line} <|reply|>"
     
-    # Group into (6-syl, 8-syl) pairs
+    # Group into couplets: support both Lục Bát (6+8) and Thất Ngôn (7+7)
     couplets = []
     i = 0
     while i + 1 < len(lines):
         s1 = len(lines[i].split())
         s2 = len(lines[i+1].split())
-        if s1 == 6 and s2 == 8:
+        if (s1 == 6 and s2 == 8) or (s1 == 7 and s2 == 7):
             couplets.append((lines[i], lines[i+1]))
             i += 2
         else:
@@ -180,15 +180,21 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     # Keep at most max_context_couplets recent couplets
     couplets = couplets[-max_context_couplets:]
     
-    # Extract tags from LAST couplet
-    last_6, last_8 = couplets[-1]
-    rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
+    # Detect genre from last couplet for tag extraction
+    last_a, last_b = couplets[-1]
+    s1_last = len(last_a.split())
+    if s1_last == 7:
+        # Thất Ngôn: rhyme from last syllable of 7-syl line
+        rhyme_tag, tone_tag = get_doi_tho_tags_tn(last_a)
+    else:
+        # Lục Bát: rhyme from pos 8 of 8-syl line
+        rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
     
     # Build input lines with <|linebreak|> separators
     input_lines = []
-    for six, eight in couplets:
-        input_lines.append(six)
-        input_lines.append(eight)
+    for a, b in couplets:
+        input_lines.append(a)
+        input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     
     # Build tag
@@ -198,11 +204,12 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
-def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True):
+def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2):
     """
     Decode generated tokens, handling <|linebreak|> which decodes to empty
     string in ByteLevel BPE. Splits on linebreak token positions.
-    Returns list of line strings. Optionally enforces 6/8 syllable pattern (P3).
+    Returns list of line strings. Optionally enforces syllable pattern (P3)
+    and fixes overgeneration (P2: > max_lines → find first valid couplet).
     """
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     lines = []
@@ -217,9 +224,15 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True):
     if chunk:
         lines.append(tokenizer.decode(chunk).strip())
     
-    # P3: Enforce 6/8 syllable pattern
+    # Detect genre from first line syllable count
+    if lines:
+        s1 = len(lines[0].split())
+        targets = (6, 8) if s1 <= 7 else (7, 7)
+    else:
+        targets = (6, 8)
+    
+    # P3: Enforce syllable count per line
     if enforce_syllables:
-        targets = [6, 8]
         for i, line in enumerate(lines):
             words = line.split()
             target = targets[i % 2]
@@ -227,18 +240,49 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True):
                 words = words[:target]
             lines[i] = ' '.join(words)
     
+    # P2: Fix overgeneration — if too many lines, find first valid couplet
+    if len(lines) > max_lines:
+        t1, t2 = targets
+        for i in range(len(lines) - 1):
+            s1 = len(lines[i].split())
+            s2 = len(lines[i+1].split())
+            if s1 == t1 and s2 == t2:
+                lines = lines[i:i+2]
+                break
+        else:
+            lines = lines[:max_lines]
+    
     return lines
 
 
 @torch.no_grad()
 def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
-              top_k=50, top_p=None, device="cpu", max_syllables=None):
+              top_k=50, top_p=None, device="cpu", max_syllables=None,
+              rhyme_constraint=True):
     """
     1. Encode prompt → 2. Loop: forward → sample next token → append
     3. Stop on <|end|> or max tokens → 4. Decode new tokens only
+    
+    P1 (rhyme_constraint): When generating the rhyme-position syllable
+    in the second output line, mask out tokens whose rhyme group doesn't
+    match the target [RHYME:X] from the prompt.
     """
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
+    lb_id = tokenizer.token_to_id("<|linebreak|>")
+
+    # Parse target rhyme from prompt
+    target_rhyme = None
+    rhyme_syl_idx = None  # 0-indexed syllable position in 2nd line that must rhyme
+    rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt)
+    if rhyme_match:
+        target_rhyme = rhyme_match.group(1)
+        # Determine genre from tone tag length: 6=Lục Bát, 7=Thất Ngôn
+        tone_match = re.search(r'\[TONE:([BT]+)\]', prompt)
+        if tone_match and len(tone_match.group(1)) == 7:
+            rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable of 2nd 7-syl line
+        else:
+            rhyme_syl_idx = 5  # Lục Bát: 6th syllable of 2nd 8-syl line
 
     # Encode prompt as token IDs
     ids = tokenizer.encode(prompt).ids
@@ -256,6 +300,36 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
         # P2: Repetition penalty — penalize tokens from recent output
         for prev in new_tokens[-16:]:
             logits[:, prev] -= 1.2
+
+        # P1: Rhyme constraint — force rhyme at target position in 2nd line
+        if rhyme_constraint and target_rhyme is not None and rhyme_syl_idx is not None:
+            # Count syllables generated in the current (2nd) line after last <|linebreak|>
+            if lb_id in new_tokens:
+                last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
+                after_lb = new_tokens[last_lb + 1:]
+                decoded_after = tokenizer.decode(after_lb)
+                current_syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+            else:
+                current_syl_count = 0
+
+            # If we're about to generate the rhyme-position syllable, enforce rhyme
+            if current_syl_count == rhyme_syl_idx:
+                # Examine candidate tokens — mask those with wrong rhyme group
+                # Use top-k*2 candidates to have enough to check
+                candidate_k = min(top_k * 2 if top_k else 100, logits.size(-1))
+                _, topk_idx = torch.topk(logits, candidate_k)
+                for tid in topk_idx[0]:
+                    tid_i = tid.item()
+                    # Skip special tokens
+                    if tid_i in (end_id, pad_id, lb_id):
+                        continue
+                    decoded = tokenizer.decode([tid_i]).strip()
+                    if not decoded:
+                        continue
+                    # Get rhyme group of the candidate token
+                    rg = get_rhyme_group(decoded)
+                    if rg != target_rhyme:
+                        logits[:, tid_i] = float("-inf")
 
         # Top-k filtering
         if top_k:
