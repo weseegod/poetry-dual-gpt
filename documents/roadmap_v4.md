@@ -1,8 +1,8 @@
-# 🚀 v4.0 Roadmap — Maximum Existing Data
+# 🚀 v4.0 Roadmap — Thất Ngôn + Inference Wins
 
 > v3 shipped: 100% stress test, 80% rhyme, 97% tone, Lục Bát only.
-> v4 adds Thất Ngôn + Multi-couplet from EXISTING data (125K poems in CSV).
-> One Colab retrain (~3-4h). v5 = new data scraping only.
+> v4 adds Thất Ngôn (no new data) + beam rhyme + overgeneration fix.
+> One retrain. v5 = multi-couplet coherence + data expansion.
 
 ---
 
@@ -15,26 +15,7 @@
 | Tone (avg) | 97% |
 | Syllable (6+8) | 93% |
 | Thất Ngôn (7→7) | ❌ Dropped by line 156 |
-| Multi-couplet (2+ couplets) | ❌ Window=1 only |
-| Genres used | 1/2 in CSV |
-
----
-
-## 🗂️ What's Already in the CSV (No Scraping Needed)
-
-```
-poems_dataset_clean.csv — 125,892 poems
-├── Lục Bát:         84,538  poems  ── 541K pairs generated (window=1)
-│   ├── 3+ couplets: 74,430  poems  ── ~148K multi-couplet pairs (window=2)
-│   └── 4+ couplets: 70,514  poems  ── ~200K+ multi-couplet pairs (window=2+3)
-│
-└── Bảy Chữ:         41,354  poems  ── currently FILTERED OUT
-    ├── 2+ couplets: 40,699  poems  ── ~80K window=1 pairs
-    ├── 3+ couplets: 34,063  poems  ── ~68K window=2 pairs
-    ├── Thất ngôn bát cú:  1,554 poems (8 lines = 4 couplets)
-    ├── Thất ngôn tứ tuyệt:  712 poems (4 lines = 2 couplets)
-    └── Song thất lục bát:  371 poems (7-7-6-8 → split into TN + LB)
-```
+| Multi-couplet coherence | ❌ Independent duels only |
 
 ---
 
@@ -47,86 +28,83 @@ poems_dataset_clean.csv — 125,892 poems
 df = df[df["genre"] == "lục bát"]   # drops 41,354 bảy chữ poems
 ```
 
-The comment promised v3.0. v3 shipped without it. The data was there the whole time.
+v3 shipped without Thất Ngôn. The data (41K poems) was there the whole time.
 
 ---
 
-## 🛡️ RISK ASSESSMENT — What Could Break v3 Quality
+## ✅ v4 Plan
 
-### P1: Beam Rhyme Constraint ✅ SAFE
-**Risk: None.** Inference-only. Constrains 1 token per response. If rhyme mapping is wrong, model falls through to normal sampling. Reversible with one flag.
+### P1: Beam Rhyme Constraint (80% → 90%+)
+**Effort: 30 min | Retrain: no | Risk: none**
 
-### P2: Fix Overgeneration ✅ SAFE
-**Risk: None.** Post-processing only. Takes first valid (6,8) pair from output. Doesn't touch model.
+At the rhyme position (pos 6 of 8-syl line), force candidates to match `[RHYME:X]`:
 
-### P3: Scheduled Sampling ⚠️ RISK
-**Risk: Medium.** Changes training dynamics. Model has 31.5M params — small enough that teacher forcing is beneficial. Scheduled sampling can:
-- Cause distribution drift (model's own noise accumulates)
-- Destabilize early training if teacher_prob drops too fast
-- Hurt more than help for narrow-domain models
-
-**Recommendation:** Defer. The 31.5M-parameter ceiling + narrow domain (poetry) means teacher forcing works well. Scheduled sampling helps more on large models with diverse outputs.
-
-### T1: Thất Ngôn Support ⚠️ RISK (Mitigatable)
-**Risks:**
-1. **Genre confusion:** 31.5M params splitting capacity between 2 genres → possible 5-10% Lục Bát quality drop
-2. **Special token issue:** `[DOI_THO:TN]` is 8 BPE subwords, not 1 token. Must be added to tokenizer. Retrain BPE.
-3. **Syllable mismatch:** Model might mix 6-syl and 7-syl outputs
-
-**Mitigations:**
-1. Use `[DOI_THO]` for both (no new token). Model learns from tone sequence length (6 vs 7) + input line length.
-2. Keep Lục Bát at 87% of data (541K/621K). Thất Ngôn is 13% — small enough not to dominate.
-3. If Lục Bát quality drops, train separate models.
-
-**Recommendation:** Proceed with shared `[DOI_THO]` format (no new token needed). Risk is low — 13% data dilution with implicit genre signal from tone sequence length.
-
-### T2: Multi-Couplet Window=2 ❌ DANGER — Do Not Add
-**Risk: High.** Critical conflict with inference:
-
-| | Training | Inference |
-|---|----------|-----------|
-| Window=1 | C1 → C2 | C1 → C2 ✅ match |
-| Window=2 | (C1, C2) → C3 | C1 → C3, C2 → C4 ❌ mismatch |
-
-Adding window=2 teaches the model a format that NEVER appears at inference. The model learns to expect 2 input couplets when it only gets 1. This degrades single-couplet quality — the exact opposite of what we want.
-
-**Alternative — inference-only multi-couplet chaining:**
-```
-User sends:  C1
-Model →     C3
-Chain:      use C3 as next input
-Model →     C5  
-Chain:      use C5 as next input
-Model →     C7
+```python
+if position == rhyme_pos:
+    for tid in candidates:
+        if get_rhyme_group(tok.decode([tid])) != target_rhyme:
+            logits[:, tid] = float('-inf')
 ```
 
-No training changes. No new data. Chain rhyme propagates naturally because each generation's rhyme tag feeds the next. This is how human đối thơ works — each response becomes the next prompt.
-
-**Recommendation:** Skip T2. Implement iterative chaining at inference instead.
+Inference-only. One token per response. Togglable flag.
 
 ---
 
-## ✅ v4 Plan — Risk-Adjusted
+### P2: Fix Single-Line Overgeneration
+**Effort: 15 min | Retrain: no | Risk: none**
 
-| # | Item | Effort | Retrain | Risk |
-|---|------|--------|---------|------|
-| P1 | Beam rhyme constraint | 30 min | No | None |
-| P2 | Fix overgeneration | 15 min | No | None |
-| T1 | Thất Ngôn support | ~50 lines | Yes (3h) | Low |
-| — | Multi-couplet via chaining | ~20 lines | No | None |
+Post-generation cleanup when model outputs >2 lines:
 
-**Dropped from v4:**
-- P3 (Scheduled sampling) — medium risk, low reward for small model
-- T2 (Window=2 training) — conflicts with independent- duel inference
-
-**Retrain:** Only T1 triggers retrain (adds 80K Thất Ngôn pairs). Everything else is code-only.
+```python
+if len(lines) > 2:
+    for i in range(len(lines) - 1):
+        if len(lines[i].split()) == 6 and len(lines[i+1].split()) == 8:
+            lines = lines[i:i+2]; break
+    else:
+        lines = lines[:2]
+```
 
 ---
 
-## 🔮 v5 — New Data
+### T1: Thất Ngôn Support (7→7)
+**Effort: ~50 lines in preprocess_doi_tho.py | Retrain: yes (3h) | Risk: low**
 
-| # | Item |
-|---|------|
-| E1 | 8 canonical poets (Xuân Diệu, Hồ Xuân Hương, etc.) |
-| E2 | Window=2 training if inference changes |
-| E3 | Scheduled sampling after data expansion |
+**Data:** 41K bảy chữ poems already in CSV. No scraping needed.
+
+**Format:** Shared `[DOI_THO]` tag for both genres. Model distinguishes via tone sequence (6 vs 7 characters) and syllable count. No new special token needed — avoids BPE retraining.
+
+| | Lục Bát | Thất Ngôn |
+|---|---|---|
+| Input | 6 + 8 syllables | 7 + 7 syllables |
+| Tone tag | `[TONE:BBBBBB]` (6) | `[TONE:BBBBBBB]` (7) |
+| Rhyme | Pos 8 of 8-syl line | Pos 7 of input 7-syl line |
+| Data | 541K pairs | ~80K pairs (13% of total) |
+
+**Risk mitigation:** Thất Ngôn is only 13% of training data — Lục Bát dominates. If Lục Bát quality drops, the shared `[DOI_THO]` format can be split into `[DOI_THO:LB]` / `[DOI_THO:TN]`.
+
+**Corpus size after T1:** ~620K pairs.
+
+---
+
+## 📋 v4 Summary
+
+| # | Item | Time | Retrain |
+|---|------|------|---------|
+| P1 | Beam rhyme | 30 min | No |
+| P2 | Fix overgeneration | 15 min | No |
+| T1 | Thất Ngôn | 1h + 3h Colab | Yes |
+
+**Retrain:** T1 only. ~620K pairs. 3 hours on Colab T4.
+
+---
+
+## 🗂️ Data Inventory
+
+| Source | Content | Status |
+|--------|---------|--------|
+| `poems_dataset_clean.csv` | 125K poems (lục bát + bảy chữ) | ✅ v4 uses all of it |
+| 8 canonical poets | Hồ Xuân Hương, Hàn Mặc Tử, etc. | 🔮 v5 scraping |
+
+No new data needed for v4. All from existing CSV.
+
+> **v5:** Multi-couplet coherence + data expansion → [roadmap_v5.md](roadmap_v5.md)
