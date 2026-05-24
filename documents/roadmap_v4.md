@@ -36,8 +36,6 @@ poems_dataset_clean.csv — 125,892 poems
     └── Song thất lục bát:  371 poems (7-7-6-8 → split into TN + LB)
 ```
 
-**Total v4 corpus potential:** ~541K (existing LB w=1) + ~80K (TN w=1) + ~216K (multi-couplet LB+TN w=2) ≈ **837K pairs** — all from the CSV we already have.
-
 ---
 
 ## 🔴 Bug: Thất Ngôn Dropped
@@ -53,148 +51,82 @@ The comment promised v3.0. v3 shipped without it. The data was there the whole t
 
 ---
 
-## ✅ v4 Plan — One Retrain, All Gains
+## 🛡️ RISK ASSESSMENT — What Could Break v3 Quality
 
-### T1: Thất Ngôn Support (7→7)
-**Effort: ~50 lines in preprocess_doi_tho.py | Retrain: yes**
+### P1: Beam Rhyme Constraint ✅ SAFE
+**Risk: None.** Inference-only. Constrains 1 token per response. If rhyme mapping is wrong, model falls through to normal sampling. Reversible with one flag.
 
-Add bảy chữ handling alongside lục bát:
+### P2: Fix Overgeneration ✅ SAFE
+**Risk: None.** Post-processing only. Takes first valid (6,8) pair from output. Doesn't touch model.
 
-```python
-# Currently: df = df[df["genre"] == "lục bát"]
-# Fix: handle both genres
+### P3: Scheduled Sampling ⚠️ RISK
+**Risk: Medium.** Changes training dynamics. Model has 31.5M params — small enough that teacher forcing is beneficial. Scheduled sampling can:
+- Cause distribution drift (model's own noise accumulates)
+- Destabilize early training if teacher_prob drops too fast
+- Hurt more than help for narrow-domain models
 
-if genre == "lục bát":
-    syl_target = (6, 8)
-    rhyme_pos = 7     # pos 8 (0-indexed)
-    tone_len = 6
-elif genre == "bảy chữ":
-    syl_target = (7, 7)
-    rhyme_pos = 6     # pos 7 (0-indexed)
-    tone_len = 7
+**Recommendation:** Defer. The 31.5M-parameter ceiling + narrow domain (poetry) means teacher forcing works well. Scheduled sampling helps more on large models with diverse outputs.
+
+### T1: Thất Ngôn Support ⚠️ RISK (Mitigatable)
+**Risks:**
+1. **Genre confusion:** 31.5M params splitting capacity between 2 genres → possible 5-10% Lục Bát quality drop
+2. **Special token issue:** `[DOI_THO:TN]` is 8 BPE subwords, not 1 token. Must be added to tokenizer. Retrain BPE.
+3. **Syllable mismatch:** Model might mix 6-syl and 7-syl outputs
+
+**Mitigations:**
+1. Use `[DOI_THO]` for both (no new token). Model learns from tone sequence length (6 vs 7) + input line length.
+2. Keep Lục Bát at 87% of data (541K/621K). Thất Ngôn is 13% — small enough not to dominate.
+3. If Lục Bát quality drops, train separate models.
+
+**Recommendation:** Proceed with shared `[DOI_THO]` format (no new token needed). Risk is low — 13% data dilution with implicit genre signal from tone sequence length.
+
+### T2: Multi-Couplet Window=2 ❌ DANGER — Do Not Add
+**Risk: High.** Critical conflict with inference:
+
+| | Training | Inference |
+|---|----------|-----------|
+| Window=1 | C1 → C2 | C1 → C2 ✅ match |
+| Window=2 | (C1, C2) → C3 | C1 → C3, C2 → C4 ❌ mismatch |
+
+Adding window=2 teaches the model a format that NEVER appears at inference. The model learns to expect 2 input couplets when it only gets 1. This degrades single-couplet quality — the exact opposite of what we want.
+
+**Alternative — inference-only multi-couplet chaining:**
+```
+User sends:  C1
+Model →     C3
+Chain:      use C3 as next input
+Model →     C5  
+Chain:      use C5 as next input
+Model →     C7
 ```
 
-**Thất Ngôn rules:**
-| Rule | Lục Bát (6→8) | Thất Ngôn (7→7) |
-|------|---------------|-----------------|
-| Syllables | 6 + 8 | 7 + 7 |
-| Rhyme source | Pos 8 of 8-syl line | Pos 7 of input 7-syl line |
-| Tone pattern | `[TONE:BBBBBB]` (6 chars) | `[TONE:BBBBBBB]` (7 chars) |
-| Format tag | `[DOI_THO]` | `[DOI_THO:TN]` or `[DOI_THO]` |
+No training changes. No new data. Chain rhyme propagates naturally because each generation's rhyme tag feeds the next. This is how human đối thơ works — each response becomes the next prompt.
 
-**Genre tag:** Add `[DOI_THO:TN]` token so model knows it's generating 7-syl lines. Without genre awareness, the model can't distinguish Lục Bát from Thất Ngôn responses since both use the same `[RHYME:X] [TONE:...]` prefix. The tone length difference (6 vs 7) provides a weak signal, but an explicit tag is safer.
-
-Alternatively, use `[DOI_THO]` for both and let the input line count (6 vs 7 tokens between `<|linebreak|>`) be the implicit signal. Simpler but risks mode confusion.
-
-**Recommendation:** `[DOI_THO:TN]` — explicit, one new special token, model learns clean separation.
+**Recommendation:** Skip T2. Implement iterative chaining at inference instead.
 
 ---
 
-### T2: Multi-Couplet Training (2+ Couplets)
-**Effort: ~30 lines in preprocess_doi_tho.py | Retrain: yes**
+## ✅ v4 Plan — Risk-Adjusted
 
-**Problem:** Current training is window=1 only. Model has no concept of generating consecutive couplets that form a poem together. Inference does independent duels (C1→C3, C2→C4) with no coupling between responses.
+| # | Item | Effort | Retrain | Risk |
+|---|------|--------|---------|------|
+| P1 | Beam rhyme constraint | 30 min | No | None |
+| P2 | Fix overgeneration | 15 min | No | None |
+| T1 | Thất Ngôn support | ~50 lines | Yes (3h) | Low |
+| — | Multi-couplet via chaining | ~20 lines | No | None |
 
-**Fix:** Add window=2 pairs: couplet_k + couplet_{k+1} → couplet_{k+2}
+**Dropped from v4:**
+- P3 (Scheduled sampling) — medium risk, low reward for small model
+- T2 (Window=2 training) — conflicts with independent- duel inference
 
-```
-<|start|> [DOI_THO] [RHYME:ong] [TONE:BBBBBB]
-  C1_6 <|linebreak|> C1_8 <|linebreak|> C2_6 <|linebreak|> C2_8
-  <|reply|>
-  C3_6 <|linebreak|> C3_8
-  <|end|>
-```
-
-This teaches the model that:
-- 2 input couplets → 1 output couplet (just like 1→1, but with more context)
-- Chain rhyme tag still comes from LAST input couplet (C2)
-- The response is still ONE couplet, not two — keeps format consistent
-
-**Data available:** 74K Lục Bát + 34K Thất Ngôn poems with 3+ couplets ≈ **108K window=2 pairs**. This interleaves naturally with window=1 data — same format, different input depth.
-
-**Inference behavior:** If user sends 2 couplets, model generates 1 response couplet (just like now). The difference is the model has learned to use BOTH input couplets for context, not just the last one.
-
-**Optional: window=3:** 70K Lục Bát poems with 4+ couplets could generate ~140K pairs. But window=3 means 3 input couplets → 1 output. Rarely used at inference. Defer to v5.
+**Retrain:** Only T1 triggers retrain (adds 80K Thất Ngôn pairs). Everything else is code-only.
 
 ---
 
-### P1: Beam Rhyme Constraint
-**Effort: ~20 lines | Retrain: no | Rhyme: 80% → 90%+**
+## 🔮 v5 — New Data
 
-At position 6 of the response 8-syl line (or pos 7 for Thất Ngôn), force tokens to match `[RHYME:X]`:
-
-```python
-if current_pos == rhyme_target_position:
-    for tid in top_k_candidates:
-        word = tok.decode([tid]).strip()
-        if get_rhyme_group(word) != target_rhyme:
-            logits[:, tid] = float('-inf')
-```
-
-One token per response. Zero diversity impact elsewhere.
-
----
-
-### P2: Fix Single-Line Overgeneration
-**Effort: ~10 lines | Retrain: no**
-
-Post-generation cleanup for single-line input (no 8-syl companion):
-
-```python
-if len(lines) > 2:
-    for i in range(len(lines) - 1):
-        if len(lines[i].split()) == s6 and len(lines[i+1].split()) == s8:
-            lines = lines[i:i+2]
-            break
-    else:
-        lines = lines[:2]
-```
-
----
-
-### P3: Scheduled Sampling
-**Effort: ~15 lines in train.py | Retrain: yes (bundled with T1+T2)**
-
-Reduce teacher-forcing gap during training:
-
-```python
-teacher_prob = max(0.5, 1.0 - step / total_steps * 0.5)
-```
-
----
-
-### P4: Unified Eval Dashboard
-**Effort: 1 day | Retrain: no**
-
-Single script covering 50+ prompts across both genres:
-- Per-genre breakdown (Lục Bát vs Thất Ngôn)
-- Chain rhyme, tone per position, syllable accuracy
-- Lexical diversity (type-token ratio, unique n-grams)
-- Multi-couplet coherence (cosine similarity between successive responses)
-
----
-
-## 📊 v4 Summary
-
-| # | Item | Lines | Retrain |
-|---|------|-------|---------|
-| P1 | Beam rhyme constraint | ~20 | No |
-| P2 | Fix overgeneration | ~10 | No |
-| P3 | Scheduled sampling | ~15 | Yes |
-| P4 | Eval dashboard | ~150 | No |
-| T1 | Thất Ngôn support | ~50 | **Yes** |
-| T2 | Multi-couplet (window=2) | ~30 | **Yes** |
-
-**Retrain bundle:** T1 + T2 + P3 in one Colab session (~3-4h, ~837K pairs).
-
-**Expected results:** 2 genres, 90%+ rhyme, multi-couplet context awareness, measurable quality.
-
----
-
-## 🔮 v5 — New Data (Scraping Required)
-
-| # | Item | Effort |
-|---|------|--------|
-| E1 | 8 canonical poets (Xuân Diệu, Hồ Xuân Hương, etc.) | Scrape + retrain |
-| E2 | Window=3 multi-couplet | Preprocess tweak |
-| E3 | Qwen2.5-1.5B QLoRA | Architecture swap |
+| # | Item |
+|---|------|
+| E1 | 8 canonical poets (Xuân Diệu, Hồ Xuân Hương, etc.) |
+| E2 | Window=2 training if inference changes |
+| E3 | Scheduled sampling after data expansion |
