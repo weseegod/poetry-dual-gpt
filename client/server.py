@@ -258,6 +258,8 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
                 if current_syl_count == rhyme_syl_idx:
                     candidate_k = min(top_k * 2 if top_k else 100, logits.size(-1))
                     _, topk_idx = torch.topk(logits, candidate_k)
+                    matching = []
+                    non_matching = []
                     for tid in topk_idx[0]:
                         tid_i = tid.item()
                         if tid_i in (end_id, pad_id, lb_id):
@@ -266,7 +268,13 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
                         if not decoded:
                             continue
                         rg = get_rhyme_group(decoded)
-                        if rg != target_rhyme:
+                        if rg == target_rhyme:
+                            matching.append(tid_i)
+                        else:
+                            non_matching.append(tid_i)
+                    # Only mask if at least one matching candidate exists
+                    if matching:
+                        for tid_i in non_matching:
                             logits[:, tid_i] = float("-inf")
             
             if top_k:

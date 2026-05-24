@@ -318,6 +318,8 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
                 # Use top-k*2 candidates to have enough to check
                 candidate_k = min(top_k * 2 if top_k else 100, logits.size(-1))
                 _, topk_idx = torch.topk(logits, candidate_k)
+                matching = []
+                non_matching = []
                 for tid in topk_idx[0]:
                     tid_i = tid.item()
                     # Skip special tokens
@@ -328,7 +330,14 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
                         continue
                     # Get rhyme group of the candidate token
                     rg = get_rhyme_group(decoded)
-                    if rg != target_rhyme:
+                    if rg == target_rhyme:
+                        matching.append(tid_i)
+                    else:
+                        non_matching.append(tid_i)
+                # Only mask if at least one matching candidate exists
+                # (avoids all-masked edge case leading to random selection)
+                if matching:
+                    for tid_i in non_matching:
                         logits[:, tid_i] = float("-inf")
 
         # Top-k filtering
