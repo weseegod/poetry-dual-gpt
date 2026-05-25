@@ -149,16 +149,20 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     user_input = user_input.lower()
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     
-    # Single line → delegate to existing auto_tag
+    # Single line -> delegate to existing auto_tag
     if len(lines) == 1:
         line = lines[0]
         syls = line.split()
-        if len(syls) >= 6:
-            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+        if len(syls) == 7:
+            rhyme_tag, tone_tag = get_doi_tho_tags_tn(line)
+            genre_token = "[THAT_NGON]"
         else:
-            rhyme_tag, tone_tag = "", ""
+            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+            genre_token = "[LUC_BAT]"
         tags = f"{rhyme_tag} {tone_tag}".strip()
-        tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+        tag_part = f"[DOI_THO] {genre_token}"
+        if tags:
+            tag_part += f" {tags}"
         return f"<|start|> {tag_part} {line} <|reply|>"
     
     # Group into couplets: support both Lục Bát (6+8) and Thất Ngôn (7+7)
@@ -186,9 +190,11 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     if s1_last == 7:
         # Thất Ngôn: rhyme from last syllable of 7-syl line
         rhyme_tag, tone_tag = get_doi_tho_tags_tn(last_a)
+        genre_token = "[THAT_NGON]"
     else:
         # Lục Bát: rhyme from pos 8 of 8-syl line
         rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
+        genre_token = "[LUC_BAT]"
     
     # Build input lines with <|linebreak|> separators
     input_lines = []
@@ -197,9 +203,11 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
         input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     
-    # Build tag
+    # Build tag: [DOI_THO] [LUC_BAT] [RHYME:X] [TONE:XXXXXX]
     tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+    tag_part = f"[DOI_THO] {genre_token}"
+    if tags:
+        tag_part += f" {tags}"
     
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
@@ -277,9 +285,8 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
     rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt)
     if rhyme_match:
         target_rhyme = rhyme_match.group(1)
-        # Determine genre from tone tag length: 6=Lục Bát, 7=Thất Ngôn
-        tone_match = re.search(r'\[TONE:([BT]+)\]', prompt)
-        if tone_match and len(tone_match.group(1)) == 7:
+        # Detect genre from explicit tag: [LUC_BAT] -> pos6, [THAT_NGON] -> pos7
+        if '[THAT_NGON]' in prompt:
             rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable of 2nd 7-syl line
         else:
             rhyme_syl_idx = 5  # Lục Bát: 6th syllable of 2nd 8-syl line

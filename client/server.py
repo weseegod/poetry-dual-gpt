@@ -147,32 +147,48 @@ def _parse_couplets(user_input: str):
 
 
 def _build_doi_tho_prompt(couplets, max_context=1):
-    """Build [DOI_THO] prompt from last N couplets."""
+    """Build [DOI_THO] prompt from last N couplets with genre token."""
     if not couplets:
         return ""
     ctx = couplets[-max_context:]
-    last_6, last_8 = ctx[-1]
-    rhyme_tag, tone_tag = get_doi_tho_tags(last_6, last_8)
+    last_a, last_b = ctx[-1]
+    s1_last = len(last_a.split())
+    if s1_last == 7:
+        rhyme_tag, tone_tag = get_doi_tho_tags_tn(last_a)
+        genre_token = "[THAT_NGON]"
+    else:
+        rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
+        genre_token = "[LUC_BAT]"
     input_lines = []
-    for six, eight in ctx:
-        input_lines.append(six)
-        input_lines.append(eight)
+    for a, b in ctx:
+        input_lines.append(a)
+        input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+    tag_part = f"[DOI_THO] {genre_token}"
+    if tags:
+        tag_part += f" {tags}"
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
 def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
-    """Backward-compat: wrap input as [DOI_THO] prompt."""
+    """Backward-compat: wrap input as [DOI_THO] prompt with genre token."""
     couplets, _ = _parse_couplets(user_input)
     if not couplets:
         lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
         if lines:
             line = lines[-1]
-            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+            syl_count = len(line.split())
+            if syl_count == 7:
+                rhyme_tag, tone_tag = get_doi_tho_tags_tn(line)
+                genre_token = "[THAT_NGON]"
+            else:
+                rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
+                genre_token = "[LUC_BAT]"
             tags = f"{rhyme_tag} {tone_tag}".strip()
-            tag_part = f"[DOI_THO] {tags}" if tags else "[DOI_THO]"
+            tag_part = f"[DOI_THO] {genre_token}"
+            if tags:
+                tag_part += f" {tags}"
             return f"<|start|> {tag_part} {line} <|reply|>"
         return ""
     return _build_doi_tho_prompt(couplets, max_context)
@@ -226,8 +242,7 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
         rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt_str)
         if rhyme_match:
             target_rhyme = rhyme_match.group(1)
-            tone_match = re.search(r'\[TONE:([BT]+)\]', prompt_str)
-            if tone_match and len(tone_match.group(1)) == 7:
+            if '[THAT_NGON]' in prompt_str:
                 rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable
             else:
                 rhyme_syl_idx = 5  # Lục Bát: 6th syllable

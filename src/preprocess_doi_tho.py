@@ -134,7 +134,8 @@ def get_doi_tho_tags_tn(seven_line: str) -> tuple[str, str]:
 get_doi_tho_tags = get_doi_tho_tags_lb
 
 
-def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: int = 1) -> list[str]:
+def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: int = 1,
+                             genre_token: str = "") -> list[str]:
     """
     Generate đối thơ training pairs using sliding windows.
     
@@ -142,6 +143,7 @@ def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: in
         couplets: list of (line_a, line_b) tuples
         tag_fn: function(line_a, line_b) → (rhyme_tag, tone_tag)
         window: how many input couplets (1 or 2)
+        genre_token: explicit genre tag like [LUC_BAT] or [THAT_NGON]
     
     Window=1: couplet_k → couplet_{k+1}
     Window=2: couplet_k + couplet_{k+1} → couplet_{k+2}
@@ -171,9 +173,10 @@ def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: in
             out_a, out_b = output_couplet
             output_str = f"{out_a} {LB} {out_b}"
             
-            # Combine
+            # Combine: [DOI_THO] [GENRE] [RHYME:X] [TONE:XXXXXX]
+            genre_part = f"{genre_token} " if genre_token else ""
             tags = f"{rhyme_tag} {tone_tag}".strip()
-            tag_part = f"{DOI_THO} {tags}" if tags else DOI_THO
+            tag_part = f"{DOI_THO} {genre_part}{tags}" if (genre_part or tags) else DOI_THO
             pairs.append(f"{START} {tag_part} {input_str} {REPLY} {output_str} {END}")
     
     return pairs
@@ -190,11 +193,13 @@ GENRE_CONFIG = {
         "syl_pair": (6, 8),
         "tag_fn": get_doi_tho_tags_lb,
         "label": "Lục Bát",
+        "genre_token": "[LUC_BAT]",
     },
     "bảy chữ": {
         "syl_pair": (7, 7),
         "tag_fn": lambda a, b: get_doi_tho_tags_tn(a),  # b is unused for TN
         "label": "Thất Ngôn",
+        "genre_token": "[THAT_NGON]",
     },
 }
 
@@ -239,8 +244,9 @@ def preprocess(csv_path=None, output_path=None, max_poems=None, window=2):
         
         total_couplets[genre] += len(couplets)
         
-        # Generate sliding window pairs with genre-specific tags
-        pairs = make_doi_tho_pairs_multi(couplets, tag_fn=cfg["tag_fn"], window=window)
+        # Generate sliding window pairs with genre-specific tags + genre token
+        pairs = make_doi_tho_pairs_multi(couplets, tag_fn=cfg["tag_fn"], window=window,
+                                         genre_token=cfg["genre_token"])
         all_pairs.extend(pairs)
         genre_pairs[genre] += len(pairs)
     
