@@ -212,12 +212,12 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     return f"<|start|> {tag_part} {input_str} <|reply|>"
 
 
-def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2):
+def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2, is_tn=False):
     """
     Decode generated tokens, handling <|linebreak|> which decodes to empty
     string in ByteLevel BPE. Splits on linebreak token positions.
-    Returns list of line strings. Optionally enforces syllable pattern (P3)
-    and fixes overgeneration (P2: > max_lines → find first valid couplet).
+    Returns list of line strings. Optionally enforces syllable pattern (P3),
+    fixes overgeneration (P2), and re-splits TN output (T2a).
     """
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     lines = []
@@ -231,6 +231,16 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2
             chunk.append(t)
     if chunk:
         lines.append(tokenizer.decode(chunk).strip())
+    
+    # T2a: For Thất Ngôn, merge all words and re-split at 7+7
+    if is_tn and lines:
+        all_words = []
+        for line in lines:
+            all_words.extend(line.split())
+        lines = [' '.join(all_words[:7]), ' '.join(all_words[7:14])]
+        # Remove empty second line if no words remain
+        lines = [l for l in lines if l]
+        return lines[:max_lines]
     
     # Detect genre from first line syllable count
     if lines:
@@ -271,12 +281,9 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
     1. Encode prompt → 2. Loop: forward → sample next token → append
     3. Stop on <|end|> or max tokens → 4. Decode new tokens only
     
-    # P1 (rhyme_constraint): When generating the rhyme-position syllable
+    P1 (rhyme_constraint): When generating the rhyme-position syllable
     in the second output line, mask out tokens whose rhyme group doesn't
     match the target [RHYME:X] from the prompt.
-    
-    T2a: For Thất Ngôn, suppress <|linebreak|> until 7+ syllables
-    are generated in the first output line.
     """
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
@@ -349,14 +356,6 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
                 if matching:
                     for tid_i in non_matching:
                         logits[:, tid_i] = float("-inf")
-
-        # T2a: For Thất Ngôn, suppress premature <|linebreak|> in 1st output line
-        if is_tn and lb_id not in new_tokens:
-            # Still in first output line (no linebreak emitted yet)
-            decoded = tokenizer.decode(new_tokens)
-            syl_count = len(decoded.strip().split()) if decoded.strip() else 0
-            if syl_count < 7:
-                logits[:, lb_id] = float("-inf")
 
         # Top-k filtering
         if top_k:
@@ -445,7 +444,7 @@ if __name__ == "__main__":
                 # Multi-line → đối thơ
                 prompt = auto_tag_doi_tho(u)
                 _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
-                out_lines = decode_doi_tho(tok, ids)
+                out_lines = decode_doi_tho(tok, ids, is_tn=('[THAT_NGON]' in prompt))
                 print(f"Bot: {out_lines[0] if len(out_lines)>0 else '?'}")
                 print(f"     {out_lines[1] if len(out_lines)>1 else '?'}\n")
             elif not u.startswith("["):
@@ -492,7 +491,7 @@ if __name__ == "__main__":
             
             # Display: use decode_doi_tho for proper linebreak handling
             if is_doi_tho:
-                out_lines = decode_doi_tho(tok, ids)
+                out_lines = decode_doi_tho(tok, ids, is_tn=('[THAT_NGON]' in prompt))
                 print(f"Response: {out_lines[0] if len(out_lines)>0 else '?'}")
                 print(f"          {out_lines[1] if len(out_lines)>1 else '?'}")
                 response_only = "\n".join(out_lines)

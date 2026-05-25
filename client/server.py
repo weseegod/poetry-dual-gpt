@@ -294,13 +294,6 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
                         for tid_i in non_matching:
                             logits[:, tid_i] = float("-inf")
             
-            # T2a: For Thất Ngôn, suppress premature <|linebreak|> in 1st output line
-            if is_tn and lb_id not in new_tokens:
-                decoded = tokenizer.decode(new_tokens)
-                syl_count = len(decoded.strip().split()) if decoded.strip() else 0
-                if syl_count < 7:
-                    logits[:, lb_id] = float("-inf")
-            
             if top_k:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, -1:]] = float("-inf")
@@ -326,10 +319,10 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
     return all_new_tokens
 
 
-def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2):
+def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2, is_tn=False):
     """Decode tokens, splitting on <|linebreak|> positions.
-    Enforces syllable pattern (P3) and fixes overgeneration (P2: > max_lines).
-    Detects genre (Lục Bát vs Thất Ngôn) from first line syllable count."""
+    Enforces syllable pattern (P3), overgeneration fix (P2),
+    and TN re-split (T2a)."""
     lb_id = tok.token_to_id("<|linebreak|>")
     lines = []
     chunk = []
@@ -342,6 +335,15 @@ def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2):
             chunk.append(t)
     if chunk:
         lines.append(tok.decode(chunk).strip())
+    
+    # T2a: For Thất Ngôn, merge all words and re-split at 7+7
+    if is_tn and lines:
+        all_words = []
+        for line in lines:
+            all_words.extend(line.split())
+        lines = [' '.join(all_words[:7]), ' '.join(all_words[7:14])]
+        lines = [l for l in lines if l]
+        return lines[:max_lines]
     
     # Detect genre from first line syllable count
     if lines:
@@ -405,7 +407,10 @@ def chat(req: ChatRequest):
     )
 
     # Decode with proper linebreak handling, capitalize first letter
-    lines = _decode_doi_tho(tokenizer, new_ids)
+    # Detect TN from input syllable count
+    raw_lines = [l.strip() for l in raw.split('\n') if l.strip()]
+    is_tn_input = raw_lines and len(raw_lines[0].split()) == 7
+    lines = _decode_doi_tho(tokenizer, new_ids, is_tn=is_tn_input)
     lines = [l[0].upper() + l[1:] if l else l for l in lines]
     response = "\n".join(lines)
 
