@@ -173,10 +173,10 @@ def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: in
             out_a, out_b = output_couplet
             output_str = f"{out_a} {LB} {out_b}"
             
-            # Combine: [DOI_THO] [GENRE] [RHYME:X] [TONE:XXXXXX]
+            # Combine: [GENRE] [RHYME:X] [TONE:XXXXXX]
             genre_part = f"{genre_token} " if genre_token else ""
             tags = f"{rhyme_tag} {tone_tag}".strip()
-            tag_part = f"{DOI_THO} {genre_part}{tags}" if (genre_part or tags) else DOI_THO
+            tag_part = f"{genre_part}{tags}" if (genre_part or tags) else ""
             pairs.append(f"{START} {tag_part} {input_str} {REPLY} {output_str} {END}")
     
     return pairs

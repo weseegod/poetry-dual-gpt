@@ -2,7 +2,7 @@
 
 > v3 shipped: 100% stress test, 80% rhyme, 97% tone, Lục Bát only.
 > v4 adds Thất Ngôn (no new data) + beam rhyme + overgeneration fix.
-> One retrain. v5 = multi-couplet coherence + data expansion.
+> v5 = multi-couplet coherence + data expansion.
 
 ---
 
@@ -19,86 +19,100 @@
 
 ---
 
-## 🔴 Bug: Thất Ngôn Dropped
+## ✅ v4 Items (done)
 
-**`src/preprocess_doi_tho.py` line 156:**
+### P1: Beam Rhyme Constraint
+**Effort: 30 min | Retrain: no | Status: ✅ DONE**
 
-```python
-# Focus on Lục Bát for v2.0 (Thất Ngôn đối thơ is v3.0)
-df = df[df["genre"] == "lục bát"]   # drops 41,354 bảy chữ poems
-```
-
-v3 shipped without Thất Ngôn. The data (41K poems) was there the whole time.
-
----
-
-## ✅ v4 Items
-
-### P1: Beam Rhyme Constraint (80% → 90%+)
-**Effort: 30 min | Retrain: no | Risk: none | Status: ✅ DONE**
-
-At the rhyme position (pos 6 of 8-syl line for LB, pos 7 for TN), force candidates to match `[RHYME:X]`. Inference-only. Togglable flag. Uses `get_rhyme_group()` to check candidate tokens. Only masks non-matching tokens if at least one matching candidate exists (avoids all-masked edge case).
-
----
+At rhyme position in 2nd output line, mask tokens whose rhyme group doesn't match `[RHYME:X]`. Only masks if at least one matching candidate exists (avoids all-masked edge case). Genre detected from `[THAT_NGON]` tag → pos7 for TN, pos6 for LB.
 
 ### P2: Fix Single-Line Overgeneration
-**Effort: 15 min | Retrain: no | Risk: none | Status: ✅ DONE**
+**Effort: 15 min | Retrain: no | Status: ✅ DONE**
 
-Post-generation cleanup when model outputs >2 lines. Detects genre from first line syllable count, finds first valid couplet matching that genre's syllable pattern.
+Post-generation cleanup trims >2 line outputs to first valid couplet. Genre-aware (6+8 for LB, 7+7 for TN).
+
+### T1: Thất Ngôn Data Pipeline
+**Effort: ~80 lines | Retrain: yes | Status: ✅ DONE**
+
+41K bảy chữ poems from existing CSV. 748,807 training pairs (540K LB + 208K TN). Genre token `[LUC_BAT]` / `[THAT_NGON]` injected into format. Corpus regenerated, colab updated.
+
+### Format
+
+```
+LB: <|start|> [DOI_THO] [LUC_BAT] [RHYME:X] [TONE:BBBBBB]
+    6-syl <|linebreak|> 8-syl <|reply|> 6-syl <|linebreak|> 8-syl <|end|>
+
+TN: <|start|> [DOI_THO] [THAT_NGON] [RHYME:X] [TONE:BBBBBBB]
+    7-syl <|linebreak|> 7-syl <|reply|> 7-syl <|linebreak|> 7-syl <|end|>
+```
 
 ---
 
-### T1: Thất Ngôn Support (7→7)
-**Effort: ~50 lines in preprocess_doi_tho.py | Retrain: yes (~3h) | Risk: low | Status: ✅ CODE DONE, ⚠️ NEEDS RETRAIN**
+## 🔴 Training Analysis
 
-**Data:** 41K bảy chữ poems already in CSV. 748,807 total training pairs (540K LB + 208K TN).
+### Step 8400 results (val=2.90, with genre token)
+
+| Metric | LB | TN |
+|--------|-----|-----|
+| Syllable | 60% | 0% |
+| Rhyme | 80% | 60% |
+| Tone | 60% | 0% |
+
+### Root cause: data ratio, not format
+
+Step-by-step token trace shows the model generates exactly 6 syllables then emits `<|linebreak|>` — regardless of `[THAT_NGON]` tag:
+
+```
+Step 5: "bát"  [6th syllable of output line 1]
+Step 6: " "    
+Step 7: <|linebreak|>   ← model decides line 1 done at 6 syllables
+Step 8: "anh"  [starts line 2]
+```
+
+**Why:** At the position "just generated 6 syllables, what's next?", the model has seen:
+
+| Next token | LB examples (540K) | TN examples (208K) |
+|------------|-------------------|-------------------|
+| 7th syllable | ❌ never | ✅ always |
+| `<\|linebreak\|>` | ✅ always | ❌ never |
+
+`<|linebreak|>` is correct **72% of the time**. The `[THAT_NGON]` genre tag (1 token) can't overcome this positional weight from 540K training examples.
 
 ---
 
-## 🔧 T1-FIX: Genre Token (step 8800 evaluation → fix)
+## 🔧 T2: Two-Tier Fix
 
-### Problem
+### T2a: Post-process fix (no retrain, ship now)
 
-At step 8800 (val=3.04), Lục Bát held at 80% but Thất Ngôn first lines stuck at 6 syllables:
+In `decode_doi_tho`, when genre is `[THAT_NGON]` and first output line < 7 syllables, reject the premature `<|linebreak|>`. Continue generating until 7 syllables reached, then insert linebreak manually.
 
-| Metric | v4 LB | v4 TN | Root cause |
-|--------|-------|-------|------------|
-| Syllable | 80% | 0% | Model defaults to 6-syl first line |
-| Rhyme | 80% | 60% | Rhyme works even with wrong syl count |
-| Tone | 60% | 0% | Dual-genre confused tone patterns |
+**Cost:** ~20 lines in `sample.py`. Zero retrain. Fixes TN today.
 
-**Root cause:** 540K LB vs 208K TN (2.6:1 ratio). Model learns "first line = 6 syllables" as dominant pattern. The 6 vs 7 char `[TONE:...]` tag length is too subtle a signal.
+### T2b: Weighted loss (retrain for v4.1)
 
-### Fix: Explicit Genre Token
+TN examples get 2.6× loss weight during training. No data duplication — each real poem is used once, but the loss says "this matters more":
 
-Change format from:
-```
-[DOI_THO] [RHYME:X] [TONE:BBBBBB] ...    (model must guess genre)
-```
-To:
-```
-[DOI_THO] [LUC_BAT] [RHYME:X] [TONE:BBBBBB] ...
-[DOI_THO] [THAT_NGON] [RHYME:X] [TONE:BBBBBBB] ...
+```python
+# In training loop, after computing per-token loss (shape: B, T)
+for i in range(batch_size):
+    if is_tn[i]:
+        loss[i] *= 2.6
 ```
 
-- `[LUC_BAT]` (token 4) and `[THAT_NGON]` (token 7) already exist as single-token special tokens
-- No BPE retrain needed
-- `GENRE_CONFIG` now includes `genre_token` field
-- `make_doi_tho_pairs_multi()` accepts `genre_token` parameter
-- Inference code (`auto_tag_doi_tho`, `_build_doi_tho_prompt`) detects genre and injects token
-- Rhyme constraint detects genre from `[THAT_NGON]` presence instead of tone tag length
+**Why it works:** Stronger gradient for every aspect of TN — syllable count, rhyme, tone, word choice. The `<|linebreak|>` decision gets weighted through the full sequence. Same effect as oversampling but no duplicate data.
 
-### Files changed for T1-FIX
+**Cost:** ~10 lines in `train.py`. One retrain.
 
-| File | Change |
-|------|--------|
-| `src/preprocess_doi_tho.py` | `genre_token` in `GENRE_CONFIG` + `make_doi_tho_pairs_multi` |
-| `src/sample.py` | `auto_tag_doi_tho` injects `[LUC_BAT]`/`[THAT_NGON]`; rhyme constraint uses tag |
-| `client/server.py` | `_build_doi_tho_prompt` + `_auto_tag_doi_tho` inject genre token |
+### T2c: Drop `[DOI_THO]` (during retrain, optional)
 
-### Retrain needed
+Model is single-task (always đối thơ). `[DOI_THO]` costs 1 token per example with zero information. Removal simplifies format to:
 
-Regenerate corpus → upload `data.zip` to Drive → run `colab/colab_train.ipynb`. The explicit genre signal should fix the 6-vs-7 syllable distinction since the model now has an unambiguous token for each genre.
+```
+<|start|> [LUC_BAT] [RHYME:X] [TONE:BBBBBB] ...
+<|start|> [THAT_NGON] [RHYME:X] [TONE:BBBBBBB] ...
+```
+
+Only worth doing if retraining anyway. Saves ~20 lines across preprocess + inference code.
 
 ---
 
@@ -108,23 +122,22 @@ Regenerate corpus → upload `data.zip` to Drive → run `colab/colab_train.ipyn
 |---|------|--------|
 | P1 | Beam rhyme constraint | ✅ Done |
 | P2 | Overgeneration fix | ✅ Done |
-| T1 | Thất Ngôn preprocessing | ✅ Done |
-| T1-FIX | Genre token | ✅ Code done, ⚠️ retrain |
-| — | Corpus (748K pairs) | ✅ Regenerated |
-| — | data.zip | ✅ Updated |
-| — | Colab notebook | ✅ Updated for v4 |
-| — | Tests (90/90) | ✅ Passing |
+| T1 | Thất Ngôn pipeline (preprocess, corpus, format, colab) | ✅ Done |
+| T1-FIX | Genre token `[LUC_BAT]`/`[THAT_NGON]` | ✅ Done |
+| T2a | Post-process fix (no retrain) | ⬜ TODO |
+| T2b | Weighted TN loss (retrain) | ⬜ TODO |
+| T2c | Drop `[DOI_THO]` (retrain, optional) | ⬜ TODO |
 
 ---
 
-## 📊 v4.1 Target (after retrain with genre token)
+## 📊 v4.1 Targets (after T2a + T2b)
 
 | Metric | Target |
 |--------|--------|
 | Lục Bát syllable (6+8) | 90%+ |
 | Thất Ngôn syllable (7+7) | 80%+ |
 | Rhyme (combined) | 85%+ |
-| Tone (combined) | 85%+ |
+| Tone (combined) | 80%+ |
 | Stress test | 100% |
 
 ---
@@ -133,9 +146,7 @@ Regenerate corpus → upload `data.zip` to Drive → run `colab/colab_train.ipyn
 
 | Source | Content | Status |
 |--------|---------|--------|
-| `poems_dataset_clean.csv` | 125K poems (lục bát + bảy chữ) | ✅ v4 uses all of it |
+| `poems_dataset_clean.csv` | 125K poems (lục bát + bảy chữ) | ✅ v4 uses all |
 | 8 canonical poets | Hồ Xuân Hương, Hàn Mặc Tử, etc. | 🔮 v5 scraping |
-
-No new data needed for v4. All from existing CSV.
 
 > **v5:** Multi-couplet coherence + data expansion → [roadmap_v5.md](roadmap_v5.md)

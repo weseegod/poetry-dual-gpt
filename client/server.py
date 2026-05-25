@@ -165,7 +165,7 @@ def _build_doi_tho_prompt(couplets, max_context=1):
         input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"[DOI_THO] {genre_token}"
+    tag_part = f"{genre_token}"
     if tags:
         tag_part += f" {tags}"
     return f"<|start|> {tag_part} {input_str} <|reply|>"
@@ -186,7 +186,7 @@ def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
                 rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
                 genre_token = "[LUC_BAT]"
             tags = f"{rhyme_tag} {tone_tag}".strip()
-            tag_part = f"[DOI_THO] {genre_token}"
+            tag_part = f"{genre_token}"
             if tags:
                 tag_part += f" {tags}"
             return f"<|start|> {tag_part} {line} <|reply|>"
@@ -235,6 +235,8 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
         prompt_str = _build_doi_tho_prompt([(c6, c8)], max_context=1)
         if not prompt_str:
             break
+        
+        is_tn = '[THAT_NGON]' in prompt_str
         
         # P1: Parse target rhyme from prompt
         target_rhyme = None
@@ -291,6 +293,13 @@ def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64,
                     if matching:
                         for tid_i in non_matching:
                             logits[:, tid_i] = float("-inf")
+            
+            # T2a: For Thất Ngôn, suppress premature <|linebreak|> in 1st output line
+            if is_tn and lb_id not in new_tokens:
+                decoded = tokenizer.decode(new_tokens)
+                syl_count = len(decoded.strip().split()) if decoded.strip() else 0
+                if syl_count < 7:
+                    logits[:, lb_id] = float("-inf")
             
             if top_k:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))

@@ -245,7 +245,7 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
             # 1. Get model's own predictions from teacher input (no_grad saves memory)
             with torch.no_grad():
                 with torch.autocast(device_type=dev, dtype=torch.bfloat16):
-                    logits, _ = model(x, y)
+                    logits, _ = model(x)
             model_tokens = logits.argmax(dim=-1)  # (B, T) — what model would generate
             del logits  # free ~786 MB (B*T*V in bf16)
             # Shift: prediction at position t becomes input at position t+1
@@ -258,7 +258,19 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
 
         # Forward + backward
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
-            _, loss = model(x_input, y)
+            logits, _ = model(x_input)
+            # T2b: Weighted loss — TN examples get 2.6x weight
+            is_tn = (x[:, 1] == 7)  # token 7 = [THAT_NGON] at position 1
+            V = model.vocab_size
+            B, T = x.shape
+            ce = F.cross_entropy(
+                logits.view(-1, V), y.view(-1),
+                ignore_index=0, reduction='none'
+            ).view(B, T)
+            mask = (y != 0).float()
+            per_example = (ce * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
+            weights = torch.where(is_tn, torch.tensor(2.6, device=dev), torch.tensor(1.0, device=dev))
+            loss = (per_example * weights).mean()
         
         opt.zero_grad()
         loss.backward()

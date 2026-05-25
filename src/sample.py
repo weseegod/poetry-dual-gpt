@@ -160,7 +160,7 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
             rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
             genre_token = "[LUC_BAT]"
         tags = f"{rhyme_tag} {tone_tag}".strip()
-        tag_part = f"[DOI_THO] {genre_token}"
+        tag_part = f"{genre_token}"
         if tags:
             tag_part += f" {tags}"
         return f"<|start|> {tag_part} {line} <|reply|>"
@@ -203,9 +203,9 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
         input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     
-    # Build tag: [DOI_THO] [LUC_BAT] [RHYME:X] [TONE:XXXXXX]
+    # Build tag: [LUC_BAT] [RHYME:X] [TONE:XXXXXX]
     tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"[DOI_THO] {genre_token}"
+    tag_part = f"{genre_token}"
     if tags:
         tag_part += f" {tags}"
     
@@ -271,22 +271,25 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
     1. Encode prompt → 2. Loop: forward → sample next token → append
     3. Stop on <|end|> or max tokens → 4. Decode new tokens only
     
-    P1 (rhyme_constraint): When generating the rhyme-position syllable
+    # P1 (rhyme_constraint): When generating the rhyme-position syllable
     in the second output line, mask out tokens whose rhyme group doesn't
     match the target [RHYME:X] from the prompt.
+    
+    T2a: For Thất Ngôn, suppress <|linebreak|> until 7+ syllables
+    are generated in the first output line.
     """
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
     lb_id = tokenizer.token_to_id("<|linebreak|>")
+    is_tn = '[THAT_NGON]' in prompt
 
     # Parse target rhyme from prompt
     target_rhyme = None
-    rhyme_syl_idx = None  # 0-indexed syllable position in 2nd line that must rhyme
+    rhyme_syl_idx = None
     rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt)
     if rhyme_match:
         target_rhyme = rhyme_match.group(1)
-        # Detect genre from explicit tag: [LUC_BAT] -> pos6, [THAT_NGON] -> pos7
-        if '[THAT_NGON]' in prompt:
+        if is_tn:
             rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable of 2nd 7-syl line
         else:
             rhyme_syl_idx = 5  # Lục Bát: 6th syllable of 2nd 8-syl line
@@ -346,6 +349,14 @@ def generate(model, tokenizer, prompt, max_new=64, temperature=0.75,
                 if matching:
                     for tid_i in non_matching:
                         logits[:, tid_i] = float("-inf")
+
+        # T2a: For Thất Ngôn, suppress premature <|linebreak|> in 1st output line
+        if is_tn and lb_id not in new_tokens:
+            # Still in first output line (no linebreak emitted yet)
+            decoded = tokenizer.decode(new_tokens)
+            syl_count = len(decoded.strip().split()) if decoded.strip() else 0
+            if syl_count < 7:
+                logits[:, lb_id] = float("-inf")
 
         # Top-k filtering
         if top_k:
