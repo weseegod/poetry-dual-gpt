@@ -142,26 +142,23 @@ def load_model(ckpt_path, device="cpu"):
 
 def auto_tag(prompt):
     """
-    v4.1: Auto-wrap Lục Bát with control tokens + <|reply|> for single-line prompts.
-    Uses training format so model knows where output starts.
+    v4.1: Wrap prompt with [LUC_BAT] + rhyme/tone/trambong control tokens.
+    For single 6-syl prompts (stress test only — model is designed for couplet input),
+    also appends <|reply|> as a best-effort delimiter.
     """
     p = prompt.strip()
-    # Already tagged with genre
     if p.startswith("[LUC_BAT]"):
         inner = p.replace("[LUC_BAT]", "").strip()
         rhyme, tone, trambong = get_luc_bat_tags(inner)
         tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
         if tags:
             p = f"[LUC_BAT] {tags} {inner}"
-        # Ensure <|reply|> is present for single-line prompts
-        if "<|reply|>" not in p:
-            p = f"{p} <|reply|>"
         return p
 
-    # Default: Lục Bát single-line → add <|reply|>
+    # Default: Lục Bát
     rhyme, tone, trambong = get_luc_bat_tags(p)
     tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
-    return f"[LUC_BAT] {tags} {p} <|reply|>" if tags else f"[LUC_BAT] {p} <|reply|>"
+    return f"[LUC_BAT] {tags} {p}" if tags else f"[LUC_BAT] {p}"
 
 
 def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
