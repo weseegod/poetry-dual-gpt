@@ -153,6 +153,13 @@ def generate(
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     device = next(model.parameters()).device
     
+    # Build set of control token IDs to suppress (IDs 0-9 and any [TAG] tokens)
+    suppress_ids = {pad_id}
+    for tid in range(tokenizer.get_vocab_size()):
+        name = tokenizer.id_to_token(tid)
+        if name and (name.startswith('[') or name.startswith('<|') and name != '<|linebreak|>' and name != '<|end|>'):
+            suppress_ids.add(tid)
+    
     # Parse target rhyme for constraint
     target_rhyme = None
     rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt)
@@ -167,7 +174,40 @@ def generate(
     for _ in range(max_tokens):
         logits, _ = model(idx[:, -model.block_size:])
         logits = logits[:, -1, :] / temperature
-        logits[:, pad_id] = float("-inf")
+        # Suppress all control tokens — never sample them as content
+        for tid in suppress_ids:
+            logits[:, tid] = float("-inf")
+
+        # Linebreak enforcement: force <|linebreak|> at exactly 6 syllables in first output line
+        if lb_id not in new_tokens:
+            reply_id = tokenizer.token_to_id("<|reply|>")
+            if reply_id in new_tokens:
+                last_reply = max(i for i, t in enumerate(new_tokens) if t == reply_id)
+                after = new_tokens[last_reply + 1:]
+            else:
+                after = new_tokens
+            decoded_after = tokenizer.decode(after)
+            syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+            if syl_count < 6:
+                logits[:, lb_id] = float("-inf")  # suppress linebreak before 6
+                logits[:, end_id] = float("-inf")  # also suppress <|end|> before 6
+            elif syl_count == 6:
+                # Force linebreak: 6 content syllables done
+                logits[:, :] = float("-inf")
+                logits[:, lb_id] = 0.0
+        
+        # Second line: force <|end|> at 8 syllables, suppress linebreak after
+        elif lb_id in new_tokens:
+            last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
+            after_lb = new_tokens[last_lb + 1:]
+            decoded_after = tokenizer.decode(after_lb)
+            syl_count2 = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+            if syl_count2 < 8:
+                logits[:, end_id] = float("-inf")  # suppress <|end|> before 8
+                logits[:, lb_id] = float("-inf")   # suppress extra linebreaks
+            elif syl_count2 == 8:
+                logits[:, :] = float("-inf")
+                logits[:, end_id] = 0.0  # force <|end|> at 8 syllables
 
         # Repetition penalty
         for prev in new_tokens[-16:]:
