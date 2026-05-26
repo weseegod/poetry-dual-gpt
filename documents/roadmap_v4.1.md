@@ -388,3 +388,42 @@ Output: con nhìn bóng bóng chiều mai
 | `evaluate/eval_rules.py` | Rewrite: 5-rule eval + quality metrics |
 | `src/train_bpe.py` | Add single-token rhyme/tone/trambong to tokenizer |
 | `data/doi_tho_corpus.txt` | Regenerated: LB-only, window=1 |
+
+---
+
+## 🎓 Lessons Learned from v4.1
+
+### 1. Format fidelity is the single biggest lever
+Every time the model sees a control token at training position Y, it must see it at
+the same position during inference. A missing `<|reply|>` or misaligned `<|linebreak|>`
+breaks everything downstream. Format mismatch is the #1 silent killer of generation quality.
+
+### 2. Post-processing metrics are dangerous
+v4's P3 truncation reported 93-100% syllable accuracy while the actual model output
+was 25-40% wrong. **Always report raw metrics before any cleanup.** Hacks that make
+numbers look good make the model look better than it is.
+
+### 3. Control tokens need protection from training noise
+Scheduled sampling was silently replacing `<|linebreak|>` and `<|reply|>` 42% of the
+time, directly teaching the model wrong positions. Two lines (`is_control = x < 215`)
+fixed a bug undermining the entire training signal. **Protect structural tokens from
+any noise injection.**
+
+### 4. Beam constraints work at inference without retraining
+The rhyme constraint (masking non-matching tokens at pos6) doubled R1 from 38%→84%
+without touching the model. General principle: **if the model struggles with a rule
+during training, enforce it during generation.**
+
+### 5. Don't multi-task until single-task is solid
+Thất Ngôn at 28% data ratio destroyed Lục Bát quality. v3 (pure LB) > v4 (mixed).
+One genre, one format, one model — get to 90%+ before adding complexity.
+
+### 6. Every rule needs a control token, every token needs evaluation
+Trầm-Bổng determines whether a Lục Bát line "sings" or falls flat. It was never in
+the format, so the model never learned it. Adding `[TRAMBONG:NH/HN]` → 90% accuracy.
+**If a rule exists in the poetry canon, encode it as a token.**
+
+### 7. The bottleneck is now content quality, not structure
+Structure is solved — 100% syllable, 92% tone, 90% Trầm-Bổng. Rhyme at 84% is good
+but improvable. For v5: better data (canonical poets), larger model (Qwen QLoRA),
+and rhyme reranking at inference.
