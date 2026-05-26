@@ -4,18 +4,18 @@
 #
 # Usage: bash scripts/pack_for_doitho.sh
 #
-# Creates deploy/utils/ with everything doitho needs.
-# Then: cp -r deploy/utils/ ../doitho/
+# Creates deploy/doitho_utils.zip containing everything doitho needs.
+# Then: unzip -o deploy/doitho_utils.zip -d ../doitho/utils/
 # ============================================================
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
-UTILS_DIR="$ROOT/deploy/utils"
+TMPDIR="$ROOT/deploy/_pack_tmp"
+ZIPFILE="$ROOT/deploy/doitho_utils.zip"
+SRC_UTILS="$ROOT/deploy/utils"
 
 echo "📦 PoetryDuel-GPT v4.1 → doitho packager"
-echo "   Root: $ROOT"
-echo "   Output: $UTILS_DIR"
 echo ""
 
 # ── Check required files ──
@@ -29,50 +29,35 @@ for f in "$CKPT" "$TOK"; do
     fi
 done
 
-mkdir -p "$UTILS_DIR"
+rm -rf "$TMPDIR" "$ZIPFILE"
+mkdir -p "$TMPDIR"
 
-# ── 1. Checkpoint ──
-cp "$CKPT" "$UTILS_DIR/doitho.pt"
-echo "✅ Checkpoint: $(du -h "$UTILS_DIR/doitho.pt" | cut -f1)"
+# ── Pack: checkpoint + tokenizer + source files ──
+cp "$CKPT" "$TMPDIR/doitho.pt"
+cp "$TOK" "$TMPDIR/poetry_bpe.model"
+cp "$ROOT/src/model.py" "$TMPDIR/model.py"
+cp "$ROOT/src/tones.py" "$TMPDIR/tones.py"
+cp "$SRC_UTILS/inference.py" "$TMPDIR/inference.py"
 
-# ── 2. Tokenizer ──
-cp "$TOK" "$UTILS_DIR/poetry_bpe.model"
-echo "✅ Tokenizer: poetry_bpe.model"
+echo "📋 Files:"
+ls -lh "$TMPDIR/" | grep -v doitho.pt
+du -h "$TMPDIR/doitho.pt"
 
-# ── 3. Model architecture ──
-cp "$ROOT/src/model.py" "$UTILS_DIR/model.py"
-echo "✅ Model: model.py"
-
-# ── 4. Tones (diacritic, Trầm-Bổng, rhyme) ──
-cp "$ROOT/src/tones.py" "$UTILS_DIR/tones.py"
-echo "✅ Tones: tones.py"
-
-# ── 5. Inference (already in deploy/utils/) ──
-if [ ! -f "$UTILS_DIR/inference.py" ]; then
-    echo "⚠️  inference.py missing from deploy/utils/ — generating from sample.py"
-    # This shouldn't happen since we committed it, but as a fallback:
-    cp "$ROOT/src/sample.py" "$UTILS_DIR/inference.py"
-fi
-echo "✅ Inference: inference.py"
-
-# ── Verify ──
-echo ""
-echo "📋 Pack contents:"
-ls -lh "$UTILS_DIR/"
-echo ""
-
-# Quick sanity: verify checkpoint loads
+# ── Quick verify ──
 python3 -c "
 import torch, sys
-sys.path.insert(0, '$UTILS_DIR')
-ckpt = torch.load('$UTILS_DIR/doitho.pt', map_location='cpu', weights_only=False, mmap=True)
+sys.path.insert(0, '$TMPDIR')
+ckpt = torch.load('$TMPDIR/doitho.pt', map_location='cpu', weights_only=False, mmap=True)
 print(f'  Step: {ckpt[\"step\"]} | Loss: {ckpt[\"loss\"]:.4f} | Vocab: {ckpt[\"vocab_size\"]:,}')
 print(f'  Config: emb={ckpt[\"model_config\"][\"n_embd\"]} layers={ckpt[\"model_config\"][\"n_layer\"]}')
-" 2>/dev/null || echo "  ⚠️  Could not verify checkpoint (torch not available)"
+" 2>/dev/null || echo "  ⚠️  Could not verify checkpoint"
+
+# ── Create zip ──
+cd "$TMPDIR" && zip -r "$ZIPFILE" . > /dev/null
+cd "$ROOT"
 
 echo ""
-echo "🎉 Done! deploy/utils/ is ready."
+echo "🎉 Done! deploy/doitho_utils.zip ready."
 echo ""
 echo "   To deploy to doitho:"
-echo "     cp -r deploy/utils/ ../doitho/"
-echo "     cd ../doitho && git add utils/ && git commit -m 'Update model to v4.1'"
+echo "     unzip -o deploy/doitho_utils.zip -d ../doitho/utils/"

@@ -28,3 +28,5 @@ client/frontend/node_modules/
 data/poems_copy.csv
 deploy/utils/doitho.pt
 deploy/utils/doitho.pt
+deploy/_pack_tmp/
+deploy/doitho_utils.zip
