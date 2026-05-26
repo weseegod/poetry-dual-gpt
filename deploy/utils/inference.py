@@ -14,8 +14,16 @@ import torch.nn.functional as F
 from pathlib import Path
 from tokenizers import Tokenizer
 
-from .model import PoetryDuelGPT
-from .tones import get_luc_bat_tags, get_rhyme_group
+# Support both direct import (from utils/) and relative import (from package)
+try:
+    from .model import PoetryDuelGPT
+except ImportError:
+    from model import PoetryDuelGPT
+
+try:
+    from .tones import get_luc_bat_tags, get_rhyme_group
+except ImportError:
+    from tones import get_luc_bat_tags, get_rhyme_group
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -237,3 +245,48 @@ def generate(
         "lines": lines,
         "raw": tokenizer.decode(new_tokens).replace("<|end|>", "").strip(),
     }
+
+
+def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=False, max_lines=2, is_tn=False):
+    """
+    Decode generated token IDs into lines, splitting on <|linebreak|>.
+    v4.1: Lục Bát only. No T2a re-split.
+    """
+    lb_id = tokenizer.token_to_id("<|linebreak|>")
+    lines = []
+    chunk = []
+    for t in new_token_ids:
+        if t == lb_id:
+            if chunk:
+                lines.append(tokenizer.decode(chunk).strip())
+            chunk = []
+        else:
+            chunk.append(t)
+    if chunk:
+        lines.append(tokenizer.decode(chunk).strip())
+
+    if not lines:
+        return []
+
+    targets = (6, 8)
+
+    if enforce_syllables:
+        for i, line in enumerate(lines):
+            words = line.split()
+            target = targets[i % 2]
+            if len(words) > target:
+                words = words[:target]
+            lines[i] = ' '.join(words)
+
+    if len(lines) > max_lines:
+        t1, t2 = targets
+        for i in range(len(lines) - 1):
+            s1 = len(lines[i].split())
+            s2 = len(lines[i+1].split())
+            if s1 == t1 and s2 == t2:
+                lines = lines[i:i+2]
+                break
+        else:
+            lines = lines[:max_lines]
+
+    return lines
