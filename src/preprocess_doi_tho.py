@@ -133,17 +133,19 @@ get_doi_tho_tags = get_doi_tho_tags_lb
 
 
 def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: int = 1,
-                             genre_token: str = "") -> list[str]:
+                             genre_token: str = "", include_single_line: bool = True) -> list[str]:
     """
     Generate đối thơ training pairs using sliding windows.
     
     v4.1: Adds [TRAMBONG:NH/HN] extracted from output couplet's Bát line.
+    Also generates single-line→couplet pairs (6-syl input only).
     
     Args:
         couplets: list of (line_a, line_b) tuples
         tag_fn: function(line_a, line_b) → (rhyme_tag, tone_tag)
         window: how many input couplets (1 or 2)
         genre_token: explicit genre tag like [LUC_BAT]
+        include_single_line: also generate 6-syl→couplet pairs
     
     Window=1: couplet_k → couplet_{k+1}
     
@@ -167,20 +169,33 @@ def make_doi_tho_pairs_multi(couplets: list[tuple[str, str]], tag_fn, window: in
             out_a, out_b = output_couplet
             trambong_tag = _get_tram_bong_tag(out_b)
             
-            # Build input lines
+            # Build tag: [LUC_BAT] [RHYME:X] [TONE:BBBBBB] [TRAMBONG:NH]
+            genre_part = f"{genre_token} " if genre_token else ""
+            tags = f"{genre_part}{rhyme_tag} {tone_tag} {trambong_tag}".strip()
+            
+            # Format 1: Full couplet → couplet (main training format)
             input_lines = []
             for a, b in input_couplets:
                 input_lines.append(a)
                 input_lines.append(b)
             input_str = f" {LB} ".join(input_lines)
-            
-            # Build output lines
             output_str = f"{out_a} {LB} {out_b}"
-            
-            # Combine: [LUC_BAT] [RHYME:X] [TONE:BBBBBB] [TRAMBONG:NH]
-            genre_part = f"{genre_token} " if genre_token else ""
-            tags = f"{genre_part}{rhyme_tag} {tone_tag} {trambong_tag}".strip()
             pairs.append(f"{START} {tags} {input_str} {REPLY} {output_str} {END}")
+            
+            # Format 2: Single 6-syl line → couplet (for single-line prompts)
+            # For single-line, [RHYME:X] = input 6-syl pos6 (vần lưng),
+            # NOT chain rhyme from pos8 (no input Bát line exists).
+            if include_single_line:
+                from tones import get_rhyme_group as _get_rhyme
+                single_input = last_a
+                syls_6 = single_input.split()
+                if len(syls_6) >= 6:
+                    single_rhyme = f"[RHYME:{_get_rhyme(syls_6[5])}]"
+                else:
+                    single_rhyme = rhyme_tag  # fallback
+                single_tone = f"[TONE:{get_tone_sequence(single_input)[:6]}]"
+                single_tags = f"{genre_part}{single_rhyme} {single_tone} {trambong_tag}".strip()
+                pairs.append(f"{START} {single_tags} {single_input} {REPLY} {output_str} {END}")
     
     return pairs
 
@@ -252,8 +267,8 @@ def preprocess(csv_path=None, output_path=None, max_poems=None, window=2):
             f.write(pair + "\n")
     
     # Stats
-    w1_count = sum(1 for p in all_pairs if p.count(LB) == 2)
-    w2_count = sum(1 for p in all_pairs if p.count(LB) == 4)
+    single_line_count = sum(1 for p in all_pairs if p.count(LB) == 1)
+    full_couplet_count = sum(1 for p in all_pairs if p.count(LB) >= 2)
     
     # Count Trầm-Bổng patterns
     tb_nh = sum(1 for p in all_pairs if "[TRAMBONG:NH]" in p)
@@ -265,8 +280,8 @@ def preprocess(csv_path=None, output_path=None, max_poems=None, window=2):
     print(f"  Skipped (< 2 couplets): {skipped_short}")
     print(f"  Lục Bát couplets: {total_couplets:,}")
     print(f"  Total training pairs: {len(all_pairs):,}")
-    print(f"    window=1: {w1_count:,}")
-    print(f"    window=2: {w2_count:,}")
+    print(f"    Full couplet→couplet: {full_couplet_count:,}")
+    print(f"    Single 6-syl→couplet: {single_line_count:,}")
     print(f"  Trầm-Bổng: NH={tb_nh:,} HN={tb_hn:,}")
     print(f"  Saved → {output_path}")
     

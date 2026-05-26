@@ -237,9 +237,10 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         for pg in opt.param_groups: pg["lr"] = lr
 
         # ── Scheduled Sampling ──
-        # Replace a subset of teacher tokens with model's own argmax predictions,
+        # Replace content tokens with model's own argmax predictions,
         # forcing it to learn recovery from its mistakes. Decays from 100%→50%
         # teacher over training to reduce the train/inference mismatch.
+        # v4.1: Control tokens (IDs 0-214) are PROTECTED — never replaced.
         use_teacher_prob = max(0.5, 1.0 - step / max_steps * 0.5)
         if use_teacher_prob < 1.0:
             # 1. Get model's own predictions from teacher input (no_grad saves memory)
@@ -252,6 +253,9 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
             x_model = torch.cat([x[:, :1], model_tokens[:, :-1]], dim=1)
             # 2. Mix: with prob use_teacher_prob, keep teacher; else use model's own
             mask = torch.rand(x.shape, device=dev) < use_teacher_prob
+            # But NEVER replace control tokens (<|linebreak|>, <|reply|>, [RHYME:X], etc.)
+            is_control = x < 215  # control tokens occupy IDs 0-214
+            mask = mask | is_control  # always keep teacher for control tokens
             x_input = torch.where(mask, x, x_model)
         else:
             x_input = x  # early steps: pure teacher forcing
