@@ -186,34 +186,79 @@ def load(path, dev):
 
 @torch.no_grad()
 def gen(model, tok, prompt, dev):
-    """Generate from single 6-syl line with <|reply|> delimiter."""
+    """Generate from single 6-syl line (stress test only)."""
     rhyme, tone, trambong = get_luc_bat_tags(prompt)
     tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
-    tagged = f'[LUC_BAT] {tags} {prompt} <|reply|>'
+    tagged = f'[LUC_BAT] {tags} {prompt}'
     ids = tok.encode(tagged).ids
-    return _generate(model, tok, ids, dev)
+    # Extract target rhyme from prompt pos6 (vần lưng)
+    syls = prompt.split()
+    target_rhyme = get_rhyme_group(syls[5]) if len(syls) >= 6 else None
+    return _generate(model, tok, ids, dev, target_rhyme=target_rhyme)
 
 
 @torch.no_grad()
 def gen_couplet(model, tok, line6, line8, dev):
-    """Generate from full couplet using training format: 6-syl <|linebreak|> 8-syl <|reply|>."""
+    """Generate from full couplet: 6-syl <|linebreak|> 8-syl <|reply|>."""
     rhyme, tone, trambong = get_luc_bat_tags(line6 + ' ' + line8)
     tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
     tagged = f'<|start|> [LUC_BAT] {tags} {line6} <|linebreak|> {line8} <|reply|>'
     ids = tok.encode(tagged).ids
-    return _generate(model, tok, ids, dev)
+    # Target rhyme: input Bát[pos8] must rhyme with output Lục[pos6] (chain rhyme)
+    syls_8 = line8.split()
+    target_rhyme = get_rhyme_group(syls_8[7]) if len(syls_8) >= 8 else None
+    return _generate(model, tok, ids, dev, target_rhyme=target_rhyme, rhyme_pos=5)
 
 
-def _generate(model, tok, ids, dev):
-    """Shared autoregressive generation loop."""
+def _generate(model, tok, ids, dev, target_rhyme=None, rhyme_pos=5):
+    """
+    Autoregressive generation with rhyme constraint.
+    
+    When generating the rhyme-position syllable (default: 6th syl of output),
+    masks tokens whose rhyme group doesn't match target_rhyme.
+    """
     idx = torch.tensor([ids], dtype=torch.long, device=dev)
     end_id = tok.token_to_id('<|end|>')
     pad_id = tok.token_to_id('<|pad|>')
+    lb_id = tok.token_to_id('<|linebreak|>')
     new = []
     for _ in range(64):
         logits, _ = model(idx[:, -model.block_size:])
         logits = logits[:, -1, :] / 0.75
         logits[:, pad_id] = float('-inf')
+
+        # P1: Rhyme constraint at target position in output line
+        if target_rhyme is not None:
+            # Count syllables since last <|linebreak|> (or since last <|reply|>)
+            # Find the last delimiter
+            last_delim = -1
+            for delim_id in [lb_id, tok.token_to_id('<|reply|>')]:
+                if delim_id in new:
+                    pos = max(i for i, t in enumerate(new) if t == delim_id)
+                    last_delim = max(last_delim, pos)
+            after_delim = new[last_delim + 1:] if last_delim >= 0 else new
+            decoded_after = tok.decode(after_delim)
+            current_syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+
+            if current_syl_count == rhyme_pos:
+                candidate_k = min(100, logits.size(-1))
+                _, topk_idx = torch.topk(logits, candidate_k)
+                matching, non_matching = [], []
+                for tid in topk_idx[0]:
+                    tid_i = tid.item()
+                    if tid_i in (end_id, pad_id, lb_id):
+                        continue
+                    decoded = tok.decode([tid_i]).strip()
+                    if not decoded:
+                        continue
+                    if get_rhyme_group(decoded) == target_rhyme:
+                        matching.append(tid_i)
+                    else:
+                        non_matching.append(tid_i)
+                if matching:
+                    for tid_i in non_matching:
+                        logits[:, tid_i] = float('-inf')
+
         v, _ = torch.topk(logits, min(50, logits.size(-1)))
         logits[logits < v[:, -1:]] = float('-inf')
         nid = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
