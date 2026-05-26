@@ -45,10 +45,13 @@ def count_syllables(text):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  LỤC BÁT RULE CHECKS
+#  LỤC BÁT RULE CHECKS (v4.1: 5 rules from luc_bat.md)
 # ═══════════════════════════════════════════════════════════════
-# Line 1 (6 syl): pos 2,4,6 = B-T-B
-# Line 2 (8 syl): pos 2,4,6,8 = B-T-B-B
+# Rule 1 (Vần lưng):  tiếng 6 câu Lục vần với tiếng 6 câu Bát
+# Rule 2 (Bằng-Trắc): BTB (Lục) + BTBB (Bát)
+# Rule 3 (Syllable):  6+8 exact
+# Rule 4 (Trầm-Bổng): tiếng 6 & 8 dòng Bát khác dấu (Ngang≠Huyền)
+# Rule 5 (Nhịp điệu): 2/2/2 (Lục) + 2/2/2/2 or 4/4 (Bát)
 
 def check_syllables(prompt, response):
     p, r = count_syllables(prompt), count_syllables(response)
@@ -70,11 +73,46 @@ def check_tones(line, pattern):
     return all_ok, " | ".join(results)
 
 
+def check_tram_bong(eight_line):
+    """
+    R4: Trầm-Bổng — tiếng 6 & tiếng 8 của dòng Bát must have opposite dấu.
+    Ngang ≠ Huyền (both are Bằng, but different register).
+    """
+    syls = eight_line.strip().split()
+    if len(syls) < 8:
+        return False, "too_short"
+    # Use tones module's get_diacritic
+    from tones import get_diacritic
+    d6 = get_diacritic(syls[5])
+    d8 = get_diacritic(syls[7])
+    ok = d6 in ("ngang", "huyen") and d8 in ("ngang", "huyen") and d6 != d8
+    detail = f"pos6={d6} pos8={d8} → {'PASS' if ok else 'FAIL (must differ)'}"
+    return ok, detail
+
+
+def check_rhythm(line, is_luc=True):
+    """
+    R5: Nhịp điệu — approximate check for chẵn rhythm.
+    Lục: 6 syllables → can split 2/2/2
+    Bát: 8 syllables → can split 2/2/2/2 or 4/4
+    """
+    n = len(line.strip().split())
+    if is_luc:
+        ok = n == 6
+        return ok, f"{n}syl → {'2/2/2 ✓' if ok else 'not 6 ✗'}"
+    else:
+        ok = n == 8
+        return ok, f"{n}syl → {'2/2/2/2 ✓' if ok else 'not 8 ✗'}"
+
+
 def evaluate(prompt, response):
     return {
         "syl": check_syllables(prompt, response),
         "tone_p": check_tones(prompt, "BTB"),
         "tone_r": check_tones(response, "BTBB"),
+        "tram_bong": check_tram_bong(response),
+        "rhythm_p": check_rhythm(prompt, is_luc=True),
+        "rhythm_r": check_rhythm(response, is_luc=False),
     }
 
 
@@ -103,42 +141,35 @@ def load_model(ckpt_path, device="cpu"):
 # ═══════════════════════════════════════════════════════════════
 
 def auto_tag(prompt):
-    """Auto-wrap genre tag + rhyme/tone based on syllable count."""
+    """
+    v4.1: Auto-wrap Lục Bát with rhyme + tone + trầm-bổng control tokens.
+    Thất Ngôn auto-detection removed (moved to v5).
+    """
     p = prompt.strip()
     # Already tagged with genre
-    if any(p.startswith(t) for t in ["[LUC_BAT]", "[THAT_NGON]"]):
-        # Inject rhyme/tone if missing
-        if "[LUC_BAT]" in p and "[RHYME:" not in p:
-            line = p.replace("[LUC_BAT]", "").strip()
-            rhyme, tone = get_luc_bat_tags(line)
-            extras = f"{rhyme} {tone}".strip()
-            if extras:
-                p = p.replace("[LUC_BAT]", f"[LUC_BAT] {extras}")
-        if "[THAT_NGON]" in p and "[DOIAM:" not in p:
-            line = p.replace("[THAT_NGON]", "").strip()
-            link2, doi_am = get_that_ngon_tags(line)
-            extras_parts = [t for t in [link2, doi_am] if t]
-            if extras_parts:
-                p = p.replace("[THAT_NGON]", f"[THAT_NGON] {' '.join(extras_parts)}")
+    if p.startswith("[LUC_BAT]"):
+        # Inject missing tags
+        inner = p.replace("[LUC_BAT]", "").strip()
+        rhyme, tone, trambong = get_luc_bat_tags(inner)
+        tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
+        if tags:
+            p = f"[LUC_BAT] {tags} {inner}"
+        return p
+    if p.startswith("[THAT_NGON]"):
+        # TN kept for backward compat but not used in v4.1 training
         return p
 
-    syl = len(p.split())
-    if syl == 7:
-        link2, doi_am = get_that_ngon_tags(p)
-        extras_parts = [t for t in [link2, doi_am] if t]
-        tag = f"[THAT_NGON] {' '.join(extras_parts)}" if extras_parts else "[THAT_NGON]"
-        return f"{tag} {p}"
-
     # Default: Lục Bát
-    rhyme, tone = get_luc_bat_tags(p)
-    extras = f"{rhyme} {tone}".strip()
-    tag = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
-    return f"{tag} {p}"
+    rhyme, tone, trambong = get_luc_bat_tags(p)
+    tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
+    return f"[LUC_BAT] {tags} {p}" if tags else f"[LUC_BAT] {p}"
 
 
 def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     """
-    Detect multi-line input → wrap as [DOI_THO] đối thơ format.
+    v4.1: Detect multi-line input → wrap as Lục Bát đối thơ format.
+    Adds [RHYME:X] [TONE:BBBBBB] [TRAMBONG:NH] tags.
+    Thất Ngôn support removed (moved to v5).
     
     User input can be:  
       - "line6\\nline8" (1 couplet)  
@@ -149,75 +180,54 @@ def auto_tag_doi_tho(user_input: str, max_context_couplets: int = 1) -> str:
     user_input = user_input.lower()
     lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
     
-    # Single line -> delegate to existing auto_tag
+    # Single line -> delegate to auto_tag
     if len(lines) == 1:
-        line = lines[0]
-        syls = line.split()
-        if len(syls) == 7:
-            rhyme_tag, tone_tag = get_doi_tho_tags_tn(line)
-            genre_token = "[THAT_NGON]"
-        else:
-            rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
-            genre_token = "[LUC_BAT]"
-        tags = f"{rhyme_tag} {tone_tag}".strip()
-        tag_part = f"{genre_token}"
-        if tags:
-            tag_part += f" {tags}"
-        return f"<|start|> {tag_part} {line} <|reply|>"
+        return auto_tag(lines[0])
     
-    # Group into couplets: support both Lục Bát (6+8) and Thất Ngôn (7+7)
+    # Group into couplets (Lục Bát: 6+8)
     couplets = []
     i = 0
     while i + 1 < len(lines):
         s1 = len(lines[i].split())
         s2 = len(lines[i+1].split())
-        if (s1 == 6 and s2 == 8) or (s1 == 7 and s2 == 7):
+        if s1 == 6 and s2 == 8:
             couplets.append((lines[i], lines[i+1]))
             i += 2
         else:
             i += 1
     
     if not couplets:
-        # No valid couplets found → fall back to last line as single prompt
         return auto_tag(lines[-1])
     
-    # Keep at most max_context_couplets recent couplets
     couplets = couplets[-max_context_couplets:]
     
-    # Detect genre from last couplet for tag extraction
+    # Extract tags from last input couplet
     last_a, last_b = couplets[-1]
-    s1_last = len(last_a.split())
-    if s1_last == 7:
-        # Thất Ngôn: rhyme from last syllable of 7-syl line
-        rhyme_tag, tone_tag = get_doi_tho_tags_tn(last_a)
-        genre_token = "[THAT_NGON]"
-    else:
-        # Lục Bát: rhyme from pos 8 of 8-syl line
-        rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
-        genre_token = "[LUC_BAT]"
+    rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
+    # For inference, use NH (most common Trầm-Bổng pattern) as default
+    trambong_tag = "[TRAMBONG:NH]"
     
-    # Build input lines with <|linebreak|> separators
+    # Build input lines
     input_lines = []
     for a, b in couplets:
         input_lines.append(a)
         input_lines.append(b)
     input_str = " <|linebreak|> ".join(input_lines)
     
-    # Build tag: [LUC_BAT] [RHYME:X] [TONE:XXXXXX]
-    tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"{genre_token}"
-    if tags:
-        tag_part += f" {tags}"
+    # Build tag: [LUC_BAT] [RHYME:X] [TONE:BBBBBB] [TRAMBONG:NH]
+    tags = f"{rhyme_tag} {tone_tag} {trambong_tag}".strip()
     
-    return f"<|start|> {tag_part} {input_str} <|reply|>"
+    return f"<|start|> [LUC_BAT] {tags} {input_str} <|reply|>"
 
 
-def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2, is_tn=False):
+def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=False, max_lines=2, is_tn=False):
     """
     Decode generated tokens, handling <|linebreak|> which decodes to empty
     string in ByteLevel BPE. Splits on linebreak token positions.
-    Returns list of line strings. Optionally enforces syllable pattern (P3),
-    fixes overgeneration (P2), and re-splits TN output (T2a).
+    Returns list of line strings.
+    
+    v4.1: enforce_syllables defaults to False (metrics should reflect raw quality).
+    T2a TN re-split removed (TN moved to v5).
     """
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     lines = []
@@ -232,16 +242,6 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2
     if chunk:
         lines.append(tokenizer.decode(chunk).strip())
     
-    # T2a: For Thất Ngôn, merge all words and re-split at 7+7
-    if is_tn and lines:
-        all_words = []
-        for line in lines:
-            all_words.extend(line.split())
-        lines = [' '.join(all_words[:7]), ' '.join(all_words[7:14])]
-        # Remove empty second line if no words remain
-        lines = [l for l in lines if l]
-        return lines[:max_lines]
-    
     # Detect genre from first line syllable count
     if lines:
         s1 = len(lines[0].split())
@@ -249,7 +249,7 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=True, max_lines=2
     else:
         targets = (6, 8)
     
-    # P3: Enforce syllable count per line
+    # P3: Optional syllable enforcement (off by default — metrics should show raw quality)
     if enforce_syllables:
         for i, line in enumerate(lines):
             words = line.split()
@@ -426,9 +426,9 @@ if __name__ == "__main__":
 
     # Interactive mode
     if args.interactive:
-        print("\n🎭  Interactive Poetry Duel")
+        print("\n🎭  Interactive Poetry Duel  [v4.1 — Lục Bát]")
         print("    Single line → [LUC_BAT] single couplet")
-        print("    Multi-line (use '|' between lines) → [DOI_THO] couplet duel")
+        print("    Multi-line (use '|' between lines) → couplet duel")
         print("    Example: kiều nhi phận mỏng như tờ | một lời đã lỗi tóc tơ với chàng!")
         print("    'quit' to exit.\n")
         while True:
@@ -444,7 +444,7 @@ if __name__ == "__main__":
                 # Multi-line → đối thơ
                 prompt = auto_tag_doi_tho(u)
                 _, ids = generate(model, tok, prompt, args.max_tokens, args.temperature, args.top_k, args.top_p, dev)
-                out_lines = decode_doi_tho(tok, ids, is_tn=('[THAT_NGON]' in prompt))
+                out_lines = decode_doi_tho(tok, ids)
                 print(f"Bot: {out_lines[0] if len(out_lines)>0 else '?'}")
                 print(f"     {out_lines[1] if len(out_lines)>1 else '?'}\n")
             elif not u.startswith("["):
@@ -477,9 +477,6 @@ if __name__ == "__main__":
             elif '[LUC_BAT]' in prompt and '[RHYME:' not in prompt:
                 inner = prompt.replace('[LUC_BAT]', '').strip()
                 prompt = auto_tag(inner)
-            elif '[THAT_NGON]' in prompt and '[DOIAM:' not in prompt:
-                inner = prompt.replace('[THAT_NGON]', '').strip()
-                prompt = auto_tag(inner)
 
         for i in range(args.num_samples):
             print(f"\n{'='*60}\nSample {i+1}/{args.num_samples}\n{'='*60}")
@@ -491,26 +488,33 @@ if __name__ == "__main__":
             
             # Display: use decode_doi_tho for proper linebreak handling
             if is_doi_tho:
-                out_lines = decode_doi_tho(tok, ids, is_tn=('[THAT_NGON]' in prompt))
+                out_lines = decode_doi_tho(tok, ids)
                 print(f"Response: {out_lines[0] if len(out_lines)>0 else '?'}")
                 print(f"          {out_lines[1] if len(out_lines)>1 else '?'}")
                 response_only = "\n".join(out_lines)
 
             # Rule check — strip control tokens properly with regex
-            prompt_part = re.sub(r'\[(?:RHYME|TONE|LINK2):[^\]]+\]', '', prompt)
+            prompt_part = re.sub(r'\[(?:RHYME|TONE|LINK2|TRAMBONG):[^\]]+\]', '', prompt)
             prompt_part = prompt_part.replace('[LUC_BAT]', '').replace('[DOI_THO]', '').replace('[THAT_NGON]', '')
             prompt_part = ' '.join(prompt_part.split()).strip().rstrip(',')
             resp_clean = response_only.rstrip(",. ")
             is_luc_bat = "[LUC_BAT]" in prompt
-            is_that_ngon = "[THAT_NGON]" in prompt
 
-            if is_luc_bat or is_that_ngon:
-                tag = "Lục Bát (6→8)" if is_luc_bat else "Thất Ngôn (7→7)"
+            if is_luc_bat:
                 r = evaluate(prompt_part, resp_clean)
-                print(f"\n{'─'*60}\n📏  {tag} Rule Check\n{'─'*60}")
-                print(f"  Syllables: {r['syl'][1]} → {'PASS' if r['syl'][0] else 'FAIL'}")
-                print(f"  Prompt tone:  {r['tone_p'][1]}")
-                print(f"  Response tone: {r['tone_r'][1]}")
+                print(f"\n{'─'*60}\n📏  Lục Bát (6→8) — 5-Rule Check (v4.1)\n{'─'*60}")
+                print(f"  R1 Vần lưng:   (prompt pos6 → response pos6 rhyme match)")
+                print(f"  R2 Bằng-Trắc:  BTB / BTBB tone pattern")
+                print(f"  R3 Syllable:   6+8 exact")
+                print(f"  R4 Trầm-Bổng:  tiếng 6 & 8 dòng Bát khác dấu Ngang≠Huyền")
+                print(f"  R5 Nhịp điệu:  2/2/2 (Lục) + 2/2/2/2 (Bát)")
+                print(f"{'─'*60}")
+                print(f"  R3 Syllable:    {r['syl'][1]} → {'✅' if r['syl'][0] else '❌'}")
+                print(f"  R2 Prompt tone:  {r['tone_p'][1]}")
+                print(f"  R2 Resp tone:    {r['tone_r'][1]}")
+                print(f"  R4 Trầm-Bổng:    {r['tram_bong'][1]}")
+                print(f"  R5 Rhythm (P):   {r['rhythm_p'][1]}")
+                print(f"  R5 Rhythm (R):   {r['rhythm_r'][1]}")
                 print(f"{'─'*60}")
             elif is_doi_tho:
                 if len(out_lines) >= 2:

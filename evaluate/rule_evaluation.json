@@ -1,1229 +1,1748 @@
 {
+  "version": "v4.1",
+  "checkpoint": "doi_tho_best.pt",
   "summary": {
-    "Stage 1": {
-      "R1_rhyme": 45.664739884393065,
-      "R2_tone": 78.5493827160494,
-      "R3_syllable": 65.3179190751445,
-      "all_pass": 38.15028901734104
-    },
-    "Stage 2": {
-      "R1_rhyme": 49.71098265895954,
-      "R2_tone": 88.08724832214764,
-      "R3_syllable": 71.09826589595376,
-      "all_pass": 45.664739884393065
-    }
+    "R1_rhyme": 5.780346820809249,
+    "R2_tone": 55.78034682080924,
+    "R3_syllable": 0.0,
+    "R4_trambong": 10.404624277456648,
+    "R5_rhythm": 0.0,
+    "all_5_pass": 0.0,
+    "avg_length": 23.08670520231214,
+    "lexical_diversity": 0.7487844328599742,
+    "bpe_artifacts": 9,
+    "empty_rate": 0.0
   },
   "samples": [
     {
       "p": "Thân em như tấm lụa đào",
-      "r": "làm sao em muốn ước ao bao chàng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi côại mộnguốnượng núi chắc đùa tôi già bạn sáng khó gỡ cách tôi khó sử quá khôi bầu trái vân dù tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trèo lên cây khế nửa ngày",
-      "r": "còn mấy lần trái tim nồng ý thơ",
-      "R1": false,
-      "R2": 3,
-      "R3": true
+      "r": "tôi sợi cất trầu thamòi bay trái tôi nên già nhưng tươi nên cay đang tôi thuyền ba chơiép chuông bay êm tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ai làm cho bướm xa hoa",
-      "r": "héo gầy",
+      "r": "tôi nuôi phúc rạo nhè rạo đổ môi môi tôi tôi bông mùi tác cất hơi dâng tôi bông nguy tàn giếng ly dịụng mộng tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đêm khuya thắp ngọn đèn dầu",
-      "r": "ta về thăm lại sắc màu thanh xuân",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi giấc rửa xo nghề bạc ao bay bạc tôi bay chơi mái ngon màu phấn tôi bayBTB niệm niệm niệm già chí cây tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gió mùa thu mẹ ru con",
-      "r": "mẹ ru con ngủ mẹ cười à ơi",
+      "r": "tôi phận lụt đềm xông mỗi nẻo quá tôi ước chạy lụt nghề lụt chăm cất tôi tôi nên nồng hoan chốn mi chăm chămấu tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chim khôn đậu nóc nhà quan",
-      "r": "viên",
+      "r": "tôi chí hơn điềuuốn vấn héo nhè tôi bay nên mờiẹn mộng bạn hư tôi tào cất hay hay vượt vượt tròn tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cây khô chưa dễ mọc chồi",
-      "r": "ai người biết được cuộc đời ra sao",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi to thấp dốc xo thấpBTB nónướng tôi cảnh hỏiẹp nởẹn thuyền tôi điều niệm niệm bi bảnện aoBTB tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mẹ già như chuối ba hương",
-      "r": "thôi đành khép kín cổng trường nhìn đâu",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôiấn niệmấnếng chí chăm điềuấu tôi chơi cảnh cô dạ máấu tôi ước hàng ước lành ly khôn côấu tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ru con con ngủ cho lâu",
-      "r": "không tròn tiếng hát bên cầu tri âm",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "thông tôi lụt sức niệm chăm đô thấp trầu tôi vượt bạn lụt sức điều mặt a tôi ao ao đúng ao niệm tha môi tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Công cha như núi thái sơn",
-      "r": "bắc nam xum họp không còn khổ đau",
+      "r": "tôi tươiạo chăm già hơi liệ mộng đủ tôi hẹn dị ước nhưng gà ghê tôi quá đình nở già chắc thuyền men đang tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Rủ nhau xuống biển mò cua",
-      "r": "thỏa lòng",
+      "r": "tôi khách cảnh cảnh nên đành laìu trầu tôi niệm niệm niệm nén giấc ngỏ tôiuyệt câyạc môiưới môi vaiép tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đố ai đếm được lá rừng",
-      "r": "",
+      "r": "sức tôi bay cảnh xơấu mộng già hẹn tôiiệtượng bắc đổ điềuổn nên tôi quáBTB mời hơn già dùớm tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cày đồng đang buổi ban trưa",
-      "r": "mặt trời ló dạng đã thưa dần dần",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi khách quá sức điều bạn du la bay tôi tươi già dù tiền duượn tôi hơn môiắnomưỡi bay bè nhè tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mồ hôi thánh thót như mưa",
-      "r": "những chiều mưa đổ như vừa tắm xong",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi khói tri tri hy vết lụt trận môi tôi cảnh mỗi niệm trựcTTTTTB bâng tôi niệmấn thoang hơn mùi tác nhập thấp tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Dẻo thơm một hạt đắng cay",
-      "r": "ai thương xin hãy tỏ bày cùng ta",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi hơi chăm chăm dạ chăm nga dang nên tôi côại xo dangấu nên tôi dang mái chăm chăm trầu ngon dang cô tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ai về tôi gửi buồng cau",
-      "r": "chờ ngày khai hội cùng nhau họp bàn",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôiènộn tào lụt niệm chăm đang sai tôi tôi cảnh hay tôiấu nên mời tôi quáBTB má nêniệu giấc má bay tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Buồng cau non mẹ để già",
-      "r": "cho con cháu hưởng tuổi già thảnh thơi",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "BBTBBB tôi ngổn ngổn niệm đơn bay rửa cào tôi ôngủa bay vơi biế thuyền thuyền tôiuyệt cây bắc nó ước hỏi đánh tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cau già khéo bổ thì non",
-      "r": "non  còn tui có sức tui còn ham chơi",
+      "r": "tôi to niệm gầyấu nên già đô bản tôi sáng phậniệnBTTTTB bụngớm tôi núi già phận cheấu võng ngắn đình tôi",
       "R1": false,
-      "R2": 4,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cây đa bến nước sân đình",
-      "r": "thuyền quyên nép bóng sân đình ngẩn ngơ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "đình tôi bắc niệm thấp biế niệm già trầm tôi bến môi não môi điều bồi mưu tôi ôngBTBấn thực già tiền trầm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Qua đình ngả nón trông đình",
-      "r": "chị hai xinh xắn tươi xinh duyên thầm",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ép tôi quá đô niệm chí máuép ngơ tôi lành biế chơi chút sángiện vô tôi trọn che nao hội hội bayưới tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Hòn đá đóng rêu vì ngâu",
-      "r": "làm mưa ngâu rụng mái đầu làm mưa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ngổn sương ngổn ngổn ngổnổn ngổn nghề tôi ngổn giảẹp sương đậm pha tôi giả ngổn chấp ngổn ngổn chấp cây lạnh tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Thuyền ơi có nhớ bến không",
-      "r": "đêm dài đêm ngắn đêm dài nhớ mong",
+      "r": "tôi nghề não lụt tham niệm niệm niệm tôi cảnh nênưới to chịu niệm tôi tôi môi nga trí nén to mươi môi tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bến thì một dạ khăng khăng",
-      "r": "làm sao ai cũng phải chăng hỡi trời",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi thuyền nên bi cảnh bồi thuyền quáBTB tôiại nhưng chăm cất bay to tôi nở nên mời lâu chết nên chết thức tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mưa từ xa tới mưa mau",
-      "r": "đi qua mưa tạnh nắng mau mưa hoài",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi thuyền hay nên danh đúng hơn chăm dại tôi chơi hayại chuông chuông dại tôi bay điều tuổi chuôngép thuyềnấu nên tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trời mưa trời gió đùng đùng",
-      "r": "không ngớt mưa gió không ngừng tạnh ngay",
+      "r": "tôi bay quá nênẹniềm tiền rưng tôi thứcấn thức sức bay đình tôi thủụi soiấuếmổn bạn cây tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lúa mùa vàng óng đồng quê",
-      "r": "hai ta chung sức đi về có nhau",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ủi tôi chăm cách tàoếngủi gia bộ tôiét niệm nhập xo điều cây mái tôi hội thông điều bay thông máu thấu tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trâu ơi ta bảo trâu này",
-      "r": "để trâu ăn lúa để ta cày bừa",
+      "r": "tôi thuyền niệm vuốtTTTTTB ngổn giòn giòn tôi niệm ruộngợn quen đơn ruộng tôi môi sáng danh ích nhiên nhiên khó bản tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": true,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bao giờ cho đến tháng ba",
-      "r": "có gì đâu nữa để ta có người",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "đắng tôiBTTTBT món niệm thấpBTB nhưng thanh tôi dù tha tươi tươiắnớm trái tôi hơn nguy duủa trái khoảng hoài tôi tôi",
+      "R1": false,
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ếch kêu dưới vũng ao nhà",
-      "r": "bạn  có người đã mất lẽ ra thế này",
+      "r": "tôi thủ bay niệm nế biế biế bộ tôi thủụi nênấu cơn tào xôi tôi nởuốn diết thông nụ tứ vân tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tháng năm chưa đến đã mưa",
-      "r": "rào  mưa rào ngập lụt biết bao cho vừa",
+      "r": "tôi nên bạc hyiềm dại dưỡng dại tôi tâmấu nụ laớm thuở tôi hoài chơi gia niệm già khoai bay êm tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ve kêu ra rả suốt mùa",
-      "r": "mưa ngâu",
+      "r": "tôiBTT chăm niệm tàoọn điều tất gia tôi ước ru cuối chungọng hay tôiốt sương khổ chửa quang xuôi trùng thiên tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sen tàn cúc lại nở hoa",
-      "r": "quỳnh ơi nàng đã mất hút còn đâu",
+      "r": "tôi quá điều niệm tươi gầy khỏa lấy chấp tôi già sắn địa dang bay nên tôi thuyền điều chí lànhấu vướng vướng thiên tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sầu dài ngày ngắn sang đông",
-      "r": "em thường thích ngắm hoa hồng anh thương",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi chăm chăm quen tào nên thấp già nghề tôiại giấc xo xo én tới tôi chămấn xo bay nhiên tiếtấn chăm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gió đông về lạnh lòng ai",
-      "r": "đêm dài đêm ngắn ngày dài canh thâu",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ích khách niệm tôi cậy nên bay nghề tôi hay heo bay nên sương heo tôi tôi tôi ưu sương pha đậm thiên vọng ngại tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tóc mây một mái còn dài",
-      "r": "bóng cây liễu yếu phôi phai má đào",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi chơi điều quen hội bàn niệm món tôi tôi to sáng niệm phờ thổi niệm nhặt tôi bạn thấp niệm chỗ héo vấn phiền tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mắt em là cả trời xanh",
-      "r": "sao em không đến với mình không sang",
+      "r": "tôi quá bạc trầu cất thấu món sáng bến tôiấn chăm hy sức thấuBTB tôiấn chăm kỉếng thấu thúng chămộn tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Môi em là nắng long lanh",
-      "r": "cây cầu đã chọn ngày lành ấm no",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi niệm niệm sợi đài phong cổ dạ niệm tôi tươiắn tành nhấp quân nghỉ tôi bụng dù dự vân nuôi niệm thư trầu tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Núi cao bởi có đất bồi",
-      "r": "",
-      "R1": false,
-      "R2": 0,
-      "R3": false
+      "r": "ợn tôiiềm giàắn du bè chơi khách tôi già sáng hơi bến ngang cờ cách tôi già bay nẻo tao thông chắc mị tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sông sâu bởi có nước nguồn",
-      "r": "ô nhiễm co vid chẳng buông lời bình",
-      "R1": false,
-      "R2": 2,
-      "R3": true
+      "r": "tôi đùa điều đúng ngổn ngổn chấp ngổn ngổn tôi tôi thuyền ba thayưới to gánh tôi đơn danh danh mô mô trót dời trầu tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Uống nước nhớ kẻ đào sông",
-      "r": "nhớ em nhớ mãi tình không bến bờ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ếp tôi tiền tiền niệm vui tôi trầu tằm tôi niệm môi già to tham nghề dờ tôi môi vờn niệm bến vuốt dở nghề tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ăn quả nhớ kẻ trồng cây",
-      "r": "đào tiên núi đôi mươi mốt núi ngàn",
+      "r": "tôi rửa triều cột ngổn niệm chịu nhè nhè tôiụng hàng tần ngổn tươi nhưng tôi tươiạo tươi lạnh ly đạo na cơn tôi",
       "R1": false,
-      "R2": 2,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đất lành chim đậu về đây",
-      "r": "",
+      "r": "tôi mặt môi tào thủ nên lụt lụt bay tôi chăm nên trầuếm gieo bay tôi núi bắc nhiên nhập baiển giấc phát tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Người hiền thì lại gặp may",
-      "r": "nhưng cũng phải quý lắm thay đổi nhiều",
-      "R1": true,
-      "R2": 3,
-      "R3": true
+      "r": "tôi bay điều sương đổ vơi bầu đủ tôiớmưới thờ giấc điều sáng dạ tôi chơi chút điều chàng cay đang bạn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lời nói chẳng mất tiền mua",
-      "r": "không tiền mà tính ganh đua với đời",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ngổn tôi ngổn chấp thấp tươi già mặtớm tôiấu tâm tinếm bay vấn chuông tôi tào hư mộng chí hoài thâm khôn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lựa lời mà nói cho vừa",
-      "r": "để mai mốt nọ đêm thừa vắng anh",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôiấu bạc ngon hội bay điều điều sáng tôi thôngớm trầm hìnhiềm bắc tôi hay thấuòi ngon đổ nên hoài cây tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đèn nhà ai nấy sáng trưng",
-      "r": "",
+      "r": "tôi mặt phúc ngổn ngổn ngổn ngổn phúc rửa tôi cột cột cột to mộng dị tôi ngổn ngổn chấp ngổnẹp ngổn giả sương tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chớ thấy đèn sáng mà mừng",
-      "r": "quá vui quá không thấy vui ngay",
+      "r": "tôi giòn rạo chăm bàn già to chăm tôi sáng niệm thấp tên miên sợi niệm tôi la trí thôn chăm xo xo trầu tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sông sâu còn có kẻ đò",
-      "r": "nào  một ngày không thấy nói sao đủ đầy",
+      "r": "tôi hơn môi thể thể loãng thổi hơnướng tôi cô nên điều thông giông hay tôiấu tặng tinếm sứcướng ly tha tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đường xa còn có người qua",
-      "r": "cho con tình cảm chan hòa không gian",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi vuiấu niệm chăm bay xơTTTTTB bạn tôi ao mộng bay cay vất thủy tôi chăm nênấuẹn tất tác cay đang tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bầu ơi thương lấy bí cùng",
-      "r": "",
+      "r": "tôi môi niệm ích thông nghề nghề niệm chăm tôiấn bayẹp tươi chàng hơi tôi thôn íchón già phong chịuấu môi tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tuy rằng khác giống nhưng chung",
-      "r": "khi nào ai cũng sống chung một nhà",
+      "r": "tôi danh quá trầu trầu đúng sức đúng ao tôiấu nên niệm nhập lất thùng tôi gia chàng thấu trầu biếòiớt vấn tôi",
       "R1": true,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Một cây làm chẳng nên non",
-      "r": "mẹ việt còn mẹ còn con bây giờ",
-      "R1": true,
-      "R2": 3,
-      "R3": true
+      "r": "tôi bay bạn tào thủ nên thấp bạn ủ tôi bến bếnỡng già êm ủ tôi núi lớ hiuẹn bạn che trút chí tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ba cây chụm lại nên hòn",
-      "r": "đá kia",
+      "r": "tôi quá danhuyệt biế thổi ngơễu nhè tôiétấn chăm sức sức dịch tôi điều sức tào tàoễu đìnhễu nhè tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gần mực thì đen gần đèn",
-      "r": "mới lên đèn hoa đèn lồng phố phường",
+      "r": "tôi cô món sức chăm réo lụt lụt mỗi tôi côại giấcuốnuốnấn tôi màu hay cô vơi hon giang đangại tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gần người hiền trí thì nên",
-      "r": "sao mình lạc lõng giữa dòng nước trôi",
+      "r": "tôi nghề nghề lụt rạo già dù tươi nhịn tôiưới quay nụTTTTTB nhịn nhịn tôi tôiẹp cảnh bụng già rửa ngùi sưởiướng tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": true,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nước lã làm sao khuấy nên",
-      "r": "không cần lên mạng không phiền lắm đây",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ước dạiẩmặn gây ngùi ngùi gươm tôi cảnh đọa nụ dại êm hàng tôi thuyền ba đọaụng nụ chơi nụ quân tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chữ rằng bán tự vi sư",
-      "r": "huynh",
+      "r": "tôi nghề nghề tưởng lýổn quá tâm tôi thủ quáuyệt cây cây du đảng tôi vơi vơi thờ hayếm cấy học tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nhất tự vi sư bán tự",
-      "r": "đắc đạo thành công chúa quý nhân",
+      "r": "tôi bụngớmiềmiềm gầy gáy khách tôi sáng bừng đô già dù dù già tôi tươi già nhịp tần khắp dự thức tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mồng một tết cha mồng hai",
-      "r": "con mong cha khỏe sống dài cả năm",
+      "r": "tôiại cô vần chừng việcBTB voi bom tôi mặt bỏ hơn tanh én bạch tôi én phúc khê lỗạo bom phúc nên tôi",
       "R1": true,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tháng giêng ăn tết ở nhà",
-      "r": "mẹ già con vắng mẹ già ngóng trông",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi phậnẫm tri sáng sai bạn du tôi chơi chí tươi tên chút sáng tôiếpBTB lý khắp bay thức ấm chút tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tháng hai cờ bạc tháng ba",
-      "r": "để anh hùng vương một lòng vì dân",
-      "R1": false,
-      "R2": 3,
-      "R3": true
+      "r": "tôi đùa ngổn ngổn chấp quá ước nhưng tôiưới quayạiạiại trông đỏ tôi chìm cây niệm chìm chìm tươi đuổi tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trên trời có đám mây vàng",
-      "r": "có dòng nước chảy hai hàng bờ xa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi khách la ngổn chấp bụng gia thấu tôi cảnhấu sơ bạn nênướiổn tôi tào thiếpấn sáng nên danh ích tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bên sông có chị hái dâu",
-      "r": "chị em đi cấy đồng sâu một mình",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "diết tôi đùa niệm ngổn chấpẩm ngổn ngổn tôi bạn tắt niệm giòn bạc dù già tôi nuôi tho giấu tươi tươi hỏi đề tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đồng đăng có phố kỳ lừa",
-      "r": "",
+      "r": "tôi nên nuôi phúc bayẹp cảnh ly tử tôiẹp tâm phúc nên dùng lửa tôi ước hàng ru lửa dùng lửa dùng ru tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Có nàng tô thị có chùa",
-      "r": "thanh  chàng hai trăm họ đã già còn đâu",
-      "R1": true,
-      "R2": 2,
-      "R3": false
+      "r": "tôi đùa tôi vần giấc tâm tôi gien tôi ao tôi cảnh môi môi hơn môi và tôi giấc giấc niệm chơiấu tâm giấc tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đường vô xứ nghệ quanh quanh",
-      "r": "anh hùng thiên hạ kinh thành tài hoa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi phúc môi nghề tham bè bướm tha tôi ướcại màu hay ôngiềm tôi tôi đổại kêuúp bè quanh thỏ tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Non xanh nước biếc như tranh",
-      "r": "vẽ thành",
+      "r": "ép tôi rửa ngại sáu biế vơi đúng đúng tôi sáng phậnộn biế bề các chút tôi chơi hội tươi số mỏiép lay tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Anh về câu cá bờ sông",
-      "r": "anh ơi có nhớ không em một thời",
+      "r": "tôi quá quá biế quáấn to niệm đơn tôi niệm niệmấn khoai niệm niệm tôiét vẻ niệm trầu chàng niệm phận chút tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Em về cấy lúa trên đồng",
-      "r": "em cấy vội vàng gặt xuống gặt nhanh",
-      "R1": true,
-      "R2": 1,
-      "R3": true
+      "r": "tôi du niệm niệm bề niệm niệm la xăm tôiưới phận khách la tám gật tôi đùa khai thấp niệm bị niệm niệm niệm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nắng sớm mưa chiều đồng không",
-      "r": "có người nhìn thấy bóng cây hoa tàn",
+      "r": "tôi tôi phích tôi niệm nên nhiênuyến trầu tôi sáng nên hơn giáo vân cớ nên tôi lâu nao thấpBTB máu máu xào tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mong cho lúa tốt bông vàng",
-      "r": "trĩu bông",
+      "r": "tôièn tri chút sáng chút màu vân bát tôi tôi niệm chơi hội gia thư bộ tôi đùa khai dù bền sắn u tươiấn tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bàn tay ta làm nên tất",
-      "r": "cả  những gì tốt đẹp mãi không phai mờ",
+      "r": "giòn tôi chí bay vỡ phong dạ chăm dưỡng tôiấu nên vấn hay chămấn lung tôi chăm sai tào sức sức tới chăm tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Có sức người sỏi đá cũng",
-      "r": "lạ  vì yêu nên phải yêu vội vàng chi",
+      "r": "tôi danh quá ngổn chấp tươi môi nên niệm tôiạiủa xơ phờ điều niệm tôi nghề nghề khách ngổn ngổn dã bay nghề tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chim bay về núi tối rồi",
-      "r": "một ngày nắng đẹp mây trôi theo dòng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tri niệmiềm nhiên sợi niệm thấp tôiại đình lâuếm đình sợi xo tôi biế thủ thấp bồi dựếm quá tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mau lên kẻo nắng tắt rồi",
-      "r": "mẹ ngồi hơ hớ nét môi héo tàn",
+      "r": "tôi núi chút môiiềm ngổn dại ngổn chơi tôi mặt lụt lụt cột khách chăm tôi cột lầy quen tươi ngổn chấp giả thuyền tôi",
       "R1": true,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trăng lên đỉnh núi trăng mờ",
-      "r": "ảo sương mù  biển vắng hắt hiu hiu hắt trăng tà huy hoàng",
+      "r": "tôi tôi khách nghề tưởng nhè gầy khỏa khỏa tôi cảnh điềuấu nhèễu điều la tôi quá bayễu ngon la chí trầm tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đêm nay sao sáng hơn đêm",
-      "r": "em đây cũng lắm nỗi niềm em ơi",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi bạn lụt lụt sức đúng chăm chămBTB tôi chăm cảnh luống cảnh chămấn tôi sức quá mỗi xo liễuẫy tênớm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Xa xa có tiếng chuông chùa",
-      "r": "ngân nga",
+      "r": "tôi ao lụt lụtiệu aoBTBTTTTTB nhưng tôi tuổi trước vượtiềm bắc phiền tôiấu nên tuổi mờiuốn chiaẹn hằng tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gió đưa hương lúa thơm mùa",
-      "r": "cho em má thắm môi hường má xinh",
-      "R1": false,
-      "R2": 4,
-      "R3": true
+      "r": "tôiễu phiêu niệm quá mỗi quá bay tôi khói tôi điềuBBBB điều sáng mô tôiấu hayọn nao vơi bay vai quân tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sáng trăng suông sáng cả đồng",
-      "r": "gió mùa lạnh lẽo sương đông phủ mờ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi nên môiắn già khó khó già chiếu tôi lần đổiềm ngậm môi trồng tôi khách toép hội vẩn mảnh giàạo tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Em đi gặt lúa trên đồng",
-      "r": "quê  lúa vàng bông trải cánh đồng quê hương",
+      "r": "tôi niệm niệm lụt niệm lụt niệm niệm niệm tôi đùa niệm dở nghề niệm niệm tôi niệm niệm màu não đùa niệm niệm niệm tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mưa xuân lất phất vườn đào",
-      "r": "nắng xuân ấm áp ngọt ngào đào phai",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi niệm môi môi rạo giàBTB chìmớm tôi ông nếu già lấy bảnuốm tôi hay cô trò nhập bản e miên hình tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nụ tầm xuân nở ra chào",
-      "r": "đón xuân",
-      "R1": false,
-      "R2": 1,
-      "R3": false
+      "r": "điều tôi bi hay tiết xo cấy toanịch tôiấu nên tuổi lửa tới học nên tôi khổ chiu aoBTB hay cấyếm tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Hoa thơm ong bướm tìm về",
-      "r": "cho chàng bướm hẹn thề cùng hoa",
+      "r": "tôi ngổnếm nên cây ào men phúc tôi mộng dị mộng thông cơn hỏi tôi tôi thuyền cõng rửa cơn ngẩn na hàng tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Người khôn thiên hạ tìm theo",
-      "r": "sau",
+      "r": "tôi tôi quá khui giấc trông trông nồng tôi bạn tôi tôi tôi tôi danh nhạc vẻ tôi chơiưới to ngắn phong nồng giấc tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tốt gỗ hơn là tốt nước",
-      "r": "việt nam sáng ngời rạng rỡ non sông",
+      "r": "tôi tôi bạn niệm niệm nên nên nên bồi tôiẹn tâm truáp quá niệm thủ tôi bạn nế sợi niệm biế hoài thấp tôi",
       "R1": false,
-      "R2": 2,
-      "R3": true
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Xấu người đẹp nết còn hơn",
-      "r": "nhưng còn khoe sắc vẫn hơn quê mình",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "hơn tôi dạ cảnh mộng dị bè quáBTB tôiẹp cây bắc môi thông chăm đổ tôi núi niệm niệm nế đỏ lần núi tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chim không ăn muối chim ươn",
-      "r": "hèn",
+      "r": "tôi thông bi bắcBTB thấp thấp thổi tôi thức cây tào cất sợi đúng tôi tôi xo thà thiếp hơi quên chuông dại tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Con không nghe mẹ con hư",
-      "r": "là con đang sống vô tư trong lòng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi bông bạn bụng tri già thông khóụt tôi bi bayẹp giàụt chong tôi nuôi phận niệmiềmụt mạnễu trầm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cá không ăn muối cá ươn",
-      "r": "không hề nếm mật cho con cháu mình",
+      "r": "tôi giấc vui quá chăm dạ lành thấu vai tôi lần thức tham bi hơi liệ tôi vượt la đổ ngôi hơi khoaiủiấn tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Con cãi cha mẹ trăm đường",
-      "r": "cho nên cha mẹ phải thương mọi người",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôiấu bạniềm dạ môi khách la thiệt tôiại hay thoáng ngơi chămấn tôi laấn la lý thuyền đangủiấn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đói cho sạch rách cho thơm",
-      "r": "nhưng mà da diết còn gì đâu đây",
+      "r": "giấc tôi xơ đúng phúc thiênét võng nên tôi danh niệm đùa nao u màu nó tôi thông hay niệm đềmBTTTTB nghề giấc tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Khôn ngoan đá đáp người ngoài",
-      "r": "vòng",
+      "r": "tôi bay dại sứcếm la aoấu tôi bắc đổuyệtổn vơi gây quá tôi sức bảo nghiêngBTB laiềm hiên tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Thương người như thể thương thân",
-      "r": "sao mình chẳng thể đến gần với nhau",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi thuyền niệm ao đúng môi mớ lụt núi tôi hơn môi vẻ ao cột nghề tôi cách niệmón sợi niệm niệm phận niệm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nhiễu điều phủ lấy giá gương",
-      "r": "vì dịch lây lan khắp biên giới nằm nhà",
+      "r": "tôiấn bay tham sĩiềm phiền đủ tôi trái ấm đùa dành khắp khắp hay tôi nhịp nhịp thiệt đô chắc mị ấm tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Một nắng hai sương mẹ cha",
-      "r": "sớm hôm tần tảo nuôi con tháng ngày",
+      "r": "tôi vui nghề cột cột ngổn bay ngổn bạn tôi mặt thức bay điều mặt bạn tôi lửa nên vượt thông lò bước toơm tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lên non mới biết non cao",
-      "r": "con đường cách mạng ngọt ngào đường xa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi bông bàn thấp trao biế nhiên chăm nên tôi biBTB niệm nhập bi bông tôi hơi ngon niệm thấp cặp vất héo vấn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nuôi con mới biết công lao",
-      "r": "cha đâu có biết mà trao tấm lòng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi bắc quá đúng chăm dưỡng ào quá ích tôi tôi môi môiép hội mươi gây tôiợnợnợn bàn quân bền hơn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nước chảy đá mòn theo năm",
-      "r": "tháng  nhớ về thời chiến trường làng quê ta",
+      "r": "tôi quá niệm niệm niệm màu quá niệm niệm tôi núi màu dốc niệm niệm màu tôi trầu nghề nghề niệm hoan niệm niệm niệm tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gió lên cho biển hóa rồng",
-      "r": "vua ban con đến con rồng cháu tiên",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ao đúng ngổn rạo chăm thùngìu tôi tâm chơi mái trí quáìu tôi tôi niệm phận già chăn sáng niệm niệm tôi",
+      "R1": false,
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sóng to gió lớn mênh mông",
-      "r": "đưa ta về tìm người thương đang chờ",
+      "r": "tôiiệt vui tôiếng to điều sức tin tôi ước giấc điều bay êm xôi tôi chơi cây mặt mật điều xôi má tuổi tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đất phèn mọc trái thơm ngon",
-      "r": "hay cơm tấm áo vẫn còn vẹn nguyên",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôiấn chămấn chăm sứcếm mồi bụng tôi tôiẹp mộng bạn tắt sương khắp tôi nở bồi quáBTB thông nở cây tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Người nghèo biết quý từng đồng",
-      "r": "tiền",
+      "r": "tôi la quá xo xo trí hơi liệ tôiấn chăm họ bi niệm nên ngô tôi dìu góc bay cây mời nở hơi tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Học thầy không tày học bạn",
-      "r": "thầy đồ cô giáo ngày càng hăng say",
+      "r": "tôi dạ gieo điều lũ khó điều đổắn tôi bếnuốn tuổi biế ngắn bộ tôi nhịp vòng khắp dải thao đình nở lớ tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đi một ngày đàng học một",
-      "r": "ngày  đã đến trường xa học thuộc lòng mình",
+      "r": "tôi thuyền dại lâu xo lụt bay tào chuông tôiuyệt cây chăm sức êm u tôi điều hội bay đang chết đổ dạ bạn tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Xa mặt nhưng chẳng cách lòng",
-      "r": "vòng tròn vo một cái nong bong hư không  cứ như được thỏa ước mong đợi chờ",
-      "R1": true,
-      "R2": 4,
-      "R3": false
+      "r": "tôi nên cô rửa tránh chămấn nên nên tôiạiủaấu nên thuyền nên tôiại chào tới chăm dang dang lành chí tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Gần nhau càng thấy nhớ mong",
-      "r": "một bóng một bóng bên song một mình",
-      "R1": true,
-      "R2": 3,
-      "R3": true
+      "r": "tôi to mươi vẻ thấp nên ngổn ngổn ngổn tôi thuyền nên dangấn chăm hơn tôi bạn bạn dàyưới tuổi thuyền men nên tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trăng mờ còn tỏ hơn sao",
-      "r": "người thương người như một người như thế",
+      "r": "tôiuyệt bay tuổi vui ngổn chấp ngổnấu tôi nhưng bến giàạo hằng hằng tôi khó vân vânBBTBTB hài hàiẹn nên tôi",
       "R1": false,
-      "R2": 2,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Dẫu rằng núi lở còn cao",
-      "r": "một vùng đầy rẫy ai nào dám coi",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tâm hỏi niệm niệm niệm nghề ngổn chấp tôi tôi tươi dù sángãyạo rắt tôi nở nhịp bạn biế hè thấp thấp tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Công cha nghĩa mẹ sinh thành",
-      "r": "",
+      "r": "tôi hy chăm đúng lụt niệm niệm đơn niệm tôi danh quá vần nó danh niệm tôi nóộn kẻo thẳm danh niệmấu nên tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Một lòng thờ mẹ kính cha",
-      "r": "nhân ngày phụ nữ trẻ trung của mình",
+      "r": "tôi quá núi khêápBTB món chùm thủy tôi tôi cảnh hỏi tào dự dị chếch tôi đổ điều tào xuyên tất bước bay nhiên nên tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Con người có tổ có tông",
-      "r": "có một tên gọi trong lòng rất vui",
+      "r": "tôi bông bạn hơn giáo niệm niệm thư thấp tôi dù bụng la bến niệm niệm tôi bayấn nhiên đài niệm niệm tiền cổ tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lên non xem núi cao vời",
-      "r": "vợi xanh",
-      "R1": false,
-      "R2": 1,
-      "R3": false
+      "r": "tôi ngổn quáướng lụt chăm dại lụt ngon tôi cây nhào tào tào khói bạn tôi sức ngon niệm chăm sức họ tàoét tôi",
+      "R1": true,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nước non ngàn dặm xa xôi",
-      "r": "người quên sao được nụ cười em trao",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi saiại già già điều điều ao bay tôiétấu niệm cổ núi tuổi tôi du giấcộn sức ao tím điều nồng tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ra đi từ thuở lên ba",
-      "r": "mươi  chiến hào đất nước quê nhà nhớ thương",
+      "r": "niệm tôi quá nên chăm mộng thuyềniềm cô tôi ước chí bay dạ lành chí khát tôi ông niệm niệm lung tiền niệm nế tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Quê hương mỗi lúc một xa",
-      "r": "một vùng biển đảo bao la ngọt ngào",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ngổn phúc ngổn ngổn ly ngổn chấp tôi nên ba sương đậmẩm nghiêngẩm tôi giả xông ngổn tho ngổn ngổn chấp tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bồng bềnh con nước về đâu",
-      "r": "mẹ già thui thủi với nhà bơ vơ",
+      "r": "tôi sai chăm tào tào sợi thấp niệm thủ tôi tôión phận bay hội dạ êm êm tôi quá niệm niệm biếụng mộng tươi tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đò chiều khách vắng sang sông",
-      "r": "",
+      "r": "tôi thấp nên khê niệm la não niệm to tôi già tha vấn vấn bèuốn tôi bông niệm niệm phờ thổi ao aoBTB tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Trời xanh mây trắng lang thang",
-      "r": "bên nhau quấn quýt nồng nàn bên nhau",
+      "r": "tôi niệm ngổn ngổnẫm ngổnẫmắn tôi ngổn phúc ngổn tươi tươi ngổn ngổn tôi chấp bụng ngổn ngổn chấp ngổn chấp tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đường quê lúa chín vàng ươm",
-      "r": "anh về thăm mẹ thăm mẹ con rồi",
+      "r": "tôi thủ chăm niệm sợi niệm thôngấu tham tôi nênấnấn già tuyết sai tôi nênấu nên phong sai kém hoài tươi tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Hương đồng gió nội bay xa",
-      "r": "",
+      "r": "tôi bayạiạiếm niệm niệmTTTTTB bâng tôiấn điều bè mái chịu trầu tôi hayạc xoếng tất bướcấu nên tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ve sầu kêu gọi hè sang",
-      "r": "ve sầu rên rỉ thở than đêm trường",
+      "r": "tôi tôi bay tin phong tri la mật nên tôi bay bạn già ôiềm núi tôi nênấuẹn bạnuốnếm tin cây tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Phượng hồng thắp lửa sân trường",
-      "r": "em không đủ ánh trăng ngà soi chung",
+      "r": "tôi danh lụt chăm giấc nao chàng hơi tôi nhọc nao chămấu thuyền men tôi tôi sợi bồi mờiTTTTBB vượt bồi hơi tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Áo em trắng cả sân trường",
-      "r": "làm cho tà áo vấn vương quê nghèo",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi bụng tham khách nên ngổn vạn món tôi nên mộng chơi chơi chào bay lành tôi mời nên chào bay nở chốn giận tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tóc em dài quá vai thương",
-      "r": "giờ thì một mình đơn côi cả đời",
+      "r": "tôi tôiuyệt nó hy la ngỡ vạn niệm tôi tôiưới toẹpiềm chung dị tôiướng vẻ danh thờ quênTTTTTB bâng tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bàn tay năm ngón nở hoa",
-      "r": "tình nhân còn mãi thiết tha chẳng nhòa",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi aoấu nẻo vui bạn che biế tôi bay nhiên bay sáng phận gà chủ tôi bay cây khúc bay ngẩn câm nên tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đôi chân chim sáo quanh nhà",
-      "r": "líu lo chim hót lời ca vang lừng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi điều nẻo duớm vấn héo đang tôi đổ chung chung cây dị hỏi tươi tôi bayấuọn đào đo bay nên tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Em như cây lúa trổ bông",
-      "r": "bao ngày qua vẫn đứng trông đợi chờ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "ện tôi niệm phờ tri giảng nở thức niệm tôiớm bến hoài trái tiền niệm niệm tôi họấn vẻ trực niệm niệm bay tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Anh như hạt thóc vàng trong",
-      "r": "tay  người ta có khác chứ không chịu vào",
+      "r": "tôi tôi lụt lụt thấp bay nên bayấu tôi chăm aoBTB nên nên nên tôi phúc dị chấp bay thôngúpấuấn tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Xa quê nhớ mẹ nhớ cha",
-      "r": "nhớ cha nhớ mẹ ruột diết da cõi lòng",
+      "r": "tôiỡngạo tươi gà bay trồng sương ngổn tôi tấm ba ước na mộng dị tôiẩm kết giấc cõng nghiêng bạn màu mộng tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nhớ hàng cau trước sân nhà",
-      "r": "gió lay lắt lá rơi sà nhẹ lay",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôiuyệt nên niệm ngổnTTTTTBếm phận tôiưới quay bụng giáo bà trước nhạt tôi đo nên màuẹn quênếm đình tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Giếng làng trong mát tuổi thơ",
-      "r": "tháng năm tắm nắng hong hơ xuân thì",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi lụt chămấn la trùng trông trầu tôi điều bay trầuét nênấu tôi chốn giấc trầu rọi bay nên phong êm tôi",
+      "R1": false,
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cánh diều no gió tuổi thơ",
-      "r": "hoa bằng lăng tím đợi chờ hương quê",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi niệm phận bàn chút sáng chắc trầm tôi chơi môi lấy lấy loàiắn ghen tôi chơi môi thê tươi tươiắnắn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mưa rào tắm mát vườn quê",
-      "r": "để cho quân giặc trở về như lai",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi du động sương sức điều niệm niệm bán tôi sáng ba mặt khói dịch chăm tôi thuyền nghĩa cô đàoBBBB chơi trúc cây tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nắng vàng ươm cả đồng xa",
-      "r": "cùng nhau uống cạn chén trà chung thân",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi nghề nghềộn vui nao đổ điều tôi chơi gia hội vất gái núi lâu tôi ngonòi gieo gái quang lâu yến tôi",
+      "R1": false,
+      "R2": true,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Bếp nhà ai đỏ lửa hồng",
-      "r": "như đã đốt lò thiêu rụi đêm nay",
+      "r": "tôi tôi bay đúng ích bay môiuôi môi tôiẹp cách lợi nghề nghề niệm dờ tôi môi cách vãng môi dường lấy chút tôi",
       "R1": false,
-      "R2": 1,
-      "R3": true
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Khói lam chiều tỏa mênh mông",
-      "r": "mà em giờ còn nhớ không em",
-      "R1": true,
-      "R2": 2,
-      "R3": false
+      "r": "tôi la điều thoáng chăm hội thư nhịp tôi to bay thủy môi trông traoặc tôi thôn niệm niệm não lung quá yến tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đàn trâu về ngõ chiều hôm",
-      "r": "cha yêu thương mẹ thương yêu vô vàn",
+      "r": "tôi phận mồi niệm ích niệm phúc quá ích tôi thông bayTTTTTBếm vấn bộ tôi bến thấp sức hoan thao tròn ao đúng tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tiếng sáo diều vọng triền đê",
-      "r": "mẹ cha quy tụ con về quê hương",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "thấp tôi đùa thiên xông điều mặt ích niệm tôi ao đúng trầu la aoBTB thông tôi quá núi niệm mái thông chắc mị tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đêm trăng soi tỏ vườn nhà",
-      "r": "hương thơm nhè nhẹ làm quà tặng nhau",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi khách sương đổ bay tôi tươi già trói tôi ônguốn hoan tên dành vòng tôi tới thôngếm câyứt quên chống hằng tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Hoa cau rụng trắng thềm xưa",
-      "r": "một cành hồng rụng mấy cành lá khô",
+      "r": "tôi bắcấn hàngiềm vơiạcuyển tôi tôi hay nhẹ tiết tông ruột du già tôiạc saấu nênếm gầy bay tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Thuyền ai lờ lững trên sông",
-      "r": "bên giòng chảy ngược xuôi ngược bềnh bồng lờ trôi",
+      "r": "tôi đúng đúng ao khuaón đúngìu tôi hàng dị chơi dòng nhưng tiền lung tôi niệm dởTTTTTB tặng thông lành lùng tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Câu hò vọng giữa thinh không",
-      "r": "lời yêu đương ở trong lòng thủy chung",
+      "r": "tôi niệm ngổn thấp aoẫm nghề niệm niệm tôi tâm bayộn ngổn nhè đơn tôi sương giấc điều xo trùng bayộn nên tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cây khế chua ngọt sau vườn",
-      "r": "cho đàn chim đậu uyên ương hòa bình",
+      "r": "tôi già thừa ngang chăn phó vòng cay đang tôi tuổiủa môi thể hình chí tôiếpượn đô già khôi chen nghèoắn tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Quả na mở mắt thơm lừng",
-      "r": "cả năm nay đã không ngừng nhớ nha",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ngổnấu nẻo biế thưa khách cây tôi mặtèn thông thông bay êm chòe tôi quênổn du cây nụ nhận khúc tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Lời ru của mẹ ngày xưa",
-      "r": "có ai còn nhớ xuân xưa những ngày",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi chăm lụt lụt chăm nên ngon quá đúng tôi tôiấu cô vượt buôn dành êm tôi dạáp niệm đơnếmổn ước tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Theo con suốt cả chặng đường",
-      "r": "tình quê thắm thiết nhớ thương vô bờ",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi rửauyệt chăm chí tỏ thờ quá tôi tôi giấc phát giấc phát nao ích tôi trông tri giấc nhờ quang khéo quá tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Người đi đâu suốt chiều nay",
-      "r": "nhưng chỉ là một đấng anh hùng binh",
+      "r": "tôi môi nghề sức sức quên chăm chăm tôi môi cây tin xo hay nẻo dùng tôi thông hội quân các sáu mái bạc tôi",
       "R1": false,
-      "R2": 3,
-      "R3": true
+      "R2": true,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Để lòng ai những vơi đầy",
-      "r": "tình ai còn sống ở đời liệu toan",
+      "r": "tôi tôi sợi bắc già khoai má chí dại tôi thủ vui quá hay giấciệm võng tôi chơi gia chơi chàng định bộ bay tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đường trần ai biết được đâu",
-      "r": "cho ai ai cũng nhìn lâu mới tài",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi cột cột niệm quá niệm chăm nên tôi quá niệm vèo rạoưới to tôi tôi chơiủa tươi chàng to toưới tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ngày mai sương gió dãi dầu",
-      "r": "để giờ nhớ bóng người xưa một thời",
+      "r": "tôi lụt íchấn chăm họ kỉ điều tôi tha chăm réo chăm thoáng giấc điều tôi chào phúc nênấn chốn giậnBBBB tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Thương ai con mắt lim dim",
-      "r": "đêm đêm anh có ngày tìm tới em",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ngổn ngổn ngổn ngổn ngổn ngổn ngổn bụng tôi chấp ngổn vô ngổn ngổn chấp tôi ngổn ngổn ngổn xông ngổn ngổn ngổn ngổn tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Nhớ ai nước mắt đầm đìa",
-      "r": "phải qua sông vắng thuyền về bến mơ",
+      "r": "tôi vui tôiấn khui ngổn ước nghề tôi tôi tôi nghề giấc tôi màu dốc duy tôi tôi phúc giấc má vơiuyệtiểnấn tôi",
       "R1": false,
-      "R2": 4,
-      "R3": true
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mưa nguồn chớp bể ào ào",
-      "r": "một ngày sao vẫn lao đao lạ lùng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi niệm phận tônếm sợi hình dự ao tôiẹp la bếnắnắn dự tôi tri sáng bến phờ thông dự chuyên thỉ tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Thương em anh biết làm sao",
-      "r": "thương em thương cả ngọt ngào tình nhân",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi già ngổn chấp giàn chen niệmấu dù tôi quá bến bàn ngổn ngùi chạm tôi nên thừa lạnh lạnh cột sai cấy lễ tôi",
+      "R1": false,
+      "R2": true,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ví dầu cầu ván đóng đinh",
-      "r": "ta đây không lụy cuộc tình đã qua",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi dốc dốc lụt lụt vần nẻo hay tôi nênẹnBTBTTBẹn đang thuyền tôi tôi men nàn aoấn dự hoài hay tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Cầu tre lắc lẻo gập ghềnh",
-      "r": "một phen vượt ẩu vượt ghềnh vượt qua",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ướcấn niệm thấp thấpBTB na gò tôiụngèn mộng tươi nhạt dã tôi giàạo tuổi dù dõi phánếm động tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Qua sông phải lụy đò ngang",
-      "r": "cho dòng sông đuống mênh mang nỗi niềm",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "sai tôi bắc niệm niệm bi niệm phận cuội tôiẹpớm biế gỡ tri khó thông tôiếm cấy núi kém ấm chọnớm tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Qua suối phải lụy cầu tre",
-      "r": "để nay gặp được bạn bè thân thương",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi dạ bay vấn àoBTB bắc thông bay tôiẹp cây bay la aoBTB tôi nên sương bảy thể bớt đang cay thuyền tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Đồng bằng ruộng lúa mênh mông",
-      "r": "lúa thì con gái lúa bông hạt vàng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi họ quá lụt chăm chăm la trí bay tôi thủ già thủ thấp thủ nhiệm tôiụciềm bắciềmụtụt hoài trái tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Biển đông sóng vỗ rì rào",
-      "r": "em về đi ngủ đi nào cho nhanh",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi quá nẻo gầy ngổn bạc ngẫn động lực tôiấnộnưu nhè lực đình tôi nên càng nên ngổn ngổn hàng giả đắng tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Non cao ai đắp mà cao",
-      "r": "vời vợi  yêu em yêu mãi thế nào anh ơi",
+      "r": "tôi tôi bay tham niệm bi lâu thứcấn tôi tiềnấn biế nên sáng chăm vẻ tôi quá núiấn hon trang trầm hình tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Sông sâu ai bới ai đào",
-      "r": "sông sâu biển mặn lòng ta",
+      "r": "tôi sợi sợi niệm niệm aoBTB thấp tào tôi nở chốn tuổi bay bayấn tôi mộngụng hàng dành hoài phố ao bạn tôi",
       "R1": false,
-      "R2": 3,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": true,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Khi vui cũng vậy khi buồn",
-      "r": "",
+      "r": "tôi thuyền dại điều điều giấc thông đơn danh tôiại thôngếm tặng quá thông êm tôi chăm chăm chăm nên thông tao êm tôi",
       "R1": false,
-      "R2": 0,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Ở hiền thì lại gặp lành",
-      "r": "yêu thơ yêu cả trời xanh với trò",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi vui tôi niệmại naoại số bướm tôi cô cảnh phận môi phậnềm tôi đo thuyềnuyệt cây giấc góp gây giấc tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Chị em như chuối nhiều tàu",
-      "r": "hai quả là đà nẵng mà thôi bớt cay",
+      "r": "tôi rửa sức lụt sức quá đúng thông tôi ước cây chủ vơi ước nên võng tôi bayấu bay nao quên lành chịu tôi",
       "R1": false,
-      "R2": 1,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tấm lành che tấm rách đừng",
-      "r": "cả dân tộc cũng không ngừng diễn ra",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ngổn hàng cậy hơn tươiớm bạn nghẹn tôiại phận phúc niệm bè bạc tôi hay phận phận dày gầy gieoướiướng tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Rừng vàng biển bạc quê ta",
-      "r": "mà sao ta lại là ta là mình",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi nghề nghề tươiiềm niệm íchạo tôi điều bay laiềm điều sáng tôi tâm chí tươi tài ghiét ngon gieo tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Không gì bằng cơm với cà",
-      "r": "ăn xong rồi lại thêm quà bà yêu",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi đùa môi đôépưỡi niệm chơi tôi thấp to hoan thà phố hơi thà tôi già tươi dù u máu nghèo mùi tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Có chí thì nên có công",
-      "r": "ấy là  nếu ai muốn có việc làm gì không",
+      "r": "tôi chí niệm đùa màu môi kháchTTTTTB đơn tôi mộngụng hàng mộng chơiượn tôiẹp to môi phép môi bay thưưới tôi",
       "R1": false,
-      "R2": 2,
-      "R3": false
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Mài sắt nên kim bạn ơi",
-      "r": "đã ghi dấu ấn của tôi không nào",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi ao đúng hy chăm chăm dốc chơi ích tôi già đổ phậnBTTTTB ngư sử tôi phúc đỏ đổ câyBTTTTB thôngBTTBBB nà tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Tay làm hàm nhai tay quai",
-      "r": "anh còn đi mãi chưa phai trong lòng",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi tôi chăm sức chăm lụt sợi niệm chăm tôi tôi tôi lụt quen nga quáấn bay tôi tôi vượt sức quá tham mời tin hay tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     },
     {
       "p": "Miệng ăn núi lở ai ơi",
-      "r": "ai lên phố thị tìm người tìm mua",
-      "R1": true,
-      "R2": 4,
-      "R3": true
+      "r": "tôi to niệm ích íchiềm dựớm nghề tôi tôiạo kẻ chậpẹn bạn tắt tôiẹnủa nởẹn hoan thấp hoan tặng tôi",
+      "R1": false,
+      "R2": false,
+      "R3": false,
+      "R4": false,
+      "R5": false,
+      "all_5": false
     }
   ]
 }

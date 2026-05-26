@@ -3,11 +3,13 @@ Train a BPE tokenizer on Vietnamese poetry corpus.
 Saves tokenizer/poetry_bpe.model (~11K vocab).
 
 Special tokens (indices must stay fixed):
-  0-7:   Core (<|pad|>, <|start|>, <|reply|>, <|end|>, genre tags)
-  8-148: Rhyme groups     [RHYME:a] ... [RHYME:...]   (141 tokens)
-  149-212: Tone patterns   [TONE:BBBBBB] ... [TONE:TTTTTT]   (64 tokens)
-  213-340: Đối âm patterns [DOIAM:BBBBBBB] ... [DOIAM:TTTTTTT] (128 tokens)
-  341-342: Link2           [LINK2:B], [LINK2:T]   (2 tokens)
+  0-9:     Core (<|pad|>, <|start|>, <|reply|>, <|end|>, [LUC_BAT],
+                [TU_TUYET], [THAT_NGON_BAT_CU], [THAT_NGON], [DOI_THO], <|linebreak|>)
+  10-...:  Rhyme groups     [RHYME:a] ... [RHYME:...]
+  ...-...: Tone patterns    [TONE:BBBBBB] ... [TONE:TTTTTT]
+  ...-...: Đối âm patterns  [DOIAM:BBBBBBB] ... [DOIAM:TTTTTTT]
+  ...-...: Link2            [LINK2:B], [LINK2:T]
+  ...-...: Trầm-Bổng        [TRAMBONG:NH], [TRAMBONG:HN]  (v4.1)
 """
 
 import argparse, re
@@ -94,9 +96,12 @@ def build_special_tokens(corpus_path):
     # Link2
     link_tokens = ["[LINK2:B]", "[LINK2:T]"]
     
-    all_tokens = core + rhyme_tokens + tone_tokens + doi_am_tokens + link_tokens
+    # Trầm-Bổng (v4.1 — from luc_bat.md §4)
+    trambong_tokens = ["[TRAMBONG:NH]", "[TRAMBONG:HN]"]
+    
+    all_tokens = core + rhyme_tokens + tone_tokens + doi_am_tokens + link_tokens + trambong_tokens
     print(f"Core: {len(core)} | Rhyme: {len(rhyme_tokens)} | Tone: {len(tone_tokens)}")
-    print(f"Đối âm: {len(doi_am_tokens)} | Link2: {len(link_tokens)}")
+    print(f"Đối âm: {len(doi_am_tokens)} | Link2: {len(link_tokens)} | Trầm-Bổng: {len(trambong_tokens)}")
     print(f"Total special tokens: {len(all_tokens)}")
     
     return all_tokens
@@ -137,7 +142,7 @@ def train(corpus=None, output_dir=None, vocab_size=12000):
     # Key checks
     key_tokens = ["<|pad|>", "<|start|>", "<|reply|>", "<|end|>",
                   "[LUC_BAT]", "[THAT_NGON]", "[DOI_THO]", "<|linebreak|>",
-                  "[RHYME:ong]", "[TONE:BBBTTB]", "[DOIAM:BBBBBBB]", "[LINK2:B]"]
+                  "[RHYME:ong]", "[TONE:BBBTTB]", "[TRAMBONG:NH]", "[TRAMBONG:HN]"]
     print(f"\nVerification:")
     for t in key_tokens:
         tid = tok.token_to_id(t)

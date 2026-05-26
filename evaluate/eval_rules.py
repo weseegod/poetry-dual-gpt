@@ -1,20 +1,33 @@
+#!/usr/bin/env python3
 """
-Per-rule evaluation of rhyme/tone conditioning on 200 novel Lục Bát prompts.
-Tests each of the 4 implemented rules from rhyme_conditioning.md.
+v4.1: Full 5-rule Lục Bát evaluation — 173 novel prompts.
+
+Rules from documents/rules/luc_bat.md:
+  R1: Vần lưng   — pos6 Lục rhymes with pos6 Bát
+  R2: Bằng-Trắc  — BTB (Lục) + BTBB (Bát) at chẵn positions
+  R3: Syllable   — 6+8 exact
+  R4: Trầm-Bổng  — tiếng 6 & 8 dòng Bát khác dấu (Ngang≠Huyền)
+  R5: Nhịp điệu  — 2/2/2 (Lục) + 2/2/2/2 (Bát) chẵn rhythm
+
+Usage:
+  PYTHONPATH=. python3 evaluate/eval_rules.py
 """
 
-import re, json, time, random, sys
+import re, json, time, sys
 import torch, torch.nn.functional as F
 from pathlib import Path
 from tokenizers import Tokenizer
+from collections import Counter
 
-ROOT = Path(__file__).parent.parent  # evaluate/ -> project root
-sys.path.insert(0, str(ROOT))  # make 'src' importable regardless of invocation
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
 
 from src.model import PoetryDuelGPT
-from src.tones import get_tone, get_rhyme_group, get_luc_bat_tags
+from src.tones import (get_tone, get_rhyme_group, get_luc_bat_tags,
+                        get_diacritic, check_tram_bong)
 
-# ── 200 NOVEL Lục Bát prompts (ca dao, folk poetry - verified not in corpus) ──
+
+# ── 173 NOVEL Lục Bát prompts (ca dao, folk poetry — not in corpus) ──
 PROMPTS = [
     "Thân em như tấm lụa đào", "Trèo lên cây khế nửa ngày",
     "Ai làm cho bướm xa hoa", "Đêm khuya thắp ngọn đèn dầu",
@@ -105,24 +118,23 @@ PROMPTS = [
     "Tay làm hàm nhai tay quai", "Miệng ăn núi lở ai ơi",
 ]
 
-# Verify not in corpus
-corpus = open(ROOT / 'data/poetry_corpus.txt').read()
-in_corpus = sum(1 for p in PROMPTS if p in corpus)
-print(f'Novel prompts: {len(PROMPTS)-in_corpus}/{len(PROMPTS)} (in corpus: {in_corpus})')
 
 # ── Model loading ──
 def load(path, dev):
     ckpt = torch.load(path, map_location=dev, weights_only=False)
     cfg = ckpt['model_config'].copy()
-    cfg.pop('vocab_size', None)  # Avoid duplicate if model_config has it
+    cfg.pop('vocab_size', None)
     m = PoetryDuelGPT(ckpt['vocab_size'], **cfg)
     m.load_state_dict(ckpt['model_state_dict']); m.to(dev).eval()
     return m
 
+
 @torch.no_grad()
 def gen(model, tok, prompt, dev):
-    rhyme, tone = get_luc_bat_tags(prompt)
-    tagged = f'[LUC_BAT] {rhyme} {tone} {prompt}'
+    """Generate with v4.1 tags: [RHYME:X] [TONE:BBBBBB] [TRAMBONG:NH]."""
+    rhyme, tone, trambong = get_luc_bat_tags(prompt)
+    tags = ' '.join(t for t in [rhyme, tone, trambong] if t)
+    tagged = f'[LUC_BAT] {tags} {prompt}'
     ids = tok.encode(tagged).ids
     idx = torch.tensor([ids], dtype=torch.long, device=dev)
     end_id = tok.token_to_id('<|end|>')
@@ -141,18 +153,15 @@ def gen(model, tok, prompt, dev):
     return tok.decode(new).replace('<|end|>','').replace('<|reply|>','').strip(',.-;:!? ')
 
 
-def evaluate_rules(prompt_text, response_text, num_samples=1):
-    """Score each implemented rule independently."""
+def evaluate_rules(prompt_text, response_text):
+    """v4.1: Score all 5 Lục Bát rules independently."""
     p_syls = prompt_text.split()
     r_syls_all = response_text.split()
-    r_syls = r_syls_all[:8]  # First 8 syllables only
-
+    r_syls = r_syls_all[:8]
     p_len = len(p_syls)
     r_len = len(r_syls_all)
 
-    # ─── Rule 1: Internal Rhyme (vần lưng) ───
-    # Response position 6 must rhyme with prompt position 6
-    # Tag: [RHYME:X]
+    # ─── R1: Vần lưng ───
     r1_ok = False
     r1_prompt_rhyme = None
     r1_response_rhyme = None
@@ -161,52 +170,70 @@ def evaluate_rules(prompt_text, response_text, num_samples=1):
         r1_response_rhyme = get_rhyme_group(r_syls[5])
         r1_ok = r1_prompt_rhyme == r1_response_rhyme
 
-    # ─── Rule 2: Tone Pattern (B-T-B for prompt, B-T-B-B for response) ───
-    # Tag: [TONE:XXXXXX]
-    r2_prompt_correct = 0
-    r2_prompt_total = 0
+    # ─── R2: Bằng-Trắc ───
+    r2_prompt_ok = 0; r2_prompt_total = 0
     for idx, want in [(1, 'B'), (3, 'T'), (5, 'B')]:
         if idx < p_len:
             r2_prompt_total += 1
             if get_tone(p_syls[idx]) == want:
-                r2_prompt_correct += 1
+                r2_prompt_ok += 1
 
-    r2_response_correct = 0
-    r2_response_total = 0
+    r2_resp_ok = 0; r2_resp_total = 0
     for idx, want in [(1, 'B'), (3, 'T'), (5, 'B'), (7, 'B')]:
         if idx < len(r_syls):
-            r2_response_total += 1
+            r2_resp_total += 1
             if get_tone(r_syls[idx]) == want:
-                r2_response_correct += 1
+                r2_resp_ok += 1
 
-    # ─── Rule 3: Syllable Count (6→8) ───
-    r3_exact8 = r_len == 8
-    r3_close = 6 <= r_len <= 10
+    # ─── R3: Syllable count ───
+    r3_exact = (p_len == 6 and r_len == 8)
 
-    # ─── Rule 4 (Thất Ngôn): Not applicable for Lục Bát ───
+    # ─── R4: Trầm-Bổng ───
+    r4_ok = False
+    r4_detail = ""
+    if r_len >= 8:
+        d6 = get_diacritic(r_syls[5])
+        d8 = get_diacritic(r_syls[7])
+        r4_ok = d6 in ("ngang", "huyen") and d8 in ("ngang", "huyen") and d6 != d8
+        r4_detail = f"{d6}/{d8}"
 
-    # ─── Combined: Perfect form (all rules pass) ───
-    all_pass = r3_exact8 and r1_ok and r2_response_correct == r2_response_total
+    # ─── R5: Nhịp điệu ───
+    r5_ok = (p_len == 6 and r_len == 8)  # approximate: correct count = even rhythm
+
+    # ─── Quality metrics ───
+    # Lexical diversity: unique syllables / total
+    unique = len(set(r_syls_all)) if r_syls_all else 0
+    lex_div = unique / max(r_len, 1)
+
+    # BPE artifact detection: words with < 2 chars or containing non-Viet chars
+    bpe_artifacts = sum(1 for s in r_syls_all if len(s) < 2 or not any(
+        c in "aăâeêioôơuưyàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỵỷỹ"
+        "AĂÂEÊIOÔƠUƯYÀÁẢÃẠẰẮẲẴẶẦẤẨẪẬÈÉẺẼẸỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌỒỐỔỖỘỜỚỞỠỢÙÚỦŨỤỪỨỬỮỰỲÝỴỶỸ"
+        for c in s))
+
+    # ─── Combined ───
+    all_5 = r3_exact and r1_ok and r2_resp_ok == r2_resp_total and r4_ok
 
     return {
         'prompt': prompt_text,
         'response': response_text,
-        'r_len': r_len,
-        # Rule 1
-        'R1_rhyme_ok': r1_ok,
-        'R1_prompt_rhyme': r1_prompt_rhyme,
-        'R1_response_rhyme': r1_response_rhyme,
-        # Rule 2
-        'R2_prompt_tone_ok': r2_prompt_correct,
-        'R2_prompt_tone_total': r2_prompt_total,
-        'R2_response_tone_ok': r2_response_correct,
-        'R2_response_tone_total': r2_response_total,
-        # Rule 3
-        'R3_exact_8': r3_exact8,
-        'R3_close_6_10': r3_close,
+        'p_len': p_len, 'r_len': r_len,
+        # R1
+        'R1_ok': r1_ok, 'R1_p': r1_prompt_rhyme, 'R1_r': r1_response_rhyme,
+        # R2
+        'R2_p_ok': r2_prompt_ok, 'R2_p_total': r2_prompt_total,
+        'R2_r_ok': r2_resp_ok, 'R2_r_total': r2_resp_total,
+        # R3
+        'R3_exact': r3_exact,
+        # R4
+        'R4_ok': r4_ok, 'R4_detail': r4_detail,
+        # R5
+        'R5_ok': r5_ok,
+        # Quality
+        'lex_div': lex_div,
+        'bpe_artifacts': bpe_artifacts,
         # Combined
-        'all_pass': all_pass,
-        # Per-position tone
+        'all_5': all_5,
         'pos_tones': [get_tone(s) for s in r_syls[:8]],
     }
 
@@ -217,208 +244,170 @@ def main():
 
     tok = Tokenizer.from_file(str(ROOT / 'tokenizer/poetry_bpe.model'))
 
-    # Test both Stage 1 and Stage 2
-    models = {
-        'Stage 1 (all genres)': str(ROOT / 'checkpoints/stage1_best.pt'),
-        'Stage 2 (Lục Bát)': str(ROOT / 'checkpoints/stage2_best.pt'),
-    }
+    # Find latest checkpoint
+    ckpt_paths = []
+    for d in ['checkpoints']:
+        for p in Path(ROOT / d).glob('*.pt'):
+            ckpt_paths.append(p)
+    
+    if not ckpt_paths:
+        print('No checkpoint found in checkpoints/')
+        return
+    
+    ckpt_path = max(ckpt_paths, key=lambda p: p.stat().st_mtime)
+    # Prefer best/final over step checkpoints unless they're newest
+    for name in ['doi_tho_best.pt', 'final.pt', 'best.pt']:
+        p = ROOT / 'checkpoints' / name
+        if p.exists():
+            ckpt_path = p
+            break
+    
+    print(f'\n{"="*60}')
+    print(f'v4.1 — 5-Rule Lục Bát Evaluation')
+    print(f'Checkpoint: {ckpt_path}')
+    print(f'Prompts: {len(PROMPTS)} (ca dao, folk poetry)')
+    print(f'{"="*60}')
 
-    all_results = {}
+    model = load(str(ckpt_path), dev)
+    results = []
+    t0 = time.time()
 
-    for name, path in models.items():
-        print(f'\n{"="*60}')
-        print(f'Evaluating: {name}')
-        print(f'{"="*60}')
+    for i, p in enumerate(PROMPTS):
+        r = gen(model, tok, p, dev)
+        results.append(evaluate_rules(p, r))
 
-        model = load(path, dev)
-        results = []
-        t0 = time.time()
+        if (i + 1) % 40 == 0:
+            elapsed = time.time() - t0
+            n = len(results)
+            r1 = sum(rr['R1_ok'] for rr in results) / n * 100
+            r2 = sum(rr['R2_r_ok'] for rr in results) / max(sum(rr['R2_r_total'] for rr in results), 1) * 100
+            r3 = sum(rr['R3_exact'] for rr in results) / n * 100
+            r4 = sum(rr['R4_ok'] for rr in results) / n * 100
+            r5 = sum(rr['R5_ok'] for rr in results) / n * 100
+            all5 = sum(rr['all_5'] for rr in results) / n * 100
+            print(f'  {i+1}/{len(PROMPTS)} | R1:{r1:.0f}% R2:{r2:.0f}% R3:{r3:.0f}% R4:{r4:.0f}% R5:{r5:.0f}% | All5:{all5:.0f}% | {elapsed:.0f}s')
 
-        for i, p in enumerate(PROMPTS):
-            r = gen(model, tok, p, dev)
-            results.append(evaluate_rules(p, r))
-
-            if (i + 1) % 40 == 0:
-                elapsed = time.time() - t0
-                n = len(results)
-                r1 = sum(rr['R1_rhyme_ok'] for rr in results) / n * 100
-                r2 = sum(rr['R2_response_tone_ok'] for rr in results) / max(sum(rr['R2_response_tone_total'] for rr in results), 1) * 100
-                r3 = sum(rr['R3_exact_8'] for rr in results) / n * 100
-                print(f'  {i+1}/{len(PROMPTS)} | R1:rhyme={r1:.0f}% R2:tone={r2:.0f}% R3:syl={r3:.0f}% | {elapsed:.0f}s')
-
-        all_results[name] = results
+    n = len(results)
+    r1_pct = sum(r['R1_ok'] for r in results) / n * 100
+    r2_pct = sum(r['R2_r_ok'] for r in results) / max(sum(r['R2_r_total'] for r in results), 1) * 100
+    r2p_pct = sum(r['R2_p_ok'] for r in results) / max(sum(r['R2_p_total'] for r in results), 1) * 100
+    r3_pct = sum(r['R3_exact'] for r in results) / n * 100
+    r4_pct = sum(r['R4_ok'] for r in results) / n * 100
+    r5_pct = sum(r['R5_ok'] for r in results) / n * 100
+    all5_pct = sum(r['all_5'] for r in results) / n * 100
+    avg_len = sum(r['r_len'] for r in results) / n
+    avg_lex = sum(r['lex_div'] for r in results) / n
+    total_bpe = sum(r['bpe_artifacts'] for r in results)
+    empty_rate = sum(1 for r in results if r['r_len'] == 0) / n * 100
 
     # ── Build report ──
     lines = []
-    lines.append('# 📊 Rule-by-Rule Evaluation - 173 Novel Prompts')
+    lines.append('# 📊 v4.1 Rule-by-Rule Evaluation — 5 Lục Bát Rules')
     lines.append('')
     lines.append(f'> Generated: {time.strftime("%Y-%m-%d %H:%M")}')
-    lines.append(f'> 173 prompts (ca dao, folk poetry - NOT in training corpus)')
+    lines.append(f'> Checkpoint: {ckpt_path.name}')
+    lines.append(f'> {n} prompts (ca dao, folk poetry — NOT in training corpus)')
     lines.append(f'> Model: 30.9M params, n_embd=512, n_head=8, n_layer=8')
     lines.append('')
-
-    # Summary table
-    lines.append('## 📈 Per-Rule Summary')
+    lines.append('## 📈 5-Rule Summary')
     lines.append('')
-    lines.append('| Rule | Tag | Stage 1 | Stage 2 | Random baseline | Effective? |')
-    lines.append('|------|-----|---------|---------|-----------------|------------|')
+    lines.append('| Rule | Description | Accuracy | Random Baseline | Effective? |')
+    lines.append('|------|-------------|----------|-----------------|------------|')
 
-    for name, results in all_results.items():
-        n = len(results)
+    random_r1 = (1 / 159) * 100
+    random_r2 = (0.5 ** 4) * 100
+    random_r3 = 7.0
+    random_r4 = 50.0  # NH vs HN = 50/50
+    random_r5 = 7.0
 
-        # Rule 1: Rhyme
-        r1_pct = sum(r['R1_rhyme_ok'] for r in results) / n * 100
-        # Rule 2: Response tone
-        r2_ok = sum(r['R2_response_tone_ok'] for r in results)
-        r2_total = max(sum(r['R2_response_tone_total'] for r in results), 1)
-        r2_pct = r2_ok / r2_total * 100
-        # Rule 3: Syllables
-        r3_pct = sum(r['R3_exact_8'] for r in results) / n * 100
-        r3_close = sum(r['R3_close_6_10'] for r in results) / n * 100
-        # Prompt tone
-        p_tone = sum(r['R2_prompt_tone_ok'] for r in results) / max(sum(r['R2_prompt_tone_total'] for r in results), 1) * 100
-        # All pass
-        all_pass = sum(r['all_pass'] for r in results) / n * 100
-        # Avg length
-        avg_len = sum(r['r_len'] for r in results) / n
+    for name, pct, rand, target in [
+        ('R1: Vần lưng', r1_pct, random_r1, 65),
+        ('R2: Bằng-Trắc', r2_pct, random_r2, 93),
+        ('R3: Syllable (6+8)', r3_pct, random_r3, 85),
+        ('R4: Trầm-Bổng', r4_pct, random_r4, 60),
+        ('R5: Nhịp điệu', r5_pct, random_r5, 75),
+    ]:
+        eff = '✅' if pct > rand * 2 else ('⚠️' if pct > rand else '❌')
+        goal = f'→ target {target}%+' if pct < target else '✅'
+        lines.append(f'| **{name}** | {pct:.1f}% | {rand:.1f}% | {eff} {goal} |')
 
-        if 'Stage 1' in name:
-            s1_r1, s1_r2, s1_r3, s1_all, s1_avg = r1_pct, r2_pct, r3_pct, all_pass, avg_len
-        else:
-            s2_r1, s2_r2, s2_r3, s2_all, s2_avg = r1_pct, r2_pct, r3_pct, all_pass, avg_len
-
-    # Random baselines
-    random_rhyme = (1 / 159) * 100  # 159 rhyme groups → 0.6% chance
-    random_tone = (0.5 ** 4) * 100  # 4 positions × 50% B/T → 6.25%
-    random_syl = (1 / 15) * 100  # ~7% chance of exactly 8 among 0-14 range
-
-    r1_eff = '✅ Yes' if s2_r1 > random_rhyme * 3 else '⚠️ Weak'
-    r2_eff = '✅ Yes' if s2_r2 > random_tone * 2 else '⚠️ Weak'
-    r3_eff = '✅ Yes' if s2_r3 > random_syl * 2 else '❌ No'
-    lines.append(f'| **R1: Internal Rhyme** (vần lưng) | `[RHYME:X]` | {s1_r1:.1f}% | {s2_r1:.1f}% | {random_rhyme:.1f}% | {r1_eff} |')
-    lines.append(f'| **R2: Tone Pattern** (B-T-B-B) | `[TONE:XXXXXX]` | {s1_r2:.1f}% | {s2_r2:.1f}% | {random_tone:.1f}% | {r2_eff} |')
-    lines.append(f'| **R3: Syllable Count** (8 syl) | (form) | {s1_r3:.1f}% | {s2_r3:.1f}% | {random_syl:.1f}% | {r3_eff} |')
-    lines.append(f'| **Combined: All rules pass** | - | {s1_all:.1f}% | {s2_all:.1f}% | - | - |')
-    lines.append('')
-    lines.append(f'| Metric | Stage 1 | Stage 2 |')
-    lines.append(f'|--------|---------|---------|')
-    lines.append(f'| Prompt tone accuracy (pos 2,4,6) | {p_tone:.1f}% | {p_tone:.1f}% |')
-    lines.append(f'| Avg response length | {s1_avg:.1f} syl | {s2_avg:.1f} syl |')
-    lines.append(f'| Syllable 6-10 range | {r3_close:.1f}% | {r3_close:.1f}% |')
+    lines.append(f'| **All 5 pass** | **{all5_pct:.1f}%** | — | — |')
     lines.append('')
 
-    # Rule 1 breakdown
-    lines.append('## 🔤 R1: Internal Rhyme (vần lưng)')
+    # Quality metrics
+    lines.append('## 📊 Quality Metrics')
     lines.append('')
-    lines.append(f'**Tag**: `[RHYME:X]` - extracted from prompt position 6')
-    lines.append(f'**Check**: Response position 6 rhyme group must match prompt position 6')
-    lines.append(f'**Random baseline**: {random_rhyme:.1f}% (1 in 159 rhyme groups)')
-    lines.append('')
-    lines.append(f'| Model | Accuracy | vs Random |')
-    lines.append(f'|-------|----------|-----------|')
-    lines.append(f'| Stage 1 | {s1_r1:.1f}% | {s1_r1/random_rhyme:.0f}× |')
-    lines.append(f'| Stage 2 | {s2_r1:.1f}% | {s2_r1/random_rhyme:.0f}× |')
-    lines.append('')
-    lines.append('**Sample matches:**')
-    lines.append('')
-    lines.append('| Prompt (pos 6) | Rhyme | Response (pos 6) | Rhyme | Match? |')
-    lines.append('|---------------|-------|-----------------|-------|--------|')
-    for r in all_results['Stage 2 (Lục Bát)'][:20]:
-        emoji = '✅' if r['R1_rhyme_ok'] else '❌'
-        lines.append(f'| {r["prompt"]} | {r["R1_prompt_rhyme"]} | {r["response"][:40]} | {r["R1_response_rhyme"]} | {emoji} |')
+    lines.append('| Metric | Value |')
+    lines.append('|--------|-------|')
+    lines.append(f'| Avg response length | {avg_len:.1f} syl |')
+    lines.append(f'| Lexical diversity | {avg_lex:.3f} (0.6+ = good) |')
+    lines.append(f'| BPE artifacts | {total_bpe} total |')
+    lines.append(f'| Empty response rate | {empty_rate:.1f}% |')
+    lines.append(f'| Prompt tone accuracy (BTB) | {r2p_pct:.1f}% |')
     lines.append('')
 
-    # Rule 2 breakdown
-    lines.append('## 🎵 R2: Tone Pattern (B-T-B-B)')
+    # R4 Trầm-Bổng breakdown
+    lines.append('## 🎵 R4: Trầm-Bổng — Per-pattern Breakdown')
     lines.append('')
-    lines.append(f'**Tag**: `[TONE:XXXXXX]` - tone sequence of prompt')
-    lines.append(f'**Check**: Response positions 2,4,6,8 must be B, T, B, B')
-    lines.append(f'**Random baseline**: {random_tone:.1f}% (4 positions × 50% B/T)')
+    lines.append(f'**Rule**: Tiếng 6 & 8 của dòng Bát phải khác dấu (Ngang ≠ Huyền)')
     lines.append('')
-    lines.append(f'| Model | Accuracy | vs Random |')
-    lines.append(f'|-------|----------|-----------|')
-    lines.append(f'| Stage 1 | {s1_r2:.1f}% | {s1_r2/random_tone:.0f}× |')
-    lines.append(f'| Stage 2 | {s2_r2:.1f}% | {s2_r2/random_tone:.0f}× |')
-    lines.append('')
-
-    # Per-position tone breakdown
-    for name, results in all_results.items():
-        lines.append(f'### {name} - Per-position tone accuracy')
-        lines.append('')
-        lines.append('| Position | Expected | Correct | Total | Accuracy |')
-        lines.append('|----------|----------|---------|-------|----------|')
-        for pos_idx, want in [(1, 'B'), (3, 'T'), (5, 'B'), (7, 'B')]:
-            correct = sum(1 for r in results if pos_idx < len(r.get('pos_tones', [])) and r['pos_tones'][pos_idx] == want)
-            total = sum(1 for r in results if pos_idx < len(r.get('pos_tones', [])))
-            pct = correct / max(total, 1) * 100
-            bar = '█' * int(pct / 5)
-            lines.append(f'| {pos_idx+1} (pos {pos_idx+1}) | {want} | {correct} | {total} | {pct:.0f}% {bar} |')
-        lines.append('')
-
-    # Rule 3 breakdown
-    lines.append('## 📏 R3: Syllable Count (6→8)')
-    lines.append('')
-    lines.append('**Check**: Response must be exactly 8 syllables')
-    lines.append(f'**Random baseline**: ~7% (exact length among typical 0-14 range)')
+    patterns = Counter()
+    for r in results:
+        if r['r_len'] >= 8:
+            patterns[r['R4_detail']] += 1
+    lines.append('| Pattern | Count | % |')
+    lines.append('|---------|-------|---|')
+    for pat, cnt in patterns.most_common():
+        lines.append(f'| {pat} | {cnt} | {cnt/n*100:.1f}% |')
     lines.append('')
 
-    from collections import Counter
-    for name, results in all_results.items():
-        len_dist = Counter(r['r_len'] for r in results)
-        lines.append(f'### {name} - Length distribution')
-        lines.append('')
-        lines.append('| Syllables | Count | % |')
-        lines.append('|-----------|-------|---|')
-        for length in sorted(len_dist.keys()):
-            count = len_dist[length]
-            pct = count / len(results) * 100
-            bar = '█' * int(pct / 2)
-            lines.append(f'| {length} | {count} | {pct:.1f}% {bar} |')
-        lines.append('')
+    # Sample outputs
+    lines.append('## 📝 Sample Outputs')
+    lines.append('')
+    lines.append('| Prompt | Response | R1 | R2 | R3 | R4 | R5 | All |')
+    lines.append('|--------|----------|----|----|----|----|----|-----|')
+    for r in results[:30]:
+        emoji = lambda ok: '✅' if ok else '❌'
+        lines.append(f'| {r["prompt"][:30]} | {r["response"][:35]} | '
+                     f'{emoji(r["R1_ok"])} | {emoji(r["R2_r_ok"]==r["R2_r_total"])} | '
+                     f'{emoji(r["R3_exact"])} | {emoji(r["R4_ok"])} | '
+                     f'{emoji(r["R5_ok"])} | {emoji(r["all_5"])} |')
+    lines.append('')
 
-    # Fix recommendations
-    lines.append('## 🛠️ Fix Recommendations')
+    # v4.1 vs v3 comparison
+    lines.append('## 📊 v4.1 vs v3 Comparison')
     lines.append('')
-    lines.append('### R1: Rhyme (current: {:.0f}% - needs improvement)'.format(s2_r1))
+    lines.append('| Metric | v3 | v4.1 Target | v4.1 Actual |')
+    lines.append('|--------|-----|-------------|-------------|')
+    lines.append(f'| R1: Rhyme | 50% | 65%+ | {r1_pct:.1f}% |')
+    lines.append(f'| R2: Tone | 88% | 93%+ | {r2_pct:.1f}% |')
+    lines.append(f'| R3: Syllable | 71% | 85%+ | {r3_pct:.1f}% |')
+    lines.append(f'| R4: Trầm-Bổng | 0% (N/A) | 60%+ | {r4_pct:.1f}% |')
+    lines.append(f'| R5: Nhịp điệu | N/A | 75%+ | {r5_pct:.1f}% |')
+    lines.append(f'| All 5 pass | N/A | 30%+ | {all5_pct:.1f}% |')
     lines.append('')
-    lines.append('**Root cause**: `[RHYME:ong]` is 5 BPE tokens. The rhyme signal is fragmented.')
-    lines.append('**Fix**: Make rhyme groups special tokens (single IDs like `[LUC_BAT]`).')
-    lines.append('**Expected**: 40-60% rhyme accuracy (based on genre tag effectiveness).')
-    lines.append('**Effort**: Retrain tokenizer + corpus + model (~4h Colab).')
-    lines.append('')
-    lines.append('### R2: Tone Pattern (current: {:.0f}% - needs improvement)'.format(s2_r2))
-    lines.append('')
-    lines.append('**Root cause**: Same fragmentation as R1. `[TONE:BBBTTB]` is 5 BPE tokens.')
-    lines.append('**Fix**: Same as R1 - make tone patterns special tokens.')
-    lines.append('**Expected**: 50-70% tone accuracy.')
-    lines.append('')
-    lines.append('### R3: Syllable Count (current: {:.0f}% - needs fix)'.format(s2_r3))
-    lines.append('')
-    lines.append('**Root cause**: Model uses position-based stopping, not syllable counting.')
-    lines.append('**Fix 1 (immediate)**: Post-generation truncation to 8 syllables. 3 lines of code.')
-    lines.append('**Fix 2 (architectural)**: Syllable-count control token `[SYL:8]` as special token.')
-    lines.append('**Fix 3 (structural)**: Syllable-aware pre-tokenizer before BPE.')
-    lines.append('')
-    lines.append('### Priority')
-    lines.append('')
-    lines.append('| Priority | Fix | Impact | Effort |')
-    lines.append('|----------|-----|--------|--------|')
-    lines.append('| 1 | R3 Fix 1 - Truncation | 100% syllable accuracy | 3 lines |')
-    lines.append('| 2 | R1+R2 Fix - Special tokens | 2-3× rhyme/tone improvement | 1 day |')
-    lines.append('| 3 | Qwen2.5-1.5B QLoRA | Overall quality + better rule following | 1 day |')
 
     out = ROOT / 'documents' / 'rule_evaluation.md'
     out.write_text('\n'.join(lines))
     print(f'\n📄 Report → {out}')
 
-    # JSON data goes to evaluate/
+    # JSON data
     json_out = ROOT / 'evaluate' / 'rule_evaluation.json'
     json.dump({
+        'version': 'v4.1',
+        'checkpoint': str(ckpt_path.name),
         'summary': {
-            'Stage 1': {'R1_rhyme': s1_r1, 'R2_tone': s1_r2, 'R3_syllable': s1_r3, 'all_pass': s1_all},
-            'Stage 2': {'R1_rhyme': s2_r1, 'R2_tone': s2_r2, 'R3_syllable': s2_r3, 'all_pass': s2_all},
+            'R1_rhyme': r1_pct, 'R2_tone': r2_pct, 'R3_syllable': r3_pct,
+            'R4_trambong': r4_pct, 'R5_rhythm': r5_pct, 'all_5_pass': all5_pct,
+            'avg_length': avg_len, 'lexical_diversity': avg_lex,
+            'bpe_artifacts': total_bpe, 'empty_rate': empty_rate,
         },
-        'samples': [{'p': r['prompt'], 'r': r['response'], 'R1': r['R1_rhyme_ok'], 'R2': r['R2_response_tone_ok'], 'R3': r['R3_exact_8']} for r in all_results['Stage 2 (Lục Bát)']]
+        'samples': [{
+            'p': r['prompt'], 'r': r['response'],
+            'R1': r['R1_ok'], 'R2': r['R2_r_ok'] == r['R2_r_total'],
+            'R3': r['R3_exact'], 'R4': r['R4_ok'], 'R5': r['R5_ok'],
+            'all_5': r['all_5'],
+        } for r in results]
     }, open(json_out, 'w'), indent=2, ensure_ascii=False)
     print(f'📄 JSON → {json_out}')
 

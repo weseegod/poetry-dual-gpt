@@ -259,18 +259,11 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         # Forward + backward
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
             logits, _ = model(x_input)
-            # T2b: Weighted loss — TN examples get 2.6x weight
-            is_tn = (x[:, 1] == 7)  # token 7 = [THAT_NGON] at position 1
-            V = model.vocab_size
-            B, T = x.shape
-            ce = F.cross_entropy(
-                logits.view(-1, V), y.view(-1),
-                ignore_index=0, reduction='none'
-            ).view(B, T)
-            mask = (y != 0).float()
-            per_example = (ce * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
-            weights = torch.where(is_tn, torch.tensor(2.6, device=dev), torch.tensor(1.0, device=dev))
-            loss = (per_example * weights).mean()
+            # v4.1: Pure Lục Bát — simple cross-entropy, no weighted loss
+            loss = F.cross_entropy(
+                logits.view(-1, model.vocab_size), y.view(-1),
+                ignore_index=0
+            )
         
         opt.zero_grad()
         loss.backward()

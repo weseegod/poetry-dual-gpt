@@ -1,6 +1,11 @@
 """
-Vietnamese tone classification + rhyme extraction.
-Used by preprocess.py, sample.py, and server.py for Phase 9 (rhyme conditioning).
+Vietnamese tone classification + rhyme extraction + Trầm-Bổng detection.
+Used by preprocess.py, sample.py, and server.py.
+
+Rules covered:
+  - Bằng/Trắc classification (tone)
+  - Rhyme group extraction (vần)
+  - Diacritic detection (ngang vs huyền within Bằng) → Trầm-Bổng rule
 """
 
 # ═══════════════════════════════════════════════════════════════
@@ -27,6 +32,12 @@ TRAC = set(
     "ÃẴẪẼỄĨÕỖỠŨỮỸ"
 )
 
+# Huyền (falling tone) — a subset of Bằng, needed for Trầm-Bổng distinction
+HUYEN = set(
+    "àằầèềìòồờùừỳ"
+    "ÀẰẦÈỀÌÒỒỜÙỪỲ"
+)
+
 
 def get_tone(syllable: str) -> str:
     """Return 'B' (bằng) or 'T' (trắc). Scans TRAC first — toned vowels take priority."""
@@ -42,6 +53,59 @@ def get_tone(syllable: str) -> str:
 def get_tone_sequence(line: str) -> str:
     """Return tone string, e.g. 'BBTBBT' for a 6-syllable line."""
     return "".join(get_tone(s) for s in line.strip().split())
+
+
+def get_diacritic(syllable: str) -> str:
+    """
+    Distinguish within Bằng: 'ngang' (no mark) vs 'huyen' ( ` ).
+    Returns 'ngang', 'huyen', or 'trac'.
+    Used for Trầm-Bổng rule: tiếng 6 và tiếng 8 dòng Bát must differ.
+    """
+    for ch in syllable:
+        if ch in HUYEN:
+            return "huyen"
+        if ch in TRAC:
+            return "trac"
+    return "ngang"  # no diacritic = ngang
+
+
+def get_tram_bong_tag(eight_line: str) -> str:
+    """
+    Extract [TRAMBONG:NH] or [TRAMBONG:HN] from an 8-syllable Bát line.
+    
+    Rule (from luc_bat.md §4):
+      Nếu tiếng 6 là Ngang → tiếng 8 phải là Huyền  [TRAMBONG:NH]
+      Nếu tiếng 6 là Huyền → tiếng 8 phải là Ngang  [TRAMBONG:HN]
+    
+    Returns empty string if line is too short or violates the rule.
+    """
+    import re
+    syls = eight_line.strip().split()
+    if len(syls) < 8:
+        return ""
+    d6 = get_diacritic(re.sub(r'[,.!?;:]+$', '', syls[5]))  # pos 6 (0-indexed: 5)
+    d8 = get_diacritic(re.sub(r'[,.!?;:]+$', '', syls[7]))  # pos 8 (0-indexed: 7)
+    if d6 == "ngang" and d8 == "huyen":
+        return "[TRAMBONG:NH]"
+    elif d6 == "huyen" and d8 == "ngang":
+        return "[TRAMBONG:HN]"
+    return ""  # violation in source data — still trainable
+
+
+def check_tram_bong(eight_line: str) -> tuple[bool, str]:
+    """
+    Verify Trầm-Bổng rule on an 8-syllable line.
+    Returns (ok, detail_string).
+    """
+    import re
+    syls = eight_line.strip().split()
+    if len(syls) < 8:
+        return False, "too_short"
+    d6 = get_diacritic(re.sub(r'[,.!?;:]+$', '', syls[5]))
+    d8 = get_diacritic(re.sub(r'[,.!?;:]+$', '', syls[7]))
+    if d6 in ("ngang", "huyen") and d8 in ("ngang", "huyen") and d6 != d8:
+        return True, f"{d6[0].upper()}{d8[0].upper()}"
+    return False, f"{d6}/{d8} (expected opposite dấu)"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -96,12 +160,16 @@ def get_rhyme_group(syllable: str) -> str:
 
 def get_luc_bat_tags(prompt: str) -> tuple:
     """
-    Extract [RHYME:X] and [TONE:XXXXXX] tags for a 6-syllable Lục Bát prompt.
-    Returns (rhyme_tag, tone_tag) — empty strings if prompt too short.
+    Extract [RHYME:X], [TONE:XXXXXX], and [TRAMBONG:NH/HN] for a Lục Bát prompt.
+    Returns (rhyme_tag, tone_tag, trambong_tag).
+    
+    Note: Trầm-Bổng tag is only meaningful when prompt includes a Bát line.
+    For single 6-syl prompts, returns empty trambong_tag.
     """
     syls = prompt.strip().split()
     rhyme_tag = ""
     tone_tag = ""
+    trambong_tag = ""
 
     if len(syls) >= 6:
         rhyme = get_rhyme_group(syls[5])
@@ -111,7 +179,13 @@ def get_luc_bat_tags(prompt: str) -> tuple:
         seq = get_tone_sequence(prompt)
         tone_tag = f"[TONE:{seq[:6]}]"
 
-    return rhyme_tag, tone_tag
+    # Trầm-Bổng only when we have a full couplet (14 syllables = 6+8)
+    # Extract from the 8-syl line (last 8 syllables)
+    if len(syls) >= 14:
+        eight_line = " ".join(syls[6:14])
+        trambong_tag = get_tram_bong_tag(eight_line)
+
+    return rhyme_tag, tone_tag, trambong_tag
 
 
 def get_that_ngon_tags(prompt: str) -> tuple:
