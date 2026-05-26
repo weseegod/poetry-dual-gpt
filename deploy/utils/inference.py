@@ -243,6 +243,7 @@ def generate(
         "luc": lines[0] if len(lines) > 0 else "",
         "bat": lines[1] if len(lines) > 1 else "",
         "lines": lines,
+        "token_ids": new_tokens,
         "raw": tokenizer.decode(new_tokens).replace("<|end|>", "").strip(),
     }
 
