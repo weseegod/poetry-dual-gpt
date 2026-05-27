@@ -239,6 +239,7 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
             token_weight[i] = 0.3
     token_weight[lb_id] = 1.0 + linebreak_bonus  # P8: 1.2× for linebreak
     print(f"   P6+P8: Content-weighted loss (tags ×0.3, <|end|> ×1.0, <|lb|> ×{1.0+linebreak_bonus})")
+    print(f"   P7: Diversity loss (weight=0.03, 512 samples/step, warmup=500)")
 
     while step < max_steps:
         # Next batch (new epoch if exhausted)
@@ -288,6 +289,32 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
                 logits.view(-1, model.vocab_size), y.view(-1),
                 ignore_index=0, weight=token_weight
             )
+
+        # ── P7: N-gram diversity loss (L4 has 24GB — sufficient headroom) ──
+        # Penalize high raw logits on content tokens that appeared recently.
+        # Uses raw logit mean (no softmax) for memory efficiency.
+        # Samples random (batch, position) pairs to keep overhead ~5%.
+        if step >= 500:  # warmup: let model learn basics first
+            B, T = y.shape
+            window = 16
+            n_sample = 512  # sample 512 random (b,t) pairs per step
+            b_idx = torch.randint(0, B, (n_sample,), device=dev)
+            t_idx = torch.randint(1, T, (n_sample,), device=dev)
+            div_sum = torch.tensor(0.0, device=dev)
+            div_n = 0
+            for i in range(n_sample):
+                bi, ti = b_idx[i].item(), t_idx[i].item()
+                start_t = max(0, ti - window)
+                recent = x_input[bi, start_t:ti]
+                content_mask = recent >= 215
+                if not content_mask.any():
+                    continue
+                unique_ids = recent[content_mask].unique()
+                div_sum = div_sum + logits[bi, ti, unique_ids].mean()
+                div_n += 1
+            if div_n > 0:
+                div_loss = div_sum / div_n
+                loss = loss + 0.03 * div_loss
         
         opt.zero_grad()
         loss.backward()
