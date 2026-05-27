@@ -36,35 +36,35 @@ cd client && python start.py
 | **Training** | Single-stage, 541K đối thơ pairs, example-aligned batches, batch=192 |
 | **Format** | `[DOI_THO] [RHYME:X] [TONE:XXXXXX]` with `<\|linebreak\|>` line separator |
 
-## 🎯 Results (v3, 15 diverse prompts)
+## 🎯 Results (v4.2.3, 50 couplet prompts)
 
 | Rule | Accuracy |
 |------|----------|
-| **Stress test** (valid output, 14 prompts) | **100%** |
-| **BPE collapse** (garbled tokens) | **0%** |
-| **Rhyme** (vần, pos 6 matches `[RHYME:X]`) | **80%** |
-| **Tone** (B-T-B-B pattern) | **97%** |
-| **Syllable** (exact 6+8 enforced) | **93%** |
+| **All-5-pass** (all rules simultaneously) | **92%** |
+| **Rhyme** (vần lưng, pos6 Lục matches pos6 Bát) | **94%** |
+| **Tone** (B-T-B-B pattern at even positions) | **100%** |
+| **Syllable** (exact 6+8 enforced) | **98%** |
+| **Trầm-Bổng** (Ngang≠Huyền at pos6,8 Bát) | **98%** |
+| **Adjacent repeats** (word duplication) | **0.0%** |
+| **BPE artifacts** (subword fragments) | **0.4%** |
 
-## 🎭 Sample Output
+See [documents/roadmap_v4.2.md](documents/roadmap_v4.2.md) for full evaluation.
 
+### v4.2.3: Tier 3 training — content-weighted loss + diversity loss + linebreak bonus
+
+Output:
 ```
-Input:   Thân em như chẽn lúa đòng
-         Phất phơ dưới ngọn nắng hồng ban mai
-
-Output:  Mẹ già ăn sắn ngô đồng nương thu
-         Con ăn cơm nước, anh về chợ quê
-
 Input:   Công cha như núi thái sơn
+         Nghĩa mẹ như nước trong nguồn chảy ra
 
-Output:  Sơn hà hoa đẹp ngọt hơn hoa sen
-         Rừng xanh xanh thẳm bên miền hương linh
+Output:  Dù cho gian khổ can qua
+         Một lòng cha mẹ quê nhà mẹ yêu
 
-Input:   Gió đưa cành trúc la đà
-         Tiếng chuông Trấn Vũ canh gà Thọ Xương
+Input:   Đường vô xứ nghệ quanh quanh
+         Non xanh nước biếc như tranh họa đồ
 
-Output:  Ba đình chuông vọng tơ vương
-         Nghe như tiếng vọng chùa thương quyện hòa
+Output:  Sơn la bát ngát nhấp hồ
+         Lung linh huyền ảo mơ tô sắc trời
 ```
 
 ## 🧠 How It Works

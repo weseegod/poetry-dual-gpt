@@ -15,7 +15,7 @@ resources/
 data.zip
 
 # Generated models (created by scripts)
-tokenizer/poetry_bpe.model
+tokenizer/poetry_bpe*.model
 
 # Secrets
 .env
