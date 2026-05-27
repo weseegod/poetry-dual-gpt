@@ -1,131 +1,14 @@
 """
-v4.2.3: Static evaluation prompts — 200 single-line + 118 couplet + 40 quality.
+v4.2.3: Static evaluation prompts — 116 couplet + 40 quality.
 
 All prompts are hand-crafted, novel (not in training corpus).
+Couplet prompts verified 6+8 syllables each.
 
-Verification: run `python evaluate/prompts.py` to validate all prompts.
+The model was trained on couplet→couplet format only.
+Single-line evaluation is meaningless and has been removed.
+
+Verification: run `python evaluate/prompts.py` to validate.
 """
-
-# ═══════════════════════════════════════════════════════════
-# SINGLE-LINE PROMPTS (200 prompts — 6-syllable lines)
-# ═══════════════════════════════════════════════════════════
-
-SINGLE_PROMPTS = [
-    # ── Ca dao / Folk poetry (1-60) ──
-    "Thân em như tấm lụa đào",       "Trèo lên cây khế nửa ngày",
-    "Ai làm cho bướm xa hoa",        "Đêm khuya thắp ngọn đèn dầu",
-    "Gió mùa thu mẹ ru con",         "Chim khôn đậu nóc nhà quan",
-    "Cây khô chưa dễ mọc chồi",      "Mẹ già như chuối ba hương",
-    "Ru con con ngủ cho lâu",        "Công cha như núi thái sơn",
-    "Rủ nhau xuống biển mò cua",     "Đố ai đếm được lá rừng",
-    "Cày đồng đang buổi ban trưa",   "Mồ hôi thánh thót như mưa",
-    "Dẻo thơm một hạt đắng cay",     "Ai về tôi gửi buồng cau",
-    "Buồng cau non mẹ để già",       "Cau già khéo bổ thì non",
-    "Cây đa bến nước sân đình",      "Qua đình ngả nón trông đình",
-    "Hòn đá đóng rêu vì ngâu",
-    "Thuyền ơi có nhớ bến không",    "Bến thì một dạ khăng khăng",
-    "Mưa từ xa tới mưa mau",         "Trời mưa trời gió đùng đùng",
-    "Lúa mùa vàng óng đồng quê",     "Trâu ơi ta bảo trâu này",
-    "Bao giờ cho đến tháng ba",      "Ếch kêu dưới vũng ao nhà",
-    "Tháng năm chưa đến đã mưa",     "Ve kêu ra rả suốt mùa",
-    "Sen tàn cúc lại nở hoa",        "Sầu dài ngày ngắn sang đông",
-    "Gió đông về lạnh lòng ai",      "Tóc mây một mái còn dài",
-    "Mắt em là cả trời xanh",        "Môi em là nắng long lanh",
-    "Núi cao bởi có đất bồi",        "Sông sâu bởi có nước nguồn",
-    "Uống nước nhớ kẻ đào sông",     "Ăn quả nhớ kẻ trồng cây",
-    "Đất lành chim đậu về đây",      "Người hiền thì lại gặp may",
-    "Lời nói chẳng mất tiền mua",    "Lựa lời mà nói cho vừa",
-    "Đèn nhà ai nấy sáng trưng",     "Chớ thấy đèn sáng mà mừng",
-    "Sông sâu còn có kẻ đò",         "Đường xa còn có người qua",
-    "Bầu ơi thương lấy bí cùng",     "Tuy rằng khác giống nhưng chung",
-    "Một cây làm chẳng nên non",     "Ba cây chụm lại nên hòn",
-    "Gần mực thì đen gần đèn",       "Gần người hiền trí thì nên",
-    "Nước lã làm sao khuấy nên",     "Chữ rằng bán tự vi sư",
-    "Nhất tự vi sư bán tự",          "Mồng một tết cha mồng hai",
-
-    # ── Regional / Landscape (61-90) ──
-    "Tháng giêng ăn tết ở nhà",      "Tháng hai cờ bạc tháng ba",
-    "Trên trời có đám mây vàng",     "Bên sông có chị hái dâu",
-    "Đồng đăng có phố kỳ lừa",       "Có nàng tô thị có chùa",
-    "Đường vô xứ nghệ quanh quanh",  "Non xanh nước biếc như tranh",
-    "Anh về câu cá bờ sông",         "Em về cấy lúa trên đồng",
-    "Nắng sớm mưa chiều đồng không", "Mong cho lúa tốt bông vàng",
-    "Bàn tay ta làm nên tất",        "Có sức người sỏi đá cũng",
-    "Chim bay về núi tối rồi",       "Mau lên kẻo nắng tắt rồi",
-    "Trăng lên đỉnh núi trăng mờ",   "Đêm nay sao sáng hơn đêm",
-    "Xa xa có tiếng chuông chùa",    "Gió đưa hương lúa thơm mùa",
-    "Sáng trăng suông sáng cả đồng", "Em đi gặt lúa trên đồng",
-    "Mưa xuân lất phất vườn đào",    "Nụ tầm xuân nở ra chào",
-    "Hoa thơm ong bướm tìm về",      "Người khôn thiên hạ tìm theo",
-    "Tốt gỗ hơn là tốt nước",        "Xấu người đẹp nết còn hơn",
-    "Chim không ăn muối chim ươn",   "Con không nghe mẹ con hư",
-
-    # ── Moral / Philosophy (91-120) ──
-    "Cá không ăn muối cá ươn",       "Con cãi cha mẹ trăm đường",
-    "Đói cho sạch rách cho thơm",    "Khôn ngoan đá đáp người ngoài",
-    "Thương người như thể thương thân", "Nhiễu điều phủ lấy giá gương",
-    "Một nắng hai sương mẹ cha",     "Lên non mới biết non cao",
-    "Nuôi con mới biết công lao",    "Nước chảy đá mòn theo năm",
-    "Gió lên cho biển hóa rồng",     "Sóng to gió lớn mênh mông",
-    "Đất phèn mọc trái thơm ngon",   "Người nghèo biết quý từng đồng",
-    "Học thầy không tày học bạn",    "Đi một ngày đàng học một",
-    "Xa mặt nhưng chẳng cách lòng",  "Gần nhau càng thấy nhớ mong",
-    "Trăng mờ còn tỏ hơn sao",       "Dẫu rằng núi lở còn cao",
-    "Công cha nghĩa mẹ sinh thành",  "Một lòng thờ mẹ kính cha",
-    "Con người có tổ có tông",       "Lên non xem núi cao vời",
-    "Nước non ngàn dặm xa xôi",      "Ra đi từ thuở lên ba",
-    "Quê hương mỗi lúc một xa",      "Bồng bềnh con nước về đâu",
-    "Đò chiều khách vắng sang sông", "Trời xanh mây trắng lang thang",
-
-    # ── Seasons & Nature (121-160) ──
-    "Đường quê lúa chín vàng ươm",   "Hương đồng gió nội bay xa",
-    "Ve sầu kêu gọi hè sang",        "Phượng hồng thắp lửa sân trường",
-    "Áo em trắng cả sân trường",     "Tóc em dài quá vai thương",
-    "Bàn tay năm ngón nở hoa",       "Đôi chân chim sáo quanh nhà",
-    "Em như cây lúa trổ bông",       "Anh như hạt thóc vàng trong",
-    "Xa quê nhớ mẹ nhớ cha",         "Nhớ hàng cau trước sân nhà",
-    "Giếng làng trong mát tuổi thơ", "Cánh diều no gió tuổi thơ",
-    "Mưa rào tắm mát vườn quê",      "Nắng vàng ươm cả đồng xa",
-    "Bếp nhà ai đỏ lửa hồng",        "Khói lam chiều tỏa mênh mông",
-    "Đàn trâu về ngõ chiều hôm",     "Tiếng sáo diều vọng triền đê",
-    "Đêm trăng soi tỏ vườn nhà",     "Hoa cau rụng trắng thềm xưa",
-    "Thuyền ai lờ lững trên sông",   "Câu hò vọng giữa thinh không",
-    "Cây khế chua ngọt sau vườn",    "Quả na mở mắt thơm lừng",
-    "Lời ru của mẹ ngày xưa",        "Theo con suốt cả chặng đường",
-    "Người đi đâu suốt chiều nay",   "Để lòng ai những vơi đầy",
-    "Đường trần ai biết được đâu",   "Ngày mai sương gió dãi dầu",
-    "Thương ai con mắt lim dim",     "Nhớ ai nước mắt đầm đìa",
-    "Mưa nguồn chớp bể ào ào",      "Thương em anh biết làm sao",
-    "Ví dầu cầu ván đóng đinh",     "Cầu tre lắc lẻo gập ghềnh",
-    "Qua sông phải lụy đò ngang",    "Qua suối phải lụy cầu tre",
-
-    # ── Love & Emotion (161-200) ──
-    "Đồng bằng ruộng lúa mênh mông", "Biển đông sóng vỗ rì rào",
-    "Non cao ai đắp mà cao",         "Sông sâu ai bới ai đào",
-    "Khi vui cũng vậy khi buồn",     "Ở hiền thì lại gặp lành",
-    "Chị em như chuối nhiều tàu",    "Tấm lành che tấm rách đừng",
-    "Rừng vàng biển bạc quê ta",     "Không gì bằng cơm với cà",
-    "Có chí thì nên có công",        "Mài sắt nên kim bạn ơi",
-    "Tay làm hàm nhai tay quai",     "Miệng ăn núi lở ai ơi",
-    "Yêu nhau mấy núi cũng trèo",   "Mấy sông cũng lội mấy đèo cũng qua",
-    "Nhớ ai bổi hổi bồi hồi",       "Như đứng đống lửa như ngồi đống than",
-    "Gió đưa cây cải về trời",       "Rau răm ở lại chịu lời đắng cay",
-    "Đêm qua em những mơ màng",      "Thấy anh về đứng đầu làng chờ em",
-    "Trúc xinh trúc mọc đầu đình",   "Em xinh em đứng một mình cũng xinh",
-    "Hoa thơm hoa ở trên cành",      "Người khôn người ở kinh thành người dưng",
-    "Còn duyên kẻ đón người đưa",    "Hết duyên đi sớm về trưa một mình",
-    "Chồng em áo rách em thương",    "Chồng người áo gấm xông hương mặc người",
-    "Chiều chiều ra đứng ngõ sau",   "Trông về quê mẹ ruột đau chín chiều",
-    "Nước sông Tô vừa trong vừa mát", "Em ghé thuyền anh hát một vài câu",
-    "Lênh đênh một chiếc thuyền tình", "Mười hai bến nước biết mình về đâu",
-    "Bao giờ cạn nước Đồng Nai",     "Nát chùa Thiên Mụ mới phai lời nguyền",
-    "Tóc em dài em cài hoa thiên lý", "Anh muốn làm con bướm cứ vờn quanh hoa",
-]
-
-
-# ═══════════════════════════════════════════════════════════
-# COUPLET PROMPTS (118 prompts — hand-verified 6+8 syllable pairs)
-# ═══════════════════════════════════════════════════════════
 
 COUPLET_PROMPTS = [
     # ── Original 50 (kept from v4.1/v4.2) ──
@@ -326,7 +209,6 @@ if __name__ == "__main__":
     rhymes = [get_rhyme_group(l8.split()[7]) for _, l8 in COUPLET_PROMPTS if len(l8.split()) == 8]
     rc = Counter(rhymes)
 
-    print(f"Single-line prompts: {len(SINGLE_PROMPTS)}")
     print(f"Couplet prompts: {len(COUPLET_PROMPTS)}")
     print(f"  ✅ Valid 6+8: {ok}")
     if bad:
