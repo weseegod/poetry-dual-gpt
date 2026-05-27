@@ -166,7 +166,11 @@ def generate(prompt, model, tokenizer, **kwargs):
     """
     Generate đối thơ response. Wraps src/generation.generate().
     Accepts (prompt, model, tokenizer) for backward compat with doitho.
+    Remaps max_tokens → max_new for src/generation.py compatibility.
     """
+    # Remap doitho's 'max_tokens' → generation.py's 'max_new'
+    if 'max_tokens' in kwargs:
+        kwargs['max_new'] = kwargs.pop('max_tokens')
     tokens, text = _generate(model, tokenizer, prompt, **kwargs)
 
     # Build result dict in the format doitho expects
