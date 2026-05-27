@@ -158,17 +158,20 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=False,
 #  RE-EXPORT generate from src/generation.py
 # ═══════════════════════════════════════════════════════════
 
-# src/generation.py::generate(model, tokenizer, prompt, ...)
-# Old doitho callers use: generate(prompt, model, tokenizer, ...)
-# This wrapper reorders arguments for backward compatibility.
+# ═══════════════════════════════════════════════════════════
+#  RE-EXPORT generate from src/generation.py
+# ═══════════════════════════════════════════════════════════
+
+# src/generation.py has the canonical generate(model, tokenizer, prompt, ...)
+# This wrapper accepts doitho's legacy arg order: (prompt, model, tokenizer, ...)
+# and remaps max_tokens → max_new.
 @torch.no_grad()
-def generate(prompt, model, tokenizer, **kwargs):
+def generate_doi_tho(prompt, model, tokenizer, **kwargs):
     """
-    Generate đối thơ response. Wraps src/generation.generate().
+    Generate đối thơ response. Thin wrapper over src/generation.generate().
     Accepts (prompt, model, tokenizer) for backward compat with doitho.
-    Remaps max_tokens → max_new for src/generation.py compatibility.
+    Remaps max_tokens → max_new for generation.py compatibility.
     """
-    # Remap doitho's 'max_tokens' → generation.py's 'max_new'
     if 'max_tokens' in kwargs:
         kwargs['max_new'] = kwargs.pop('max_tokens')
     tokens, text = _generate(model, tokenizer, prompt, **kwargs)
