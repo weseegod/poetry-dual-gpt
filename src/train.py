@@ -215,7 +215,7 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         print(f"   Step: {start_step}  |  LR: {cfg['learning_rate']} (fine-tune)")
 
     # ── Training ──
-    print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
+    print(f"\n{'='*60}\n🚀  TRAINING START (v4.2 Tier 3)\n{'='*60}\n")
     model.train()
     step, best_val, loss_sum, loss_cnt = start_step, float("inf"), 0.0, 0
     loss = torch.tensor(0.0)  # safety net — always bound before save_ckpt
@@ -223,6 +223,23 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
     t0 = time.time()
     it = iter(train_loader)
     pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
+
+    # ── v4.2 Tier 3: Build per-class loss weight tensor (P6 + P8) ──
+    # Used directly in F.cross_entropy(weight=...) — zero extra memory.
+    # Only <|end|> (3) and <|linebreak|> (9) are generated at inference → full weight.
+    # <|linebreak|> gets +0.2 bonus (P8). All other control IDs (1-214 except 3,9)
+    # are prompt-only tags → reduced to 0.3×.
+    # Content tokens (215+) keep 1.0×.
+    lb_id = 9
+    linebreak_bonus = 0.2
+    GENERATED_CONTROL_IDS = {3, 9}  # <|end|>, <|linebreak|>
+    token_weight = torch.ones(V, device=dev)
+    for i in range(1, 215):  # skip 0 (pad, already ignore_index)
+        if i not in GENERATED_CONTROL_IDS:
+            token_weight[i] = 0.3
+    token_weight[lb_id] = 1.0 + linebreak_bonus  # P8: 1.2× for linebreak
+    print(f"   P6+P8: Content-weighted loss (tags ×0.3, <|end|> ×1.0, <|lb|> ×{1.0+linebreak_bonus})")
+    print(f"   P7: Diversity loss (weight=0.03, 512 samples/step, warmup=500)")
 
     while step < max_steps:
         # Next batch (new epoch if exhausted)
@@ -263,11 +280,41 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         # Forward + backward
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
             logits, _ = model(x_input)
-            # v4.1: Pure Lục Bát — simple cross-entropy, no weighted loss
+
+            # ── P6 + P8: Content-weighted cross-entropy loss ──
+            # Use PyTorch's built-in per-class weight (no extra tensor allocation).
+            # token_weight[i] = 0.3 for tag tokens, 1.0 for content,
+            # 1.2 for <|linebreak|> (P8 bonus). <|pad|>(0) ignored via ignore_index.
             loss = F.cross_entropy(
                 logits.view(-1, model.vocab_size), y.view(-1),
-                ignore_index=0
+                ignore_index=0, weight=token_weight
             )
+
+        # ── P7: N-gram diversity loss (L4 has 24GB — sufficient headroom) ──
+        # Penalize high raw logits on content tokens that appeared recently.
+        # Uses raw logit mean (no softmax) for memory efficiency.
+        # Samples random (batch, position) pairs to keep overhead ~5%.
+        if step >= 500:  # warmup: let model learn basics first
+            B, T = y.shape
+            window = 16
+            n_sample = 512  # sample 512 random (b,t) pairs per step
+            b_idx = torch.randint(0, B, (n_sample,), device=dev)
+            t_idx = torch.randint(1, T, (n_sample,), device=dev)
+            div_sum = torch.tensor(0.0, device=dev)
+            div_n = 0
+            for i in range(n_sample):
+                bi, ti = b_idx[i].item(), t_idx[i].item()
+                start_t = max(0, ti - window)
+                recent = x_input[bi, start_t:ti]
+                content_mask = recent >= 215
+                if not content_mask.any():
+                    continue
+                unique_ids = recent[content_mask].unique()
+                div_sum = div_sum + logits[bi, ti, unique_ids].mean()
+                div_n += 1
+            if div_n > 0:
+                div_loss = div_sum / div_n
+                loss = loss + 0.03 * div_loss
         
         opt.zero_grad()
         loss.backward()
