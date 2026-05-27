@@ -4,12 +4,13 @@
 #
 # Usage: bash scripts/pack_for_doitho.sh
 #
-# Packs 5 files into deploy/doitho_utils.zip:
+# Packs 6 files into deploy/doitho_utils.zip:
 #   1. checkpoints/doi_tho_best.pt  → doitho.pt        (380MB model weights)
 #   2. tokenizer/poetry_bpe.model   → poetry_bpe.model  (884KB BPE tokenizer)
 #   3. src/model.py                 → model.py          (model architecture)
 #   4. src/tones.py                 → tones.py          (tone/rhyme/diacritic utils)
-#   5. deploy/utils/inference.py    → inference.py      (production inference)
+#   5. src/generation.py            → generation.py     (CANONICAL generate — same as eval/CLI)
+#   6. deploy/utils/inference.py    → inference.py      (thin wrapper: load_model + prompt builders)
 #
 # Then deploy to doitho:
 #   unzip -o deploy/doitho_utils.zip -d ../doitho/utils/
@@ -31,7 +32,7 @@ echo ""
 CKPT="$ROOT/checkpoints/doi_tho_best.pt"
 TOK="$ROOT/tokenizer/poetry_bpe.model"
 
-for f in "$CKPT" "$TOK" "$ROOT/src/model.py" "$ROOT/src/tones.py" "$SRC_UTILS/inference.py"; do
+for f in "$CKPT" "$TOK" "$ROOT/src/model.py" "$ROOT/src/tones.py" "$ROOT/src/generation.py" "$SRC_UTILS/inference.py"; do
     if [ ! -f "$f" ]; then
         echo "❌ Missing: $f"
         exit 1
@@ -46,6 +47,7 @@ cp "$CKPT" "$TMPDIR/doitho.pt"
 cp "$TOK" "$TMPDIR/poetry_bpe.model"
 cp "$ROOT/src/model.py" "$TMPDIR/model.py"
 cp "$ROOT/src/tones.py" "$TMPDIR/tones.py"
+cp "$ROOT/src/generation.py" "$TMPDIR/generation.py"
 cp "$SRC_UTILS/inference.py" "$TMPDIR/inference.py"
 
 echo "📋 Files:"
@@ -114,7 +116,8 @@ echo "      doitho.pt          — v4.2.3 checkpoint (31.5M params)"
 echo "      poetry_bpe.model   — BPE tokenizer (12,000 tokens)"
 echo "      model.py           — PoetryDuelGPT architecture"
 echo "      tones.py           — Tone/rhyme/diacritic utilities"
-echo "      inference.py       — Production inference (soft rhyme, v4.2.3)"
+echo "      generation.py      — CANONICAL generate (same as eval/CLI)"
+echo "      inference.py       — Thin wrapper: load_model + prompt builders"
 echo ""
 echo "   To deploy to doitho:"
 echo "     unzip -o deploy/doitho_utils.zip -d ../doitho/utils/"

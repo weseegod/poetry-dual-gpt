@@ -77,32 +77,27 @@ Key test file: `backend/tests/test_v4_1_inference.py` — verifies:
 |------|--------|------|
 | `doitho.pt` | `checkpoints/doi_tho_best.pt` | 31.5M parameter checkpoint. Contains `model_state_dict`, `model_config`, `vocab_size`. |
 | `poetry_bpe.model` | `tokenizer/poetry_bpe.model` | 12,000-token ByteLevel BPE tokenizer. Token IDs: 0=pad, 1=start, 2=reply, 3=end, 9=linebreak. |
-| `model.py` | `src/model.py` | `PoetryDuelGPT` class. Architecture: n_embd=512, 8 layers, 8 heads, block_size=256. Config loaded from checkpoint dict at runtime. |
-| `tones.py` | `src/tones.py` | Vietnamese tone classification (Bằng/Trắc), rhyme group extraction, diacritic detection (ngang/huyền), Trầm-Bổng tag generation. |
-| `inference.py` | `deploy/utils/inference.py` | Production inference module. Self-contained — does NOT import from `src/generation.py`. Contains its own `generate()`, prompt builders, and `decode_doi_tho()`. |
+| `model.py` | `src/model.py` | `PoetryDuelGPT` class. Architecture: n_embd=512, 8 layers, 8 heads, block_size=256. |
+| `tones.py` | `src/tones.py` | Vietnamese tone classification (Bằng/Trắc), rhyme group extraction, diacritic detection. |
+| `generation.py` | `src/generation.py` | **CANONICAL generate function**. Identical to what eval and CLI use. Single source of truth for all generation. |
+| `inference.py` | `deploy/utils/inference.py` | Thin wrapper: `load_model`, prompt builders, `decode_doi_tho`. Imports `generate` from `generation.py`. |
 
 ---
 
-## Why `inference.py` Is Separate from `src/generation.py`
+## Why `inference.py` Is a Thin Wrapper
 
-The production inference module (`deploy/utils/inference.py`) is intentionally self-contained:
+`deploy/utils/inference.py` no longer contains its own `generate()` function.
+It imports `generate` and `decode_response` from `src/generation.py` — the
+identical module used by evaluation and CLI. This guarantees:
 
-1. **No training dependencies** — doitho doesn't need `src/dataset.py`, `src/train.py`, `src/preprocess.py`
-2. **Strict linebreak enforcement** — production forces exact 6+8 syllables (users expect correct output). Eval mode in `src/generation.py` reports raw quality by default.
-3. **Single-file deployment** — zero cross-file imports within `utils/`. All prompt building + generation + decoding in one file.
-4. **Hard linebreak control** — production suppresses `<|linebreak|>` before syllable 6, forces it at syllable 6, suppresses `<|end|>` before syllable 8 in output line 2. This guarantees users always see well-formed 6+8 couplets.
+1. **Eval = Production.** Same code path, same results.
+2. **No drift.** Any improvement to `src/generation.py` automatically benefits doitho.
+3. **Single source of truth.** One `generate()` function for all callers.
 
-**When updating `src/generation.py`**, check if the production `inference.py` needs the same changes. Key differences:
-
-| Feature | `src/generation.py` (eval) | `deploy/utils/inference.py` (prod) |
-|---------|---------------------------|-----------------------------------|
-| Linebreak mode | Passive (split after generation) | **Active** (force at exact positions) |
-| Syllable enforcement | Off by default (raw quality) | **Always ON** |
-| Rhyme constraint | Soft (boost +2.0) | Soft (boost +2.0) — synced v4.2.3 |
-| Control token suppression | None | Suppresses all [TAG] and <\|control\|> |
-| Repetition penalty | -1.2, last 16 tokens | -1.2, last 16 tokens |
-| Top-k | 50 | 50 |
-| Top-p | 0.92 | 0.92 — synced v4.2.3 |
+The only production-specific additions are:
+- `load_model()` — checkpoint loading with key remapping
+- `auto_tag()`, `build_doi_tho_prompt()`, `build_doi_tho_from_lines()` — prompt builders
+- `decode_doi_tho()` — thin wrapper around `decode_response` with max_lines enforcement
 
 ---
 
@@ -111,7 +106,7 @@ The production inference module (`deploy/utils/inference.py`) is intentionally s
 - [ ] `checkpoints/doi_tho_best.pt` is the correct checkpoint
 - [ ] `tokenizer/poetry_bpe.model` has correct control token IDs (0,1,2,3,9)
 - [ ] `src/model.py` is compatible with the checkpoint (key names match)
-- [ ] `deploy/utils/inference.py` generation logic matches current best practices
+- [ ] `src/generation.py` is the canonical generate function (eval = prod = CLI)
 - [ ] `bash scripts/pack_for_doitho.sh` runs without errors
 - [ ] `cd ../doitho && python -m pytest backend/tests/ -x -q` all pass
 - [ ] Manual test: generate a poem, verify it reads like Vietnamese

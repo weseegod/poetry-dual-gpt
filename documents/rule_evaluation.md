@@ -1,6 +1,6 @@
 # 📊 v4.2.3 Rule-by-Rule Evaluation — 5 Lục Bát Rules
 
-> Generated: 2026-05-27 12:26
+> Generated: 2026-05-27 12:41
 > Checkpoint: doi_tho_best.pt
 > Couplet prompts: 116
 > Model: 31M params, n_embd=512, n_head=8, n_layer=8
@@ -9,35 +9,35 @@
 
 | Rule | Couplet | Random | Target |
 |------|---------|--------|--------|
-| R1: Vần lưng | ✅ 92.2% | 0.6% | 78%+ |
-| R2: Bằng-Trắc | ✅ 99.8% | 6.2% | 92%+ |
+| R1: Vần lưng | ✅ 94.0% | 0.6% | 78%+ |
+| R2: Bằng-Trắc | ✅ 99.4% | 6.2% | 92%+ |
 | R3: Syllable (6+8) | ✅ 99.1% | 7.0% | 85%+ |
 | R4: Trầm-Bổng | ✅ 99.1% | 50.0% | 88%+ |
 | R5: Nhịp điệu | ✅ 99.1% | 7.0% | 75%+ |
-| **All 5 pass** | ✅ 90.5% | 0.0% | 75%+ |
+| **All 5 pass** | ✅ 91.4% | 0.0% | 75%+ |
 
 ## 📊 Quality Metrics
 
 | Avg response length | 14.0 syl |
-| Lexical diversity | 0.953 |
+| Lexical diversity | 0.956 |
 | Empty response rate | 0.0% |
 
 ## 📝 Couplet Samples
 
 | Input | Output Lục | Output Bát | R1 | R2 | R3 | R4 | All |
 |-------|-----------|-----------|----|----|----|----|-----|
-| thân em như chẽn lúa đòng | yêu em như thể lá dài | anh đi để lại tháng ngày  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| công cha như núi thái sơn | mẹ cao biển rộng bao la | con là nguồn cội cha là s | ✅ | ✅ | ✅ | ✅ | ✅ |
-| một lòng thờ mẹ kính cha  | lời cha như núi thái sơn | làm con ghi tạc không còn | ❌ | ✅ | ✅ | ✅ | ❌ |
-| núi cao bởi có đất bồi /  | núi trời mây biếc trong x | hoa ban sắc thắm trên càn | ✅ | ✅ | ✅ | ✅ | ✅ |
-| uống nước nhớ kẻ đào sông | nhớ ngày hoa bưởi ngát vư | nhớ em hàng xóm hái luôn  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| đất lành chim đậu về đây  | làm người như gió cánh di | bay vào trời đất phiêu yê | ✅ | ✅ | ✅ | ✅ | ✅ |
-| lời nói chẳng mất tiền mu | anh ơi có nghĩ gì sau | tình yêu đâu dễ bắt đầu k | ✅ | ✅ | ✅ | ✅ | ✅ |
-| một cây làm chẳng nên non | một mai dù có ra sao | thì không về được ngày nà | ✅ | ✅ | ✅ | ✅ | ✅ |
-| bầu ơi thương lấy bí cùng | thế là em cũng ngập tràn | một khi anh đã biết an tâ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| nhiễu điều phủ lấy giá gư | có tình chồng nghĩa thủy  | để khi gặp bạc chẳng dung | ✅ | ✅ | ✅ | ✅ | ✅ |
-| dẻo thơm một hạt đắng cay | ai đi có những cho vừa | thương thầm nhớ trộm cho  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cày đồng đang buổi ban tr | đồng nghèo mấy bữa no say | đồng khô nứt nẻ bàn tay c | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ai về tôi gửi buồng cau / | ai còn một với trăng rằm | để người xa xứ vẫn nằm nh | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cây đa bến nước sân đình  | sân đình giếng nước cây đ | mái tranh vách đất mái nh | ✅ | ✅ | ✅ | ✅ | ✅ |
-| trâu ơi ta bảo trâu này / | trâu thì cày lại đồng xa | trâu lên xuống ruộng để l | ✅ | ✅ | ✅ | ✅ | ✅ |
+| thân em như chẽn lúa đòng | bao năm gió lạnh sương dà | mẹ con ấm áp một vài năm  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| công cha như núi thái sơn | từ khi con lớn thành cha | đến khi khôn lớn tuổi già | ✅ | ✅ | ✅ | ✅ | ✅ |
+| một lòng thờ mẹ kính cha  | mẹ là một biển nước non | cha con khôn lớn vuông tr | ✅ | ✅ | ✅ | ✅ | ✅ |
+| núi cao bởi có đất bồi /  | sóng đâu như biển trong x | vẫn đâu thấy được tròng t | ✅ | ✅ | ✅ | ✅ | ✅ |
+| uống nước nhớ kẻ đào sông | về quê nhớ mẹ thân thương | nhớ con mẹ cháu yêu thươn | ❌ | ✅ | ✅ | ✅ | ❌ |
+| đất lành chim đậu về đây  | bao giờ trời đã sang thu | mà tôi không được lời ru  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| lời nói chẳng mất tiền mu | lời thơ ý đẹp một màu | yêu thương thắm thiết tìn | ✅ | ✅ | ✅ | ✅ | ✅ |
+| một cây làm chẳng nên non | ba con không thể nào đào | ba còn chưa kịp lạc vào c | ✅ | ✅ | ✅ | ✅ | ✅ |
+| bầu ơi thương lấy bí cùng | dù cho cách sống gian nan | cũng ăn quả ngọt sẻ san m | ✅ | ✅ | ✅ | ✅ | ✅ |
+| nhiễu điều phủ lấy giá gư | dẫu là tình sống mông lun | lòng dân luôn đảng ta chu | ✅ | ✅ | ✅ | ✅ | ✅ |
+| dẻo thơm một hạt đắng cay | người ơi nhớ đến cho vừa | để hương thơm ngát những  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cày đồng đang buổi ban tr | cày cho đất nước đổi thay | ruộng ngày lúa cấy cỏ cây | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ai về tôi gửi buồng cau / | ai mang ra bến đò tăm | có về con gái đêm rằm trò | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cây đa bến nước sân đình  | người như cô gái nết na | cùng duyên thắm đượm thật | ✅ | ✅ | ✅ | ✅ | ✅ |
+| trâu ơi ta bảo trâu này / | trâu ngày mình cứ đi xa | để cho lúa đã hết mùa bội | ✅ | ✅ | ✅ | ✅ | ✅ |
