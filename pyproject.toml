@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "poetry-dual-gpt"
+version = "4.2.3"
+description = "A 31.5M GPT-style Transformer for Vietnamese poetry dueling (đối thơ)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Thanh", email = "thanh@grindy.io" }
+]
+keywords = [
+    "vietnamese",
+    "poetry",
+    "transformer",
+    "gpt",
+    "nlp",
+    "text-generation",
+    "luc-bat",
+    "doi-tho",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "tokenizers>=0.15.0",
+    "tqdm>=4.65.0",
+    "pandas>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+eval = [
+    "pytest>=7.0.0",
+]
+client = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/weseegod/poetry-dual-gpt"
+Repository = "https://github.com/weseegod/poetry-dual-gpt"
+"Issues" = "https://github.com/weseegod/poetry-dual-gpt/issues"
+"Live Demo" = "https://doitho.net"
+
+[tool.setuptools.packages.find]
+include = ["src*", "evaluate*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

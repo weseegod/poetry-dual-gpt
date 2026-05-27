@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
 
 # Virtual environment
 venv/
@@ -25,8 +26,10 @@ tokenizer/poetry_bpe*.model
 
 # Frontend
 client/frontend/node_modules/
-data/poems_copy.csv
+
+# Deploy artifacts
 deploy/utils/doitho.pt
-deploy/utils/doitho.pt
-deploy/_pack_tmp/
 deploy/doitho_utils.zip
+
+# Learning materials (personal notes, historical roadmaps, experiments)
+learning/
