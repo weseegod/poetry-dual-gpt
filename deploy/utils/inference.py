@@ -140,11 +140,15 @@ def generate(
     tokenizer: Tokenizer,
     temperature: float = 0.75,
     top_k: int = 50,
-    top_p: float = None,
+    top_p: float = 0.92,
     max_tokens: int = 64,
 ) -> dict:
     """
-    Generate đối thơ response from a formatted prompt.
+    v4.2.3: Generate đối thơ response from a formatted prompt.
+    
+    Uses soft rhyme (logit boost +2.0), soft linebreak bias, top-p nucleus
+    sampling, and only suppresses <|pad|> and <|start|> — the model naturally
+    won't generate control tokens during content generation.
     
     Args:
         prompt: formatted prompt string (from build_doi_tho_prompt or auto_tag)
@@ -152,23 +156,27 @@ def generate(
         tokenizer: ByteLevel BPE tokenizer
         temperature: sampling temperature (0.75 default)
         top_k: top-k filtering (50 default)
-        top_p: nucleus filtering (None = off)
+        top_p: nucleus filtering (0.92 default)
         max_tokens: max tokens to generate
     
     Returns:
-        dict with 'luc' (6-syl line), 'bat' (8-syl line), 'raw_tokens'
+        dict with 'luc' (6-syl line), 'bat' (8-syl line), 'lines', 'token_ids'
     """
     end_id = tokenizer.token_to_id("<|end|>")
     pad_id = tokenizer.token_to_id("<|pad|>")
+    start_id = tokenizer.token_to_id("<|start|>")
     lb_id = tokenizer.token_to_id("<|linebreak|>")
+    reply_id = tokenizer.token_to_id("<|reply|>")
     device = next(model.parameters()).device
     
-    # Build set of control token IDs to suppress (IDs 0-9 and any [TAG] tokens)
+    # v4.2.3: Only suppress <|pad|> and <|start|> — these should never appear.
+    # Do NOT suppress [RHYME:*], [TONE:*], [TRAMBONG:*], <|reply|> — the model
+    # won't generate them naturally (they only appear in the prompt prefix).
+    # Aggressive suppression redistributes probability onto rare ByteLevel BPE
+    # characters (e.g. ')', '(', '.', ',') causing visible garbage in output.
     suppress_ids = {pad_id}
-    for tid in range(tokenizer.get_vocab_size()):
-        name = tokenizer.id_to_token(tid)
-        if name and (name.startswith('[') or name.startswith('<|') and name != '<|linebreak|>' and name != '<|end|>'):
-            suppress_ids.add(tid)
+    if start_id is not None:
+        suppress_ids.add(start_id)
     
     # Parse target rhyme for constraint
     target_rhyme = None
@@ -180,58 +188,58 @@ def generate(
     ids = tokenizer.encode(prompt).ids
     idx = torch.tensor([ids], dtype=torch.long, device=device)
     new_tokens = []
-
+    lb_emitted = False  # track if first linebreak has been emitted
+    
     for _ in range(max_tokens):
         logits, _ = model(idx[:, -model.block_size:])
         logits = logits[:, -1, :] / temperature
-        # Suppress all control tokens — never sample them as content
+        
+        # Suppress only <|pad|> and <|start|> — bare minimum safety
         for tid in suppress_ids:
             logits[:, tid] = float("-inf")
 
-        # Linebreak enforcement: force <|linebreak|> at exactly 6 syllables in first output line
-        if lb_id not in new_tokens:
-            reply_id = tokenizer.token_to_id("<|reply|>")
-            if reply_id in new_tokens:
-                last_reply = max(i for i, t in enumerate(new_tokens) if t == reply_id)
-                after = new_tokens[last_reply + 1:]
-            else:
-                after = new_tokens
+        # v4.2.3: Soft linebreak BIAS instead of hard FORCE.
+        # Bias <|linebreak|> at position ~6, bias <|end|> at position ~8.
+        # The model can still override if it has a strong semantic preference.
+        after = new_tokens
+        if lb_emitted:
+            # In second line: bias <|end|> around syllable 8
+            last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
+            after = new_tokens[last_lb + 1:]
+            decoded_after = tokenizer.decode(after)
+            syl_count2 = len(decoded_after.strip().split()) if decoded_after.strip() else 0
+            if syl_count2 < 6:
+                logits[:, end_id] = float("-inf")  # don't stop before 6 syl
+            elif 6 <= syl_count2 < 8:
+                logits[:, end_id] += 1.0  # soft bias toward stopping
+                logits[:, lb_id] = float("-inf")  # no extra linebreaks
+            elif syl_count2 >= 8:
+                logits[:, end_id] += 3.0  # strong bias to stop at 8
+                logits[:, lb_id] = float("-inf")
+        else:
+            # In first line: bias <|linebreak|> around syllable 5-7
             decoded_after = tokenizer.decode(after)
             syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
-            if syl_count < 6:
-                logits[:, lb_id] = float("-inf")  # suppress linebreak before 6
-                logits[:, end_id] = float("-inf")  # also suppress <|end|> before 6
-            elif syl_count == 6:
-                # Force linebreak: 6 content syllables done
-                logits[:, :] = float("-inf")
-                logits[:, lb_id] = 0.0
-        
-        # Second line: force <|end|> at 8 syllables, suppress linebreak after
-        elif lb_id in new_tokens:
-            last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
-            after_lb = new_tokens[last_lb + 1:]
-            decoded_after = tokenizer.decode(after_lb)
-            syl_count2 = len(decoded_after.strip().split()) if decoded_after.strip() else 0
-            if syl_count2 < 8:
-                logits[:, end_id] = float("-inf")  # suppress <|end|> before 8
-                logits[:, lb_id] = float("-inf")   # suppress extra linebreaks
-            elif syl_count2 == 8:
-                logits[:, :] = float("-inf")
-                logits[:, end_id] = 0.0  # force <|end|> at 8 syllables
+            if syl_count < 4:
+                logits[:, lb_id] = float("-inf")
+                logits[:, end_id] = float("-inf")
+            elif 4 <= syl_count < 6:
+                logits[:, lb_id] += 1.0  # soft bias
+                logits[:, end_id] = float("-inf")
+            elif syl_count >= 6:
+                logits[:, lb_id] += 3.0  # strong bias after 6
+                logits[:, end_id] = float("-inf")
 
-        # Repetition penalty
+        # Repetition penalty — penalize tokens from recent output (last 16)
         for prev in new_tokens[-16:]:
             logits[:, prev] -= 1.2
 
         # P2 v4.2.3: Soft rhyme constraint at pos6 of output Lục line
-        # Boost matching rhyme candidates (+2.0 logit) instead of hard masking.
-        # This lets the model prefer semantically-plausible rhyming words.
-        # If model is very uncertain (flat distribution), fall back to hard masking.
         if target_rhyme is not None:
-            # Count syllables since last <|linebreak|> or <|reply|>
+            # Count syllables since last delimiter
             last_delim = -1
-            for delim_id in [lb_id, tokenizer.token_to_id("<|reply|>")]:
-                if delim_id in new_tokens:
+            for delim_id in [lb_id, reply_id]:
+                if delim_id is not None and delim_id in new_tokens:
                     pos = max(i for i, t in enumerate(new_tokens) if t == delim_id)
                     last_delim = max(last_delim, pos)
             after_delim = new_tokens[last_delim + 1:] if last_delim >= 0 else new_tokens
@@ -273,7 +281,7 @@ def generate(
             v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
             logits[logits < v[:, -1:]] = float("-inf")
 
-        # Top-p (nucleus)
+        # Top-p (nucleus) — v4.2.3: enabled by default
         if top_p is not None:
             probs = F.softmax(logits, dim=-1)
             sorted_probs, sorted_idx = torch.sort(probs, descending=True)
@@ -287,21 +295,31 @@ def generate(
         next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
         if next_id == end_id:
             break
+        if next_id == lb_id:
+            lb_emitted = True
         new_tokens.append(next_id)
         idx = torch.cat((idx, torch.tensor([[next_id]], device=device)), dim=1)
 
-    # Decode output — split on linebreaks
+    # Decode output — split on linebreaks, then clean
     lines = []
     chunk = []
     for t in new_tokens:
         if t == lb_id:
             if chunk:
-                lines.append(tokenizer.decode(chunk).strip())
+                decoded = tokenizer.decode(chunk)
+                # Clean: remove control tokens + trailing punctuation
+                decoded = decoded.replace('<|end|>', '').replace('<|reply|>', '')
+                decoded = decoded.replace('<|start|>', '').replace('<|pad|>', '')
+                lines.append(decoded.strip(',.-;:!?()[]{}<> \t'))
             chunk = []
         else:
             chunk.append(t)
     if chunk:
-        lines.append(tokenizer.decode(chunk).strip())
+        decoded = tokenizer.decode(chunk)
+        decoded = decoded.replace('<|end|>', '').replace('<|reply|>', '')
+        decoded = decoded.replace('<|start|>', '').replace('<|pad|>', '')
+        lines.append(decoded.strip(',.-;:!?()[]{}<> \t'))
+    lines = [l for l in lines if l]  # remove empty
 
     return {
         "luc": lines[0] if len(lines) > 0 else "",
@@ -314,8 +332,8 @@ def generate(
 
 def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=False, max_lines=2, is_tn=False):
     """
-    Decode generated token IDs into lines, splitting on <|linebreak|>.
-    v4.1: Lục Bát only. No T2a re-split.
+    v4.2.3: Decode generated token IDs into cleaned lines.
+    Splits on <|linebreak|>, strips control tokens and trailing punctuation.
     """
     lb_id = tokenizer.token_to_id("<|linebreak|>")
     lines = []
@@ -323,17 +341,24 @@ def decode_doi_tho(tokenizer, new_token_ids, enforce_syllables=False, max_lines=
     for t in new_token_ids:
         if t == lb_id:
             if chunk:
-                lines.append(tokenizer.decode(chunk).strip())
+                decoded = tokenizer.decode(chunk)
+                decoded = decoded.replace('<|end|>', '').replace('<|reply|>', '')
+                decoded = decoded.replace('<|start|>', '').replace('<|pad|>', '')
+                lines.append(decoded.strip(',.-;:!?()[]{}<> \t'))
             chunk = []
         else:
             chunk.append(t)
     if chunk:
-        lines.append(tokenizer.decode(chunk).strip())
+        decoded = tokenizer.decode(chunk)
+        decoded = decoded.replace('<|end|>', '').replace('<|reply|>', '')
+        decoded = decoded.replace('<|start|>', '').replace('<|pad|>', '')
+        lines.append(decoded.strip(',.-;:!?()[]{}<> \t'))
+    lines = [l for l in lines if l]
 
     if not lines:
         return []
 
-    targets = (6, 8)
+    targets = (7, 7) if is_tn else (6, 8)
 
     if enforce_syllables:
         for i, line in enumerate(lines):
