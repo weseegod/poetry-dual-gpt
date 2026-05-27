@@ -215,7 +215,7 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         print(f"   Step: {start_step}  |  LR: {cfg['learning_rate']} (fine-tune)")
 
     # ── Training ──
-    print(f"\n{'='*60}\n🚀  TRAINING START\n{'='*60}\n")
+    print(f"\n{'='*60}\n🚀  TRAINING START (v4.2 Tier 3)\n{'='*60}\n")
     model.train()
     step, best_val, loss_sum, loss_cnt = start_step, float("inf"), 0.0, 0
     loss = torch.tensor(0.0)  # safety net — always bound before save_ckpt
@@ -223,6 +223,23 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
     t0 = time.time()
     it = iter(train_loader)
     pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
+
+    # ── v4.2 Tier 3: Build per-token loss weights (P6) ──
+    # Only <|end|> (3) and <|linebreak|> (9) need full weight — model generates them.
+    # All other control tokens (IDs 1-214 except 3,9) are prompt-only, reduce to 0.3x.
+    # Content tokens (215+) keep 1.0x.
+    GENERATED_CONTROL_IDS = {3, 9}  # <|end|>, <|linebreak|>
+    token_weight = torch.ones(V, device=dev)
+    for i in range(1, 215):  # skip 0 (pad, already ignore_index)
+        if i not in GENERATED_CONTROL_IDS:
+            token_weight[i] = 0.3
+    
+    # Linebreak bonus (P8): positions where y == <|linebreak|> get extra weight
+    lb_id = 9
+    linebreak_bonus = 0.2
+    print(f"   P6: Content-weighted loss (tags ×0.3, <|end|>/<|lb|> ×1.0)")
+    print(f"   P7: Diversity loss weight=0.03")
+    print(f"   P8: Linebreak bonus=+{linebreak_bonus}")
 
     while step < max_steps:
         # Next batch (new epoch if exhausted)
@@ -263,11 +280,42 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         # Forward + backward
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
             logits, _ = model(x_input)
-            # v4.1: Pure Lục Bát — simple cross-entropy, no weighted loss
-            loss = F.cross_entropy(
+
+            # ── P6: Content-weighted cross-entropy loss ──
+            # Reduce gradient on prompt-only control tokens so model focuses on content
+            loss_per_token = F.cross_entropy(
                 logits.view(-1, model.vocab_size), y.view(-1),
-                ignore_index=0
+                ignore_index=0, reduction='none'
             )
+            weights = token_weight[y.view(-1)]  # lookup weight for each target token
+
+            # ── P8: Linebreak position reinforcement ──
+            # Positions where the target is <|linebreak|> get extra weight
+            lb_mask = (y.view(-1) == lb_id)
+            weights = weights + lb_mask.float() * linebreak_bonus
+
+            ce_loss = (loss_per_token * weights).mean()
+
+            # ── P7: N-gram diversity loss ──
+            # Penalize high probability on content tokens that repeat in recent context
+            if step >= 500:  # warmup: let model learn basics first
+                B, T, V_out = logits.shape
+                div_total = 0.0
+                div_count = 0
+                window = 16
+                for t in range(1, T):
+                    recent = x_input[:, max(0, t - window):t]
+                    for b in range(B):
+                        for prev_id in recent[b]:
+                            if prev_id >= 215:  # content tokens only
+                                prob = F.softmax(logits[b, t], dim=-1)[prev_id]
+                                div_total += prob
+                                div_count += 1
+                div_loss = div_total / max(div_count, 1) if div_count > 0 else 0.0
+            else:
+                div_loss = 0.0
+
+            loss = ce_loss + 0.03 * div_loss
         
         opt.zero_grad()
         loss.backward()
