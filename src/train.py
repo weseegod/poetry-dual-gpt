@@ -238,8 +238,8 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
     lb_id = 9
     linebreak_bonus = 0.2
     print(f"   P6: Content-weighted loss (tags ×0.3, <|end|>/<|lb|> ×1.0)")
-    print(f"   P7: Diversity loss weight=0.03")
     print(f"   P8: Linebreak bonus=+{linebreak_bonus}")
+    print(f"   P7: Removed — OOM on T4. P6 + inference rep_penalty sufficient.")
 
     while step < max_steps:
         # Next batch (new epoch if exhausted)
@@ -296,26 +296,7 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
 
             ce_loss = (loss_per_token * weights).mean()
 
-            # ── P7: N-gram diversity loss ──
-            # Penalize high probability on content tokens that repeat in recent context
-            if step >= 500:  # warmup: let model learn basics first
-                B, T, V_out = logits.shape
-                div_total = 0.0
-                div_count = 0
-                window = 16
-                for t in range(1, T):
-                    recent = x_input[:, max(0, t - window):t]
-                    for b in range(B):
-                        for prev_id in recent[b]:
-                            if prev_id >= 215:  # content tokens only
-                                prob = F.softmax(logits[b, t], dim=-1)[prev_id]
-                                div_total += prob
-                                div_count += 1
-                div_loss = div_total / max(div_count, 1) if div_count > 0 else 0.0
-            else:
-                div_loss = 0.0
-
-            loss = ce_loss + 0.03 * div_loss
+            loss = ce_loss  # Tier 3: P6 content-weighted CE + P8 linebreak bonus
         
         opt.zero_grad()
         loss.backward()
