@@ -1,6 +1,6 @@
 # 📊 v4.2.3 Rule-by-Rule Evaluation — 5 Lục Bát Rules
 
-> Generated: 2026-05-27 12:41
+> Generated: 2026-05-27 13:05
 > Checkpoint: doi_tho_best.pt
 > Couplet prompts: 116
 > Model: 31M params, n_embd=512, n_head=8, n_layer=8
@@ -9,35 +9,35 @@
 
 | Rule | Couplet | Random | Target |
 |------|---------|--------|--------|
-| R1: Vần lưng | ✅ 94.0% | 0.6% | 78%+ |
-| R2: Bằng-Trắc | ✅ 99.4% | 6.2% | 92%+ |
-| R3: Syllable (6+8) | ✅ 99.1% | 7.0% | 85%+ |
+| R1: Vần lưng | ✅ 92.2% | 0.6% | 78%+ |
+| R2: Bằng-Trắc | ✅ 100.0% | 6.2% | 92%+ |
+| R3: Syllable (6+8) | ✅ 100.0% | 7.0% | 85%+ |
 | R4: Trầm-Bổng | ✅ 99.1% | 50.0% | 88%+ |
-| R5: Nhịp điệu | ✅ 99.1% | 7.0% | 75%+ |
+| R5: Nhịp điệu | ✅ 100.0% | 7.0% | 75%+ |
 | **All 5 pass** | ✅ 91.4% | 0.0% | 75%+ |
 
 ## 📊 Quality Metrics
 
 | Avg response length | 14.0 syl |
-| Lexical diversity | 0.956 |
+| Lexical diversity | 0.962 |
 | Empty response rate | 0.0% |
 
 ## 📝 Couplet Samples
 
 | Input | Output Lục | Output Bát | R1 | R2 | R3 | R4 | All |
 |-------|-----------|-----------|----|----|----|----|-----|
-| thân em như chẽn lúa đòng | bao năm gió lạnh sương dà | mẹ con ấm áp một vài năm  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| công cha như núi thái sơn | từ khi con lớn thành cha | đến khi khôn lớn tuổi già | ✅ | ✅ | ✅ | ✅ | ✅ |
-| một lòng thờ mẹ kính cha  | mẹ là một biển nước non | cha con khôn lớn vuông tr | ✅ | ✅ | ✅ | ✅ | ✅ |
-| núi cao bởi có đất bồi /  | sóng đâu như biển trong x | vẫn đâu thấy được tròng t | ✅ | ✅ | ✅ | ✅ | ✅ |
-| uống nước nhớ kẻ đào sông | về quê nhớ mẹ thân thương | nhớ con mẹ cháu yêu thươn | ❌ | ✅ | ✅ | ✅ | ❌ |
-| đất lành chim đậu về đây  | bao giờ trời đã sang thu | mà tôi không được lời ru  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| lời nói chẳng mất tiền mu | lời thơ ý đẹp một màu | yêu thương thắm thiết tìn | ✅ | ✅ | ✅ | ✅ | ✅ |
-| một cây làm chẳng nên non | ba con không thể nào đào | ba còn chưa kịp lạc vào c | ✅ | ✅ | ✅ | ✅ | ✅ |
-| bầu ơi thương lấy bí cùng | dù cho cách sống gian nan | cũng ăn quả ngọt sẻ san m | ✅ | ✅ | ✅ | ✅ | ✅ |
-| nhiễu điều phủ lấy giá gư | dẫu là tình sống mông lun | lòng dân luôn đảng ta chu | ✅ | ✅ | ✅ | ✅ | ✅ |
-| dẻo thơm một hạt đắng cay | người ơi nhớ đến cho vừa | để hương thơm ngát những  | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cày đồng đang buổi ban tr | cày cho đất nước đổi thay | ruộng ngày lúa cấy cỏ cây | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ai về tôi gửi buồng cau / | ai mang ra bến đò tăm | có về con gái đêm rằm trò | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cây đa bến nước sân đình  | người như cô gái nết na | cùng duyên thắm đượm thật | ✅ | ✅ | ✅ | ✅ | ✅ |
-| trâu ơi ta bảo trâu này / | trâu ngày mình cứ đi xa | để cho lúa đã hết mùa bội | ✅ | ✅ | ✅ | ✅ | ✅ |
+| thân em như chẽn lúa đòng | bao la trời đất cao vời | tình em tha thiết muôn lờ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| công cha như núi thái sơn | dù cho vật đổi sao vừa | nhưng dân vẫn việt bốn mù | ✅ | ✅ | ✅ | ✅ | ✅ |
+| một lòng thờ mẹ kính cha  | cha là biển cả núi non | làm con ghi nhớ mãi còn t | ✅ | ✅ | ✅ | ✅ | ✅ |
+| núi cao bởi có đất bồi /  | non sông gấm vóc màu xanh | từ thời gian sử lưu thành | ✅ | ✅ | ✅ | ✅ | ✅ |
+| uống nước nhớ kẻ đào sông | cuộc đời ai biết mà lường | sao cho ta phải yêu thươn | ❌ | ✅ | ✅ | ✅ | ❌ |
+| đất lành chim đậu về đây  | thế rồi từ đó đến yêu | người về làm vợ tình phiê | ✅ | ✅ | ✅ | ✅ | ✅ |
+| lời nói chẳng mất tiền mu | mong rằng được sống một c | để cho cuộc sống bạc đầu  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| một cây làm chẳng nên non | núi là núi tựa trời cao | đất sâu không có lối vào  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| bầu ơi thương lấy bí cùng | tình ơi thương lấy muôn v | bao nhiêu cảm xúc chứa ch | ✅ | ✅ | ✅ | ✅ | ✅ |
+| nhiễu điều phủ lấy giá gư | biết bao cái sự lạ lùng | sống như ngọn lửa đã chun | ✅ | ✅ | ✅ | ✅ | ✅ |
+| dẻo thơm một hạt đắng cay | ai quê một nắng sớm trưa | mẹ là hạt gạo lúc mùa vu  | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cày đồng đang buổi ban tr | cày cho cuốc đất trời mây | để trâu gặm lúa mà say lò | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ai về tôi gửi buồng cau / | lá trầu em đã xa xăm | cau này ai đợi anh nằm mộ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cây đa bến nước sân đình  | cái thời áo cũ người qua | vẫn còn nguyên vẹn như là | ✅ | ✅ | ✅ | ✅ | ✅ |
+| trâu ơi ta bảo trâu này / | trâu cho chúng được đi xa | trâu bò ta có ở nhà hay c | ✅ | ✅ | ✅ | ✅ | ✅ |
