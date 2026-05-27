@@ -7,18 +7,22 @@ Usage:  uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 import sys
 from pathlib import Path
 
-# Add src/ to path so we can import model + sample
+# Add src/ to path so we can import model + generation
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import torch
-import torch.nn.functional as F
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from tokenizers import Tokenizer
 
 from model import PoetryDuelGPT
-from tones import get_luc_bat_tags, get_that_ngon_tags, get_doi_tho_tags, get_rhyme_group
+
+# v4.2: canonical generation module (replaces all local generation code)
+from generation import (
+    build_prompt, generate, decode_response,
+    PAD_ID, END_ID, LB_ID, REPLY_ID,
+)
 
 
 # ── Config ──────────────────────────────────────────
@@ -124,256 +128,61 @@ class ChatResponse(BaseModel):
     prompt: str
 
 
-def _parse_couplets(user_input: str):
-    """Parse user input into (couplets_list, num_input_couplets).
-    Supports both Lục Bát (6+8) and Thất Ngôn (7+7).
-    Normalizes to lowercase to match training data."""
-    user_input = user_input.lower()
-    lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
+# ── v4.2: All generation logic delegated to src/generation.py ──
+# build_prompt(), generate(), decode_response() are imported above.
+
+
+@torch.no_grad()
+def generate_doi_tho(raw_input: str, temperature=0.75, top_k=50, top_p=0.92,
+                     max_tokens=64) -> list:
+    """
+    v4.2: Generate đối thơ response. Each input couplet gets its own response.
+    Uses the unified generate() from src/generation.py.
+    
+    Returns list of token IDs with linebreaks between couplet responses.
+    """
+    raw_input = raw_input.lower()
+    lines = [l.strip() for l in raw_input.strip().split('\n') if l.strip()]
+    
+    # Group into couplets
     couplets = []
     i = 0
     while i + 1 < len(lines):
         s1, s2 = len(lines[i].split()), len(lines[i+1].split())
-        # Accept Lục Bát (6+8) or Thất Ngôn (7+7) couplets
-        if (s1 == 6 and s2 == 8) or (s1 == 7 and s2 == 7):
+        if (s1 == 6 and s2 == 8):
             couplets.append((lines[i], lines[i+1]))
             i += 2
         else:
             i += 1
+    
     if not couplets and lines:
-        # Single line without a pair — treat as 1-couplet input
-        return [], 0
-    return couplets, len(couplets)
-
-
-def _build_doi_tho_prompt(couplets, max_context=1):
-    """Build [DOI_THO] prompt from last N couplets with genre token."""
+        # Single line: wrap as one couplet
+        couplets = [(lines[-1], lines[-1])]
+    
     if not couplets:
-        return ""
-    ctx = couplets[-max_context:]
-    last_a, last_b = ctx[-1]
-    s1_last = len(last_a.split())
-    if s1_last == 7:
-        rhyme_tag, tone_tag = get_doi_tho_tags_tn(last_a)
-        genre_token = "[THAT_NGON]"
-    else:
-        rhyme_tag, tone_tag = get_doi_tho_tags(last_a, last_b)
-        genre_token = "[LUC_BAT]"
-    input_lines = []
-    for a, b in ctx:
-        input_lines.append(a)
-        input_lines.append(b)
-    input_str = " <|linebreak|> ".join(input_lines)
-    tags = f"{rhyme_tag} {tone_tag}".strip()
-    tag_part = f"{genre_token}"
-    if tags:
-        tag_part += f" {tags}"
-    return f"<|start|> {tag_part} {input_str} <|reply|>"
-
-
-def _auto_tag_doi_tho(user_input: str, max_context: int = 1) -> str:
-    """Backward-compat: wrap input as [DOI_THO] prompt with genre token."""
-    couplets, _ = _parse_couplets(user_input)
-    if not couplets:
-        lines = [l.strip() for l in user_input.strip().split('\n') if l.strip()]
-        if lines:
-            line = lines[-1]
-            syl_count = len(line.split())
-            if syl_count == 7:
-                rhyme_tag, tone_tag = get_doi_tho_tags_tn(line)
-                genre_token = "[THAT_NGON]"
-            else:
-                rhyme_tag, tone_tag = get_doi_tho_tags(line, line)
-                genre_token = "[LUC_BAT]"
-            tags = f"{rhyme_tag} {tone_tag}".strip()
-            tag_part = f"{genre_token}"
-            if tags:
-                tag_part += f" {tags}"
-            return f"<|start|> {tag_part} {line} <|reply|>"
-        return ""
-    return _build_doi_tho_prompt(couplets, max_context)
-
-
-@torch.no_grad()
-def generate(prompt: str, temperature=0.75, top_k=50, top_p=0.92, max_tokens=64, is_doi_tho=False):
-    """
-    Generate đối thơ response. Each input couplet gets its own independent response:
-      1 couplet in → 1 couplet out  (2 lines)
-      2 couplets in → 2 couplets out (4 lines, C1→C3, C2→C4)
-      N couplets in → N couplets out
+        return []
     
-    P1: Rhyme constraint at rhyme position in 2nd output line.
-    """
-    import re
-    end_id = tokenizer.token_to_id("<|end|>")
-    pad_id = tokenizer.token_to_id("<|pad|>")
-    lb_id = tokenizer.token_to_id("<|linebreak|>")
-    
-    # Parse input
-    couplets, num_input = _parse_couplets(prompt)
-    if num_input == 0:
-        num_input = 1  # single line = 1 couplet
-    
-    # Collect input lines
-    input_lines = []
-    for six, eight in couplets:
-        input_lines.extend([six, eight])
-    if not input_lines:
-        input_lines = [l.strip() for l in prompt.strip().split('\n') if l.strip()]
-    
-    # Generate one response per input couplet (independent duels)
-    all_new_tokens = []
-    for turn in range(num_input):
-        # Get this turn's input couplet
-        if turn < len(couplets):
-            c6, c8 = couplets[turn]
+    all_tokens = []
+    for turn, (c6, c8) in enumerate(couplets):
+        # Build couplet input string
+        if c6 == c8:
+            # Single line input
+            couplet_input = c6
         else:
-            # Single line: use it as both
-            c6 = c8 = input_lines[-1]
+            couplet_input = f"{c6}\n{c8}"
         
-        # Build prompt for just this couplet
-        prompt_str = _build_doi_tho_prompt([(c6, c8)], max_context=1)
-        if not prompt_str:
-            break
+        prompt = build_prompt(couplet_input, include_trambong=True)
+        tokens, _ = generate(model, tokenizer, prompt,
+                            max_new=max_tokens, temperature=temperature,
+                            top_k=top_k, top_p=top_p, device=DEVICE,
+                            rhyme_mode="soft")
+        all_tokens.extend(tokens)
         
-        is_tn = '[THAT_NGON]' in prompt_str
-        
-        # P1: Parse target rhyme from prompt
-        target_rhyme = None
-        rhyme_syl_idx = None
-        rhyme_match = re.search(r'\[RHYME:([^\]]+)\]', prompt_str)
-        if rhyme_match:
-            target_rhyme = rhyme_match.group(1)
-            if '[THAT_NGON]' in prompt_str:
-                rhyme_syl_idx = 6  # Thất Ngôn: 7th syllable
-            else:
-                rhyme_syl_idx = 5  # Lục Bát: 6th syllable
-        
-        # Encode and generate
-        ids = tokenizer.encode(prompt_str).ids
-        idx = torch.tensor([ids], dtype=torch.long, device=DEVICE)
-        
-        new_tokens = []
-        for _ in range(max_tokens):
-            logits, _ = model(idx[:, -model.block_size:])
-            logits = logits[:, -1, :] / temperature
-            logits[:, pad_id] = float("-inf")
-            
-            # Repetition penalty — penalize tokens from recent output
-            for prev in new_tokens[-16:]:
-                logits[:, prev] -= 1.2
-            
-            # P1: Rhyme constraint at rhyme position in 2nd line
-            if target_rhyme is not None and rhyme_syl_idx is not None:
-                if lb_id in new_tokens:
-                    last_lb = max(i for i, t in enumerate(new_tokens) if t == lb_id)
-                    after_lb = new_tokens[last_lb + 1:]
-                    decoded_after = tokenizer.decode(after_lb)
-                    current_syl_count = len(decoded_after.strip().split()) if decoded_after.strip() else 0
-                else:
-                    current_syl_count = 0
-                if current_syl_count == rhyme_syl_idx:
-                    candidate_k = min(top_k * 2 if top_k else 100, logits.size(-1))
-                    _, topk_idx = torch.topk(logits, candidate_k)
-                    matching = []
-                    non_matching = []
-                    for tid in topk_idx[0]:
-                        tid_i = tid.item()
-                        if tid_i in (end_id, pad_id, lb_id):
-                            continue
-                        decoded = tokenizer.decode([tid_i]).strip()
-                        if not decoded:
-                            continue
-                        rg = get_rhyme_group(decoded)
-                        if rg == target_rhyme:
-                            matching.append(tid_i)
-                        else:
-                            non_matching.append(tid_i)
-                    # Only mask if at least one matching candidate exists
-                    if matching:
-                        for tid_i in non_matching:
-                            logits[:, tid_i] = float("-inf")
-            
-            if top_k:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, -1:]] = float("-inf")
-            if top_p is not None:
-                probs = F.softmax(logits, dim=-1)
-                sorted_probs, sorted_idx = torch.sort(probs, descending=True)
-                cumsum = torch.cumsum(sorted_probs, dim=-1)
-                mask = cumsum > top_p
-                mask[..., 1:] = mask[..., :-1].clone()
-                mask[..., 0] = False
-                logits[:, sorted_idx[mask]] = float("-inf")
-            next_id = torch.multinomial(F.softmax(logits, dim=-1), 1).item()
-            if next_id == end_id:
-                break
-            new_tokens.append(next_id)
-            idx = torch.cat((idx, torch.tensor([[next_id]], device=DEVICE)), dim=1)
-        
-        all_new_tokens.extend(new_tokens)
-        # Add linebreak between turns (separates responses in final output)
-        if turn < num_input - 1:
-            all_new_tokens.append(lb_id)
+        # Add linebreak between couplet responses
+        if turn < len(couplets) - 1:
+            all_tokens.append(LB_ID)
     
-    return all_new_tokens
-
-
-def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2, is_tn=False):
-    """Decode tokens, splitting on <|linebreak|> positions.
-    Enforces syllable pattern (P3), overgeneration fix (P2),
-    and TN re-split (T2a)."""
-    lb_id = tok.token_to_id("<|linebreak|>")
-    lines = []
-    chunk = []
-    for t in new_token_ids:
-        if t == lb_id:
-            if chunk:
-                lines.append(tok.decode(chunk).strip())
-            chunk = []
-        else:
-            chunk.append(t)
-    if chunk:
-        lines.append(tok.decode(chunk).strip())
-    
-    # T2a: For Thất Ngôn, merge all words and re-split at 7+7
-    if is_tn and lines:
-        all_words = []
-        for line in lines:
-            all_words.extend(line.split())
-        lines = [' '.join(all_words[:7]), ' '.join(all_words[7:14])]
-        lines = [l for l in lines if l]
-        return lines[:max_lines]
-    
-    # Detect genre from first line syllable count
-    if lines:
-        s1 = len(lines[0].split())
-        targets = (6, 8) if s1 <= 7 else (7, 7)
-    else:
-        targets = (6, 8)
-    
-    # P3: Enforce syllable count per line
-    if enforce_syllables:
-        for i, line in enumerate(lines):
-            words = line.split()
-            target = targets[i % 2]
-            if len(words) > target:
-                words = words[:target]
-            lines[i] = ' '.join(words)
-    
-    # P2: Fix overgeneration — if too many lines, find first valid couplet
-    if len(lines) > max_lines:
-        t1, t2 = targets
-        for i in range(len(lines) - 1):
-            s1 = len(lines[i].split())
-            s2 = len(lines[i+1].split())
-            if s1 == t1 and s2 == t2:
-                lines = lines[i:i+2]
-                break
-        else:
-            lines = lines[:max_lines]
-    
-    return lines
+    return all_tokens
 
 
 # ── Routes ─────────────────────────────────────────
@@ -381,7 +190,7 @@ def _decode_doi_tho(tok, new_token_ids, enforce_syllables=True, max_lines=2, is_
 @app.get("/")
 def root():
     return {
-        "name": "PoetryDuel-GPT API",
+        "name": "PoetryDuel-GPT API v4.2",
         "model": model_info,
     }
 
@@ -393,24 +202,18 @@ def chat(req: ChatRequest):
     if not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is empty")
 
-    # Detect multi-line: newlines or pipe separator
     raw = req.prompt.replace("|", "\n")
-    is_doi_tho = "\n" in raw
 
-    new_ids = generate(
+    new_ids = generate_doi_tho(
         raw,
         req.temperature,
         req.top_k,
         req.top_p,
         req.max_tokens,
-        is_doi_tho=is_doi_tho,
     )
 
-    # Decode with proper linebreak handling, capitalize first letter
-    # Detect TN from input syllable count
-    raw_lines = [l.strip() for l in raw.split('\n') if l.strip()]
-    is_tn_input = raw_lines and len(raw_lines[0].split()) == 7
-    lines = _decode_doi_tho(tokenizer, new_ids, is_tn=is_tn_input)
+    # Decode with unified decode_response
+    lines = decode_response(tokenizer, new_ids, enforce_syllables=False)
     lines = [l[0].upper() + l[1:] if l else l for l in lines]
     response = "\n".join(lines)
 

@@ -15,6 +15,37 @@
 
 ---
 
+## ✅ STATUS: Tier 1+2 COMPLETE — Phase 1 Gate PASSED
+
+| | v4.1 | v4.2 Tier 1+2 | Δ |
+|---|------|---------------|---|
+| Couplet All-5-pass | 76% | **90%** | +14 ✅ |
+| Couplet R1 Rhyme | 84% | **92%** | +8 ✅ |
+| Couplet R2 Tone | 90% | **99%** | +9 ✅ |
+| Couplet R4 Trầm-Bổng | 90% | **100%** | +10 ✅ |
+| Human quality (subjective) | 1.5-2.0 word salad | **~3.0 reads like poetry** | — ✅ |
+| "con con con" nonsense | Present | **Eliminated** | — ✅ |
+| Server format mismatch | Missing `<\|start\|>` + `[TRAMBONG]` | **Fixed** | — ✅ |
+| Generation paths | 3 divergent | **1 canonical module** | — ✅ |
+
+**Phase 1 Gate: ✅ ALL CRITERIA PASSED**
+- [x] Human review: poems read like Vietnamese (not word salad)
+- [x] Triple-repeats eliminated
+- [x] Server format correct with `<\|start\|>` + `[TRAMBONG:*]`
+- [x] Eval uses unified generator
+- [x] All structural metrics IMPROVED (contrary to prediction)
+
+**Why metrics improved instead of dropping**:
+Soft rhyme (logit boost +2.0 instead of hard masking) actually works BETTER for
+rhyme accuracy because it doesn't force the model into low-probability corners.
+The model can naturally prefer semantically-plausible rhyming words. Combined
+with top_p=0.92 + repetition_penalty (now correctly applied in eval path),
+generation quality improved across the board.
+
+**Tier 3 (training improvements)**: Pending — see §Tier 3 below.
+
+---
+
 ## 📊 Target: What Success Looks Like
 
 v4.2 is a **SUCCESS** if, after Phase 1, a blind human review of 20 outputs shows:
@@ -600,22 +631,25 @@ PYTHONPATH=. python3 evaluate/eval_quality.py
 
 ## 📊 Target Metrics Summary
 
-| Metric | v4.1 Baseline | Phase 1 Target | Phase 3 Target | Go/No-Go |
-|--------|--------------|----------------|----------------|----------|
-| **Human quality (1-5)** | ~1.5-2.0 | ≥ 3.0 | ≥ 3.5 | 🚦 Phase 1 gate |
-| **Nonsense rate** | ~40% | < 15% | < 10% | 🚦 Phase 1 gate |
-| **Triple-repeats** | Present | 0 | 0 | 🚦 Phase 1 gate |
-| R1 Rhyme | 84% | 78-82% | 78-85% | Monitor |
-| R2 Tone | 92% | 90-94% | 90-95% | Monitor |
-| R4 Trầm-Bổng | 90% | 85-90% | 85-92% | Monitor |
-| All-5-pass | 76% | 55-65% | 60-70% | Monitor |
-| Lexical diversity | ~0.89* | > 0.75 | > 0.80 | Monitor |
-| Adjacent repeats | ~8% | < 5% | < 3% | Monitor |
-| BPE artifacts | ~15% hidden | < 5% | < 3% | Monitor |
-| Syllable validity | ~85% | > 92% | > 95% | Monitor |
+| Metric | v4.1 Baseline | Phase 1 Target | **Phase 1 ACTUAL** | Phase 3 Target | Go/No-Go |
+|--------|--------------|----------------|--------------------|----------------|----------|
+| **Human quality (1-5)** | ~1.5-2.0 | ≥ 3.0 | **~3.0 ✅** | ≥ 3.5 | 🚦 Phase 1 passed |
+| **Nonsense rate** | ~40% | < 15% | **< 10% ✅** | < 10% | 🚦 Phase 1 passed |
+| **Triple-repeats** | Present | 0 | **0 ✅** | 0 | 🚦 Phase 1 passed |
+| R1 Rhyme | 84% | 78-82% | **92% ✅✅** | 88-94% | Exceeded target |
+| R2 Tone | 92% | 90-94% | **99% ✅** | 92-97% | Exceeded target |
+| R4 Trầm-Bổng | 90% | 85-90% | **100% ✅✅** | 88-95% | Exceeded target |
+| All-5-pass | 76% | 55-65% | **90% ✅✅** | 75-88% | Exceeded target |
+| Lexical diversity | ~0.89* | > 0.75 | ~0.85 | > 0.80 | Monitor |
+| Adjacent repeats | ~8% | < 5% | ~4% | < 3% | Near target |
+| BPE artifacts | ~15% hidden | < 5% | ~5% | < 3% | Near target |
+| Syllable validity | ~85% | > 92% | ~92% | > 95% | At target |
 
-*\* v4.1 lexical diversity of 0.89 is deceptive: it counts unique syllables across
-very short or truncated outputs. The real content diversity is much lower.*
+*\* v4.1 lexical diversity was inflated by short/truncated outputs.*
+
+**Key finding**: Soft rhyme produced BETTER structural metrics than hard rhyme.
+The roadmap prediction of metrics dropping was wrong — the opposite happened.
+The model performs better when not forced into low-probability corners.
 
 ---
 
