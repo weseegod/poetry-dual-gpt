@@ -224,22 +224,21 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
     it = iter(train_loader)
     pbar = tqdm(total=eval_interval, desc=f"  Steps 0-{eval_interval}", unit="s", leave=False)
 
-    # ── v4.2 Tier 3: Build per-token loss weights (P6) ──
-    # Only <|end|> (3) and <|linebreak|> (9) need full weight — model generates them.
-    # All other control tokens (IDs 1-214 except 3,9) are prompt-only, reduce to 0.3x.
-    # Content tokens (215+) keep 1.0x.
+    # ── v4.2 Tier 3: Build per-class loss weight tensor (P6 + P8) ──
+    # Used directly in F.cross_entropy(weight=...) — zero extra memory.
+    # Only <|end|> (3) and <|linebreak|> (9) are generated at inference → full weight.
+    # <|linebreak|> gets +0.2 bonus (P8). All other control IDs (1-214 except 3,9)
+    # are prompt-only tags → reduced to 0.3×.
+    # Content tokens (215+) keep 1.0×.
+    lb_id = 9
+    linebreak_bonus = 0.2
     GENERATED_CONTROL_IDS = {3, 9}  # <|end|>, <|linebreak|>
     token_weight = torch.ones(V, device=dev)
     for i in range(1, 215):  # skip 0 (pad, already ignore_index)
         if i not in GENERATED_CONTROL_IDS:
             token_weight[i] = 0.3
-    
-    # Linebreak bonus (P8): positions where y == <|linebreak|> get extra weight
-    lb_id = 9
-    linebreak_bonus = 0.2
-    print(f"   P6: Content-weighted loss (tags ×0.3, <|end|>/<|lb|> ×1.0)")
-    print(f"   P8: Linebreak bonus=+{linebreak_bonus}")
-    print(f"   P7: Removed — OOM on T4. P6 + inference rep_penalty sufficient.")
+    token_weight[lb_id] = 1.0 + linebreak_bonus  # P8: 1.2× for linebreak
+    print(f"   P6+P8: Content-weighted loss (tags ×0.3, <|end|> ×1.0, <|lb|> ×{1.0+linebreak_bonus})")
 
     while step < max_steps:
         # Next batch (new epoch if exhausted)
@@ -281,22 +280,14 @@ def train(max_lines=None, resume_from=None, curriculum=False, curriculum_rate=0.
         with torch.autocast(device_type=dev, dtype=torch.bfloat16):
             logits, _ = model(x_input)
 
-            # ── P6: Content-weighted cross-entropy loss ──
-            # Reduce gradient on prompt-only control tokens so model focuses on content
-            loss_per_token = F.cross_entropy(
+            # ── P6 + P8: Content-weighted cross-entropy loss ──
+            # Use PyTorch's built-in per-class weight (no extra tensor allocation).
+            # token_weight[i] = 0.3 for tag tokens, 1.0 for content,
+            # 1.2 for <|linebreak|> (P8 bonus). <|pad|>(0) ignored via ignore_index.
+            loss = F.cross_entropy(
                 logits.view(-1, model.vocab_size), y.view(-1),
-                ignore_index=0, reduction='none'
+                ignore_index=0, weight=token_weight
             )
-            weights = token_weight[y.view(-1)]  # lookup weight for each target token
-
-            # ── P8: Linebreak position reinforcement ──
-            # Positions where the target is <|linebreak|> get extra weight
-            lb_mask = (y.view(-1) == lb_id)
-            weights = weights + lb_mask.float() * linebreak_bonus
-
-            ce_loss = (loss_per_token * weights).mean()
-
-            loss = ce_loss  # Tier 3: P6 content-weighted CE + P8 linebreak bonus
         
         opt.zero_grad()
         loss.backward()
