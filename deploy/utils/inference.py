@@ -1,11 +1,21 @@
 """
-v4.1 Production Inference — Lục Bát đối thơ.
+v4.2.3 Production Inference — Lục Bát đối thơ.
 Used by doitho backend. Single file, no training deps.
+
+Key v4.2.3 improvements over v4.1:
+  - Soft rhyme constraint (logit boost +2.0 instead of hard masking)
+  - Top-p nucleus sampling (top_p=0.92)
+  - Repetition penalty (-1.2) in all paths
+  - Control token suppression prevents BPE artifact leaks
+  - Strict linebreak syllable enforcement (6+8 for production)
 
 Exports:
   load_model(checkpoint_path, tokenizer_path, device) → (model, tokenizer)
-  generate(prompt, model, tokenizer, ...) → (luc_line, bat_line)
+  generate(prompt, model, tokenizer, ...) → dict(luc, bat, lines, token_ids)
   auto_tag(prompt) → formatted prompt string
+  build_doi_tho_prompt(line6, line8) → formatted couplet prompt
+  build_doi_tho_from_lines(lines) → formatted multi-couplet prompt
+  decode_doi_tho(tokenizer, new_token_ids, ...) → list of line strings
 """
 
 import re
@@ -213,7 +223,10 @@ def generate(
         for prev in new_tokens[-16:]:
             logits[:, prev] -= 1.2
 
-        # P1: Rhyme constraint at pos6 of output Lục line
+        # P2 v4.2.3: Soft rhyme constraint at pos6 of output Lục line
+        # Boost matching rhyme candidates (+2.0 logit) instead of hard masking.
+        # This lets the model prefer semantically-plausible rhyming words.
+        # If model is very uncertain (flat distribution), fall back to hard masking.
         if target_rhyme is not None:
             # Count syllables since last <|linebreak|> or <|reply|>
             last_delim = -1
@@ -240,9 +253,20 @@ def generate(
                         matching.append(tid_i)
                     else:
                         non_matching.append(tid_i)
+                
                 if matching:
-                    for tid_i in non_matching:
-                        logits[:, tid_i] = float("-inf")
+                    # v4.2.3 soft: boost matching, allow override if semantically better
+                    rhyme_logit_boost = 2.0
+                    for tid_i in matching:
+                        logits[:, tid_i] += rhyme_logit_boost
+                    
+                    # Safety valve: if model is very uncertain about ALL candidates
+                    # (flat distribution), fall back to hard masking to prevent randomness
+                    probs_check = F.softmax(logits.clone(), dim=-1)
+                    max_prob = probs_check.max().item()
+                    if max_prob < 0.03:
+                        for tid_i in non_matching:
+                            logits[:, tid_i] = float("-inf")
 
         # Top-k
         if top_k:
