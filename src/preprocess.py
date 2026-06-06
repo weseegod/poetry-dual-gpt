@@ -74,8 +74,9 @@ def make_pairs(lines: list[str], genre: str) -> list[str]:
         if p_ok and r_ok and prompt and reply:
             extras = ""
             if genre == "lục bát":
-                rhyme, tone = get_luc_bat_tags(prompt)
-                extras = f"{rhyme} {tone}".strip()
+                rhyme, tone, trambong = get_luc_bat_tags(prompt + " " + reply)
+                parts = [t for t in [rhyme, tone, trambong] if t]
+                extras = " ".join(parts)
             elif genre == "bảy chữ":
                 link2, doi_am = get_that_ngon_tags(prompt)
                 extras_parts = [t for t in [link2, doi_am] if t]
@@ -104,8 +105,9 @@ def make_pairs_song_that(lines: list[str]) -> list[str]:
         # Lines i+2 and i+3 should be 6→8 (lục bát couplet)
         l3, l4 = lines[i + 2], lines[i + 3]
         if count_syllables(l3) == 6 and count_syllables(l4) == 8:
-            rhyme, tone = get_luc_bat_tags(l3)
-            extras = f"{rhyme} {tone}".strip()
+            rhyme, tone, trambong = get_luc_bat_tags(l3 + " " + l4)
+            parts = [t for t in [rhyme, tone, trambong] if t]
+            extras = " ".join(parts)
             tag_part = f"[LUC_BAT] {extras}" if extras else "[LUC_BAT]"
             pairs.append(f"{START} {tag_part} {l3} {REPLY} {l4} {END}")
 

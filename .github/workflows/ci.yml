@@ -1,0 +1,102 @@
+name: CI — Build + Smoke Test + Push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/finetune/**"
+      - "data/poetry_corpus.txt"
+      - "data/corpus_luc_bat.txt"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/finetune/**"
+      - "data/poetry_corpus.txt"
+      - "data/corpus_luc_bat.txt"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/poetry-trainer-v5
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/finetune/Dockerfile
+          load: true
+          tags: poetry-trainer:ci-test
+
+      # ── Smoke test 1: Corpus integrity ──
+      - name: Smoke — verify corpus files
+        run: |
+          docker run --rm --entrypoint sh poetry-trainer:ci-test -c "
+            echo '=== Corpus files ==='
+            ls -lh /app/corpus/
+            echo ''
+            echo '=== Line counts ==='
+            wc -l /app/corpus/*.txt
+            echo ''
+            echo '=== poetry_corpus.txt — check control tokens ==='
+            head -2 /app/corpus/poetry_corpus.txt
+            echo '...'
+            echo ''
+            echo '=== corpus_luc_bat.txt — check control tokens ==='
+            head -2 /app/corpus/corpus_luc_bat.txt
+            echo ''
+            echo '=== Token counts ==='
+            echo 'RHYME in LB corpus:'  \$(grep -c '\[RHYME:' /app/corpus/corpus_luc_bat.txt || echo 0)
+            echo 'TONE in LB corpus:'   \$(grep -c '\[TONE:'  /app/corpus/corpus_luc_bat.txt || echo 0)
+            echo 'TRAMBONG in LB:'      \$(grep -c '\[TRAMBONG:' /app/corpus/corpus_luc_bat.txt || echo 0)
+          "
+
+      # ── Smoke test 2: Python imports ──
+      - name: Smoke — verify Python deps import
+        run: |
+          docker run --rm --entrypoint python poetry-trainer:ci-test -c "
+          import torch;              print(f'torch {torch.__version__}')
+          import transformers;       print(f'transformers {transformers.__version__}')
+          import peft;               print(f'peft OK')
+          import bitsandbytes;       print(f'bitsandbytes OK')
+          import accelerate;         print(f'accelerate OK')
+          print('All imports OK')
+          "
+
+      # ── Smoke test 3: Train script parses args ──
+      - name: Smoke — verify train.py --help works
+        run: |
+          docker run --rm --entrypoint python poetry-trainer:ci-test /app/train.py --help
+
+      # ── Log in to GHCR ──
+      - name: Log in to GitHub Container Registry
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Push image ──
+      - name: Push image to GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/finetune/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
