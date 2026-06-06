@@ -23,9 +23,9 @@ from tqdm import tqdm
 #  PATH CONFIG (all paths relative to /app inside container)
 # ═══════════════════════════════════════════════════════════════
 
-APP_DIR = Path("/app")
-CORPUS_DIR = APP_DIR / "corpus"
-CHECKPOINT_DIR = APP_DIR / "checkpoints"
+APP_DIR = Path(os.environ.get("APP_DIR", "/app"))
+CORPUS_DIR = Path(os.environ.get("CORPUS_DIR", str(APP_DIR / "corpus")))
+CHECKPOINT_DIR = Path(os.environ.get("CHECKPOINT_DIR", str(APP_DIR / "checkpoints")))
 
 STAGE_CORPUS = {
     1: CORPUS_DIR / "poetry_corpus.txt",
@@ -282,7 +282,7 @@ def upload_checkpoints(local_dir, stage):
 #  TRAINING LOOP
 # ═══════════════════════════════════════════════════════════════
 
-def train(stage=1, resume_from=None):
+def train(stage=1, resume_from=None, max_steps_override=None):
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 

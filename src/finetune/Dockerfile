@@ -1,5 +1,5 @@
 # PoetryDuel-GPT v5 QLoRA Training — containerized for local/Salad GPU
-FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
+FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
