@@ -12,7 +12,11 @@ cd "$(dirname "$0")"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 CMD="${1:-help}"
 IMAGE="poetry-trainer:v5"
-HF_TOKEN="${HF_TOKEN:?Set: export HF_TOKEN=hf_xxx}"
+
+# ── Load secrets from any available source ──
+[ -f src/finetune/.env ] && export $(grep -v '^#' src/finetune/.env | xargs) 2>/dev/null
+[ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null
+HF_TOKEN="${HF_TOKEN:?Set HF_TOKEN in ~/.bashrc or src/finetune/.env: export HF_TOKEN=hf_xxx}"
 
 # ═══════════════════════════════════════════════
 usage() {
