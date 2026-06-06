@@ -132,72 +132,20 @@ grep -c '\[TRAMBONG:' data/corpus_luc_bat.txt # → 608288
 
 ---
 
-## Step 4: Build, Test, and Push (CI-Powered)
-
-### CI Pipeline (automated)
-
-Push to `main` and GitHub Actions handles everything:
-
-```
-git push origin main
-  │
-  ▼
-.github/workflows/ci.yml
-  1. Build Docker image (CPU)
-  2. Smoke test: verify corpus integrity, Python imports, CLI args
-  3. Push image to GHCR (ghcr.io/USER/poetry-dual-gpt/poetry-trainer-v5:latest)
-```
-
-**Prerequisites**: None. GitHub Actions uses `secrets.GITHUB_TOKEN` to push to GHCR.
-The workflow only triggers when files in `src/finetune/` or `data/` change.
-
-### Local Development (before pushing)
-
-While iterating on training code, test locally first:
+## Step 4: Build, Test, Train (One Script)
 
 ```bash
-# Quick dev test — builds locally, runs 100 steps on GPU
-export HF_TOKEN=hf_xxx
-bash src/finetune/dev.sh 100
+# One-time setup
+bash run.sh setup
+
+# Smoke test (100 steps, ~2min)
+bash run.sh test
+
+# Full training (~2.5h)
+bash run.sh train
 ```
 
-### Smoke Test on Training Server
-
-After CI passes, pull and test on your GPU server:
-
-```bash
-# Pull CI-built image, run 100-step GPU smoke test
-export HF_TOKEN=hf_xxx
-export GITHUB_USER=your-github-username
-bash src/finetune/test.sh
-# Configurable: POETRY_TRAINER_IMAGE, STAGE, STEPS, TEST_DIR
-```
-
-What it checks:
-- GPU is accessible
-- Model loads and tokenizes corpus
-- Loss decreases over 100 steps
-- No CUDA OOM errors
-- Checkpoint saves correctly
-
-### Full Training Run
-
-```bash
-# Full Stage 1 training (5000 steps, ~2.5h on RTX 3090)
-export HF_TOKEN=hf_xxx
-export GITHUB_USER=your-github-username
-bash src/finetune/train.sh
-
-# Both stages (auto-chain)
-AUTO_CHAIN=1 bash src/finetune/train.sh
-
-# With cloud checkpoint upload
-export S3_BUCKET=s3://my-bucket/training
-export S3_ENDPOINT=https://xxx.r2.cloudflarestorage.com
-export AWS_ACCESS_KEY_ID=xxx
-export AWS_SECRET_ACCESS_KEY=xxx
-bash src/finetune/train.sh
-```
+That's it. `run.sh` handles Docker build, corpus generation, GPU detection, and checkpoint saving.
 
 ---
 
