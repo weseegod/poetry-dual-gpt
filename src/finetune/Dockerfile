@@ -3,7 +3,7 @@ FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
+    git build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
