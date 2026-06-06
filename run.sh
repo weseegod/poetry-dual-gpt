@@ -31,16 +31,29 @@ do_setup() {
     echo "🔧  Setup..."
     command -v docker >/dev/null 2>&1 || { echo "${RED}❌ Install Docker first${NC}"; exit 1; }
 
-    # Data deps for preprocess.py
-    pip install -q pandas 2>/dev/null || true
+    CORPUS_DIR="src/finetune/corpus"
+    CORPUS="$CORPUS_DIR/poetry_corpus.txt"
 
-    # Generate corpus if missing
-    if [ ! -f data/poetry_corpus.txt ]; then
-        echo "   📖  Generating corpus..."
-        python3 src/preprocess.py --csv data/poems_dataset_clean.csv --output data/poetry_corpus.txt
-        grep '\[LUC_BAT\]' data/poetry_corpus.txt > data/corpus_luc_bat.txt
+    # Decompress if .gz exists but .txt missing
+    if [ ! -f "$CORPUS" ] && [ -f "$CORPUS.gz" ]; then
+        echo "   📦  Decompressing corpus..."
+        gunzip -k "$CORPUS_DIR/poetry_corpus.txt.gz"
+        gunzip -k "$CORPUS_DIR/corpus_luc_bat.txt.gz"
     fi
-    echo "   ✅  Corpus: $(wc -l < data/poetry_corpus.txt) pairs"
+
+    # Generate corpus from CSV if completely missing
+    if [ ! -f "$CORPUS" ]; then
+        if [ ! -f data/poems_dataset_clean.csv ]; then
+            echo "   ${YELLOW}⚠️  data/poems_dataset_clean.csv not found${NC}"
+            echo "   Copy it from your Mac: scp data/poems_dataset_clean.csv user@ubuntu:poetry-dual-gpt/data/"
+            exit 1
+        fi
+        echo "   📖  Generating corpus..."
+        pip install -q pandas 2>/dev/null || true
+        python3 src/preprocess.py --csv data/poems_dataset_clean.csv --output "$CORPUS"
+        grep '\[LUC_BAT\]' "$CORPUS" > src/finetune/corpus/corpus_luc_bat.txt
+    fi
+    echo "   ✅  Corpus: $(wc -l < "$CORPUS") pairs"
 
     # Build
     echo "   🔨  Building Docker image..."

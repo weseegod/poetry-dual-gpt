@@ -12,8 +12,8 @@ WORKDIR /app
 COPY src/finetune/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Corpus files — generated from data/poems_dataset_clean.csv via src/preprocess.py
-COPY data/poetry_corpus.txt data/corpus_luc_bat.txt /app/corpus/
+# Corpus files — pre-generated from data/poems_dataset_clean.csv via src/preprocess.py
+COPY src/finetune/corpus/poetry_corpus.txt src/finetune/corpus/corpus_luc_bat.txt /app/corpus/
 
 # Training code
 COPY src/finetune/train.py /app/

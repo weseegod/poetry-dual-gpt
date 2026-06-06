@@ -5,14 +5,14 @@ on:
     branches: [main]
     paths:
       - "src/finetune/**"
-      - "data/poetry_corpus.txt"
-      - "data/corpus_luc_bat.txt"
+      - "src/finetune/corpus/poetry_corpus.txt"
+      - "src/finetune/corpus/corpus_luc_bat.txt"
   pull_request:
     branches: [main]
     paths:
       - "src/finetune/**"
-      - "data/poetry_corpus.txt"
-      - "data/corpus_luc_bat.txt"
+      - "src/finetune/corpus/poetry_corpus.txt"
+      - "src/finetune/corpus/corpus_luc_bat.txt"
 
 env:
   REGISTRY: ghcr.io
