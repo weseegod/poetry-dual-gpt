@@ -7,7 +7,7 @@
 #   bash run.sh train     Full training
 # ──────────────────────────────────────────────
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 CMD="${1:-help}"
