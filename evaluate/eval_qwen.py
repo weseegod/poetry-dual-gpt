@@ -93,21 +93,28 @@ def load_qwen_model(checkpoint_path: str, cache_dir: str = None):
 # GENERATION
 # ═══════════════════════════════════════════════
 
-def build_qwen_prompt(line6: str, line8: str) -> str:
+def build_qwen_prompt(line6: str, line8: str = None) -> str:
     """
     Build prompt in v5 training format:
-    <|start|> [LUC_BAT] [RHYME:X] [TONE:BBTBBT] [TRAMBONG:NH]
-      line6 line8 <|reply|>
+    <|start|> [LUC_BAT] [RHYME:X] [TONE:BBTBBT] [TRAMBONG:NH] line6 <|reply|>
+    
+    Training: model takes a Lục line + control tags → generates matching Bát line.
+    Control tags are teacher-forced from the full couplet during training.
+    During eval, we extract [RHYME] and [TONE] from line6, and use the
+    ground-truth [TRAMBONG] from line8 for fair comparison.
     """
-    couplet = f"{line6} {line8}"
-    rhyme, tone, trambong = get_luc_bat_tags(couplet)
+    if line8:
+        couplet = f"{line6} {line8}"
+        rhyme, tone, trambong = get_luc_bat_tags(couplet)
+    else:
+        rhyme, tone, trambong = get_luc_bat_tags(line6)
     tags = " ".join(t for t in [rhyme, tone, trambong] if t)
-    return f"<|start|> [LUC_BAT] {tags} {couplet} <|reply|>"
+    return f"<|start|> [LUC_BAT] {tags} {line6} <|reply|>"
 
 
 @torch.no_grad()
 def generate_response(model, tokenizer, prompt: str, max_new: int = 32) -> str:
-    """Generate from Qwen + LoRA model."""
+    """Generate Bát line from Qwen + LoRA model (line→line format)."""
     dev = next(model.parameters()).device
     inputs = tokenizer(prompt, return_tensors="pt").to(dev)
 
@@ -130,14 +137,6 @@ def generate_response(model, tokenizer, prompt: str, max_new: int = 32) -> str:
     if "<|end|>" in text:
         text = text.split("<|end|>")[0].strip()
 
-    # Split into two lines (6 + 8 syllables)
-    parts = text.split()
-    if len(parts) >= 14:
-        return "  ".join([" ".join(parts[:6]), " ".join(parts[6:14])])
-    elif len(parts) >= 8:
-        return "  ".join([" ".join(parts[:6]), " ".join(parts[6:])])
-    elif len(parts) >= 6:
-        return "  ".join([" ".join(parts[:6]), " ".join(parts[6:])])
     return text
 
 
@@ -146,21 +145,21 @@ def generate_response(model, tokenizer, prompt: str, max_new: int = 32) -> str:
 # ═══════════════════════════════════════════════
 
 def evaluate_couplet(line6_in, line8_in, response_text):
-    """Score all 5 Lục Bát rules on couplet→couplet generation."""
-    parts = response_text.split('  ')
-    out_luc = parts[0].strip() if len(parts) > 0 else ''
-    out_bat = parts[1].strip() if len(parts) > 1 else ''
-    out_luc_syls = out_luc.split()
-    out_bat_syls = out_bat.split()
-    in_bat_syls = line8_in.split()
-    r_len = len(out_luc_syls) + len(out_bat_syls)
+    """Score all 5 Lục Bát rules on line→line generation (predict Bát from Lục).
+    
+    Training format: [tags] Lục_line <|reply|> Bát_line <|end|>
+    Model generates the Bát line. We evaluate it against Lục Bát rules.
+    """
+    in_luc_syls = line6_in.split()
+    out_bat_syls = response_text.split()
+    r_len = len(out_bat_syls)
 
-    # R1: Vần lưng — input Bát[pos8] vs output Lục[pos6]
+    # R1: Vần lưng — input Lục[pos6] vs output Bát[pos6]  
     r1_ok = False
-    if len(in_bat_syls) >= 8 and len(out_luc_syls) >= 6:
-        r1_ok = get_rhyme_group(in_bat_syls[7]) == get_rhyme_group(out_luc_syls[5])
+    if len(in_luc_syls) >= 6 and len(out_bat_syls) >= 6:
+        r1_ok = get_rhyme_group(in_luc_syls[5]) == get_rhyme_group(out_bat_syls[5])
 
-    # R2: Bằng-Trắc on output Bát line
+    # R2: Bằng-Trắc on output Bát line (even positions: BTBB)
     r2_ok = 0; r2_total = 0
     for idx, want in [(1, 'B'), (3, 'T'), (5, 'B'), (7, 'B')]:
         if idx < len(out_bat_syls):
@@ -168,32 +167,31 @@ def evaluate_couplet(line6_in, line8_in, response_text):
             if get_tone(out_bat_syls[idx]) == want:
                 r2_ok += 1
 
-    # R3: Syllable count
-    r3_exact = (len(out_luc_syls) == 6 and len(out_bat_syls) == 8)
+    # R3: Syllable count — output must be exactly 8 syllables
+    r3_exact = (len(out_bat_syls) == 8)
 
-    # R4: Trầm-Bổng
+    # R4: Trầm-Bổng — pos6 and pos8 of Bát must have opposite diacritics  
     r4_ok = False
     if len(out_bat_syls) >= 8:
         d6 = get_diacritic(out_bat_syls[5])
         d8 = get_diacritic(out_bat_syls[7])
         r4_ok = d6 in ('ngang', 'huyen') and d8 in ('ngang', 'huyen') and d6 != d8
 
-    # R5: Nhịp điệu
-    r5_ok = (len(out_luc_syls) == 6 and len(out_bat_syls) == 8)
+    # R5: Nhịp điệu — correct syllable count
+    r5_ok = (len(out_bat_syls) == 8)
 
     # Quality
-    all_syls = out_luc_syls + out_bat_syls
-    lex_div = len(set(all_syls)) / max(len(all_syls), 1)
-    all_5 = r3_exact and r1_ok and r2_ok == r2_total and r4_ok
+    lex_div = len(set(out_bat_syls)) / max(len(out_bat_syls), 1)
+    all_5 = r1_ok and r3_exact and r2_ok == r2_total and r4_ok
 
-    # BPE artifacts (check for subword fragments in Qwen output)
-    bpe_count = sum(1 for s in all_syls if len(s) < 2 or not any(
+    # BPE artifacts
+    bpe_count = sum(1 for s in out_bat_syls if len(s) < 2 or not any(
         c in "aăâeêioôơuưyAĂÂEÊIOÔƠUƯY" for c in s))
 
     return {
         'prompt': f'{line6_in} / {line8_in[:20]}',
         'response': response_text,
-        'out_luc': out_luc, 'out_bat': out_bat,
+        'out_bat': response_text,
         'r_len': r_len,
         'R1_ok': r1_ok, 'R2_r_ok': r2_ok, 'R2_r_total': r2_total,
         'R3_exact': r3_exact, 'R4_ok': r4_ok, 'R5_ok': r5_ok,
@@ -274,6 +272,7 @@ def main():
     TARGETS = {
         'R1': 90, 'R2': 95, 'R3': 100, 'R4': 90, 'R5': 100,
         'all5': 90, 'avg_lex': 0.90, 'avg_bpe': 2.0, 'empty': 5,
+        'avg_len': 8,
     }
 
     print(f"\n{'='*60}")
@@ -286,9 +285,9 @@ def main():
     for key, label, fmt in [
         ('R1', 'R1 Rhyme (vần lưng)', '.0f%'),
         ('R2', 'R2 Tone (Bằng-Trắc)', '.0f%'),
-        ('R3', 'R3 Syllable (6+8)', '.0f%'),
+        ('R3', 'R3 Syllable (exact 8)', '.0f%'),
         ('R4', 'R4 Trầm-Bổng', '.0f%'),
-        ('R5', 'R5 Nhịp điệu', '.0f%'),
+        ('R5', 'R5 Nhịp điệu (exact 8)', '.0f%'),
         ('all5', 'All 5 rules pass', '.0f%'),
     ]:
         v = s[key]
@@ -300,6 +299,7 @@ def main():
 
     print(f"\n{'─'*30} {'─'*8} {'─'*8} {'─'*8}")
     for key, label, fmt in [
+        ('avg_len', 'Average Bát length', '.1f'),
         ('avg_lex', 'Lexical diversity', '.3f'),
         ('avg_bpe', 'BPE artifact rate', '.1f'),
         ('empty', 'Empty response rate', '.1f%'),
@@ -329,9 +329,9 @@ def main():
     print(f"\n📝  Sample outputs:")
     for i, r in enumerate(results[:8]):
         emoji = lambda ok: '✅' if ok else '❌'
-        print(f"\n  [{i+1}] {r['prompt'][:50]}")
-        print(f"     → Lục: {r['out_luc'][:40]}")
-        print(f"       Bát: {r['out_bat'][:40]}")
+        line6_in = r['prompt'].split(' / ')[0]
+        print(f"\n  [{i+1}] Lục: {line6_in[:50]}")
+        print(f"     → Bát: {r['out_bat'][:60]}")
         print(f"       {emoji(r['R1_ok'])}R1 {emoji(r['R2_r_ok']==r['R2_r_total'])}R2 "
               f"{emoji(r['R3_exact'])}R3 {emoji(r['R4_ok'])}R4")
     if len(results) > 8:
