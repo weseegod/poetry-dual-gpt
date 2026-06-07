@@ -60,14 +60,14 @@ QLORA_CONFIG = {
 }
 
 TRAIN_CONFIG = {
-    "batch_size": int(os.environ.get("TRAIN_BATCH_SIZE", "8")),
+    "batch_size": int(os.environ.get("TRAIN_BATCH_SIZE", "4")),
     "gradient_accumulation_steps": int(os.environ.get("TRAIN_GRAD_ACCUM", "4")),
     "block_size": int(os.environ.get("TRAIN_BLOCK_SIZE", "256")),
     "warmup_steps": 100,
     "min_lr": 1e-6,
     "eval_interval": 200,
     "grad_clip": 1.0,
-    "num_workers": int(os.environ.get("TRAIN_NUM_WORKERS", "8")),
+    "num_workers": int(os.environ.get("TRAIN_NUM_WORKERS", "4")),
     "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
 
