@@ -13,11 +13,12 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 from tokenizers import Tokenizer
 from tqdm import tqdm
 
 from model import PoetryDuelGPT
-from dataset import (PoetryDataset, tokenize_corpus, get_dataloaders,
+from dataset import (PoetryDataset, tokenize_corpus,
                       CurriculumDataset, ExampleDataset, get_dataloaders_aligned)
 
 ROOT = Path(__file__).parent.parent
