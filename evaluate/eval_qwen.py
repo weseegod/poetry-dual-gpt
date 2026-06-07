@@ -61,10 +61,24 @@ def load_qwen_model(checkpoint_path: str, cache_dir: str = None):
     else:
         kwargs["torch_dtype"] = torch.float32
 
+    # ── Load checkpoint tokenizer first to get special tokens ──
+    print(f"   🔤  Loading tokenizer from checkpoint: {checkpoint_path}")
+    ckpt_tokenizer = AutoTokenizer.from_pretrained(checkpoint_path, trust_remote_code=True)
+    special_tokens = [t for t in ckpt_tokenizer.get_vocab()
+                      if t.startswith("[") and t.endswith("]")
+                      or t.startswith("<") and t.endswith(">")]
+    print(f"   Special tokens from checkpoint: {len(special_tokens)}")
+
+    # ── Load base model + tokenizer ──
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **kwargs)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token, cache_dir=cache_dir)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # ── Resize for special tokens (must happen BEFORE loading LoRA) ──
+    num_added = tokenizer.add_tokens(special_tokens, special_tokens=True)
+    model.resize_token_embeddings(len(tokenizer))
+    print(f"   Resized embeddings: {len(tokenizer):,} tokens (+{num_added})")
 
     if not has_gpu:
         model = model.to(dev)
