@@ -108,6 +108,7 @@ do_train() {
         -e TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-8}" \
         -e TRAIN_GRAD_ACCUM="${TRAIN_GRAD_ACCUM:-4}" \
         -e TRAIN_BLOCK_SIZE="${TRAIN_BLOCK_SIZE:-256}" \
+        -e TRAIN_NUM_WORKERS="${TRAIN_NUM_WORKERS:-8}" \
         -e S3_BUCKET="${S3_BUCKET:-}" \
         -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
         -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \

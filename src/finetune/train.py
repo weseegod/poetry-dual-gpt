@@ -67,7 +67,7 @@ TRAIN_CONFIG = {
     "min_lr": 1e-6,
     "eval_interval": 200,
     "grad_clip": 1.0,
-    "num_workers": int(os.environ.get("TRAIN_NUM_WORKERS", "4")),
+    "num_workers": int(os.environ.get("TRAIN_NUM_WORKERS", "8")),
     "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
 
