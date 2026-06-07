@@ -32,35 +32,39 @@ MODEL_ID = "Qwen/Qwen2.5-1.5B"
 # ═══════════════════════════════════════════════
 
 def load_qwen_model(checkpoint_path: str):
-    """Load Qwen base + LoRA adapter."""
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    """Load Qwen base + LoRA adapter. Falls back to CPU if no GPU."""
+    from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import PeftModel
 
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
         raise RuntimeError("Set HF_TOKEN environment variable")
 
-    dev = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"📦  Loading {MODEL_ID}...")
+    has_gpu = torch.cuda.is_available()
+    dev = "cuda" if has_gpu else "cpu"
+    print(f"📦  Loading {MODEL_ID} ({'GPU' if has_gpu else 'CPU — will be slow'})...")
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-    )
+    kwargs = {"trust_remote_code": True, "token": hf_token}
 
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-        token=hf_token,
-    )
+    if has_gpu:
+        from transformers import BitsAndBytesConfig
+        kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+        kwargs["device_map"] = "auto"
+    else:
+        kwargs["torch_dtype"] = torch.float32
 
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **kwargs)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    if not has_gpu:
+        model = model.to(dev)
 
     print(f"   🎯  Loading LoRA adapter: {checkpoint_path}")
     model = PeftModel.from_pretrained(model, checkpoint_path)
