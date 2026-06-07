@@ -60,8 +60,8 @@ QLORA_CONFIG = {
 }
 
 TRAIN_CONFIG = {
-    "batch_size": int(os.environ.get("TRAIN_BATCH_SIZE", "4")),
-    "gradient_accumulation_steps": int(os.environ.get("TRAIN_GRAD_ACCUM", "8")),
+    "batch_size": int(os.environ.get("TRAIN_BATCH_SIZE", "8")),
+    "gradient_accumulation_steps": int(os.environ.get("TRAIN_GRAD_ACCUM", "4")),
     "block_size": int(os.environ.get("TRAIN_BLOCK_SIZE", "256")),
     "warmup_steps": 100,
     "min_lr": 1e-6,

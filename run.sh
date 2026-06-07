@@ -105,6 +105,9 @@ do_train() {
         -e HF_HOME="/root/.cache/huggingface" \
         -e STAGE="$STAGE" \
         -e AUTO_CHAIN_STAGES="${AUTO_CHAIN:-0}" \
+        -e TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-8}" \
+        -e TRAIN_GRAD_ACCUM="${TRAIN_GRAD_ACCUM:-4}" \
+        -e TRAIN_BLOCK_SIZE="${TRAIN_BLOCK_SIZE:-256}" \
         -e S3_BUCKET="${S3_BUCKET:-}" \
         -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
         -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
