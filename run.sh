@@ -76,6 +76,11 @@ do_test() {
         -e TRAIN_MAX_STEPS=100 \
         -e TRAIN_BATCH_SIZE=2 \
         -e TRAIN_GRAD_ACCUM=4 \
+        -e S3_BUCKET="${S3_BUCKET:-}" \
+        -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
+        -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+        -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+        -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
         -v "$(pwd)/test_output:/app/checkpoints" \
         "$IMAGE" 2>&1 | tee test_output/log.txt
 
@@ -97,6 +102,11 @@ do_train() {
         -e HF_TOKEN="$HF_TOKEN" \
         -e STAGE="$STAGE" \
         -e AUTO_CHAIN_STAGES="${AUTO_CHAIN:-0}" \
+        -e S3_BUCKET="${S3_BUCKET:-}" \
+        -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
+        -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
+        -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
+        -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
         -v "$(pwd)/checkpoints:/app/checkpoints" \
         "$IMAGE"
 
