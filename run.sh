@@ -73,6 +73,7 @@ do_test() {
     mkdir -p test_output
     docker run --rm --gpus all \
         -e HF_TOKEN="$HF_TOKEN" \
+        -e HF_HOME="/root/.cache/huggingface" \
         -e TRAIN_MAX_STEPS=100 \
         -e TRAIN_BATCH_SIZE=2 \
         -e TRAIN_GRAD_ACCUM=4 \
@@ -82,6 +83,7 @@ do_test() {
         -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
         -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
         -v "$(pwd)/test_output:/app/checkpoints" \
+        -v "${HF_CACHE_DIR:-$HOME/.cache/huggingface}:/root/.cache/huggingface" \
         "$IMAGE" 2>&1 | tee test_output/log.txt
 
     if grep -q "CUDA out of memory\|RuntimeError" test_output/log.txt 2>/dev/null; then
@@ -100,6 +102,7 @@ do_train() {
 
     docker run --rm --gpus all \
         -e HF_TOKEN="$HF_TOKEN" \
+        -e HF_HOME="/root/.cache/huggingface" \
         -e STAGE="$STAGE" \
         -e AUTO_CHAIN_STAGES="${AUTO_CHAIN:-0}" \
         -e S3_BUCKET="${S3_BUCKET:-}" \
@@ -108,6 +111,7 @@ do_train() {
         -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
         -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
         -v "$(pwd)/checkpoints:/app/checkpoints" \
+        -v "${HF_CACHE_DIR:-$HOME/.cache/huggingface}:/root/.cache/huggingface" \
         "$IMAGE"
 
     echo "${GREEN}✅  Done — checkpoints/$(ls checkpoints/ | head -1)${NC}"

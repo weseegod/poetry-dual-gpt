@@ -31,7 +31,7 @@ MODEL_ID = "Qwen/Qwen2.5-1.5B"
 # MODEL LOADING
 # ═══════════════════════════════════════════════
 
-def load_qwen_model(checkpoint_path: str):
+def load_qwen_model(checkpoint_path: str, cache_dir: str = None):
     """Load Qwen base + LoRA adapter. Falls back to CPU if no GPU."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import PeftModel
@@ -39,12 +39,15 @@ def load_qwen_model(checkpoint_path: str):
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
         raise RuntimeError("Set HF_TOKEN environment variable")
+    if cache_dir is None:
+        cache_dir = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
 
     has_gpu = torch.cuda.is_available()
     dev = "cuda" if has_gpu else "cpu"
     print(f"📦  Loading {MODEL_ID} ({'GPU' if has_gpu else 'CPU — will be slow'})...")
+    print(f"   Cache: {cache_dir}")
 
-    kwargs = {"trust_remote_code": True, "token": hf_token}
+    kwargs = {"trust_remote_code": True, "token": hf_token, "cache_dir": cache_dir}
 
     if has_gpu:
         from transformers import BitsAndBytesConfig
@@ -59,7 +62,7 @@ def load_qwen_model(checkpoint_path: str):
         kwargs["torch_dtype"] = torch.float32
 
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **kwargs)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token, cache_dir=cache_dir)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -214,6 +217,8 @@ def main():
                         help="Number of prompts to evaluate (0=all)")
     parser.add_argument("--output", type=str, default=None,
                         help="Output JSON path")
+    parser.add_argument("--cache-dir", type=str, default=None,
+                        help="HuggingFace cache directory (default: $HF_HOME or ~/.cache/huggingface)")
     args = parser.parse_args()
 
     ckpt = Path(args.checkpoint)
@@ -224,7 +229,7 @@ def main():
 
     prompts = COUPLET_PROMPTS[:args.num] if args.num else COUPLET_PROMPTS
 
-    model, tokenizer, dev = load_qwen_model(str(ckpt))
+    model, tokenizer, dev = load_qwen_model(str(ckpt), cache_dir=args.cache_dir)
     print(f"   Device: {dev}")
     if dev == 'cuda':
         print(f"   GPU: {torch.cuda.get_device_name(0)}")

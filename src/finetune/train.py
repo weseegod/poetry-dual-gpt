@@ -311,6 +311,8 @@ def train(stage=1, resume_from=None, max_steps_override=None):
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
         raise RuntimeError("HF_TOKEN environment variable not set! Set it to your HuggingFace token.")
+    cache_dir = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+    print(f"   Cache: {cache_dir}")
     bnb_config = BitsAndBytesConfig(**QLORA_CONFIG)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -319,9 +321,10 @@ def train(stage=1, resume_from=None, max_steps_override=None):
         trust_remote_code=True,
         dtype=torch.bfloat16,
         token=hf_token,
+        cache_dir=cache_dir,
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True, token=hf_token, cache_dir=cache_dir)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
