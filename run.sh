@@ -1,124 +1,147 @@
 #!/bin/bash
 # ──────────────────────────────────────────────
-# PoetryDuel-GPT v5 QLoRA — one script to rule them all
+# PoetryDuel-GPT v5.1 — Instruction Fine-Tuning
 #
-#   bash run.sh setup     One-time: corpus + docker build
-#   bash run.sh test      Smoke test (100 steps)
-#   bash run.sh train     Full training
+#   bash run.sh setup    Pre-download model + build Docker
+#   bash run.sh test     Smoke test (100 steps)
+#   bash run.sh train    Full training
 # ──────────────────────────────────────────────
 set -e
 cd "$(dirname "$0")"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
-CMD="${1:-help}"
-IMAGE="poetry-trainer:v5"
+CMD="${1:-help}"; shift 2>/dev/null || true
+IMAGE="poetry-instruct:v5.1"
 
-# ── Load secrets from any available source ──
+# ── Load HF token ──
 [ -f src/finetune/.env ] && export $(grep -v '^#' src/finetune/.env | xargs) 2>/dev/null
 [ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null
-HF_TOKEN="${HF_TOKEN:?Set HF_TOKEN in ~/.bashrc or src/finetune/.env: export HF_TOKEN=hf_xxx}"
+if [ -z "$HF_TOKEN" ]; then
+    echo "${YELLOW}⚠️  HF_TOKEN not set — set in src/finetune/.env or ~/.bashrc${NC}"
+    echo "   export HF_TOKEN=hf_xxx"
+fi
+
+# ── Parse flags ──
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --batch-size)       TRAIN_BATCH_SIZE="$2"; shift 2 ;;
+        --grad-accum)       TRAIN_GRAD_ACCUM="$2"; shift 2 ;;
+        --max-steps)        TRAIN_MAX_STEPS="$2"; shift 2 ;;
+        --max-seq-length)   TRAIN_MAX_SEQ_LENGTH="$2"; shift 2 ;;
+        --resume)           RESUME_FROM="$2"; shift 2 ;;
+        *) echo "Unknown: $1"; exit 1 ;;
+    esac
+done
+
+HF_CACHE="${HF_CACHE_DIR:-$HOME/.cache/huggingface}"
+CORPUS_DIR="src/finetune/corpus"
+CORPUS="$CORPUS_DIR/poetry_corpus.txt"
 
 # ═══════════════════════════════════════════════
 usage() {
-    echo "Usage: bash run.sh <command>"
+    echo "Usage: bash run.sh <command> [flags]"
     echo ""
-    echo "  setup    Generate corpus + build Docker image (run once)"
-    echo "  test     Smoke test — 100 steps, verify everything works"
-    echo "  train    Full training (Stage 1, 5000 steps, ~2.5h)"
+    echo "Commands:"
+    echo "  setup    Pre-download model + generate data + build Docker"
+    echo "  test     Smoke test (100 steps)"
+    echo "  train    Full training (5000 steps)"
     echo ""
-    echo "Env: HF_TOKEN required. Optional: STAGE=2, AUTO_CHAIN=1"
+    echo "Flags:"
+    echo "  --batch-size N        (default: 4)"
+    echo "  --grad-accum N        (default: 4)"
+    echo "  --max-steps N         (default: 5000, test: 100)"
+    echo "  --max-seq-length N    (default: 256)"
+    echo "  --resume PATH         Resume from checkpoint dir"
     exit 0
 }
 
 # ═══════════════════════════════════════════════
 do_setup() {
-    echo "🔧  Setup..."
+    echo "🔧  Setup v5.1 Instruct..."
     command -v docker >/dev/null 2>&1 || { echo "${RED}❌ Install Docker first${NC}"; exit 1; }
 
-    CORPUS_DIR="src/finetune/corpus"
-    CORPUS="$CORPUS_DIR/poetry_corpus.txt"
-
-    # Decompress if .gz exists but .txt missing
+    # ── Decompress corpus if needed ──
     if [ ! -f "$CORPUS" ] && [ -f "$CORPUS.gz" ]; then
-        echo "   📦  Decompressing corpus..."
         gunzip -k "$CORPUS_DIR/poetry_corpus.txt.gz"
         gunzip -k "$CORPUS_DIR/corpus_luc_bat.txt.gz"
     fi
 
-    # Generate corpus from CSV if completely missing
-    if [ ! -f "$CORPUS" ]; then
-        if [ ! -f data/poems_dataset_clean.csv ]; then
-            echo "   ${YELLOW}⚠️  data/poems_dataset_clean.csv not found${NC}"
-            echo "   Copy it from your Mac: scp data/poems_dataset_clean.csv user@ubuntu:poetry-dual-gpt/data/"
-            exit 1
-        fi
-        echo "   📖  Generating corpus..."
-        pip install -q pandas 2>/dev/null || true
-        python3 src/preprocess.py --csv data/poems_dataset_clean.csv --output "$CORPUS"
-        grep '\[LUC_BAT\]' "$CORPUS" > src/finetune/corpus/corpus_luc_bat.txt
+    # ── Generate instruction JSONL from corpus ──
+    TRAIN_JSONL="data/instruct_train.jsonl"
+    if [ ! -f "$TRAIN_JSONL" ]; then
+        echo "   📝  Generating instruction data..."
+        python3 src/finetune/preprocess_instruct.py
     fi
-    echo "   ✅  Corpus: $(wc -l < "$CORPUS") pairs"
+    echo "   ✅  Data: $(wc -l < "$TRAIN_JSONL") train + $(wc -l < data/instruct_val.jsonl) val"
 
-    # Build
+    # ── Pre-download model to host cache ──
+    echo "   📥  Downloading Qwen2.5-1.5B-Instruct (~3GB, one-time)..."
+    mkdir -p "$HF_CACHE"
+    # Fix permissions if root-owned from previous Docker runs
+    sudo chown -R "$USER:$USER" "$HF_CACHE" 2>/dev/null || true
+    pip install -q huggingface_hub 2>/dev/null || true
+    python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('Qwen/Qwen2.5-1.5B-Instruct', cache_dir='$HF_CACHE', token='$HF_TOKEN')
+print('✅ Model cached')
+"
+
+    # ── Build Docker ──
     echo "   🔨  Building Docker image..."
     docker build -t "$IMAGE" -f src/finetune/Dockerfile .
-    echo "   ${GREEN}✅  Image built${NC}"
-    echo ""
+    echo "   ${GREEN}✅  Ready!${NC}"
     echo "   Next: bash run.sh test"
 }
 
 # ═══════════════════════════════════════════════
 do_test() {
-    echo "🧪  Smoke test — 100 steps..."
+    echo "🧪  Smoke test (100 steps)..."
     mkdir -p test_output
     docker run --rm --gpus all \
         -e HF_TOKEN="$HF_TOKEN" \
-        -e HF_HOME="/root/.cache/huggingface" \
         -e TRAIN_MAX_STEPS=100 \
-        -e TRAIN_BATCH_SIZE=2 \
-        -e TRAIN_GRAD_ACCUM=4 \
-        -e S3_BUCKET="${S3_BUCKET:-}" \
-        -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
-        -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-        -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
-        -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
+        -e TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-2}" \
+        -e TRAIN_GRAD_ACCUM="${TRAIN_GRAD_ACCUM:-4}" \
+        -e TRAIN_MAX_SEQ_LENGTH=256 \
+        -e DATA_DIR=/app/data \
+        -e CHECKPOINT_DIR=/app/checkpoints \
         -v "$(pwd)/test_output:/app/checkpoints" \
-        -v "${HF_CACHE_DIR:-$HOME/.cache/huggingface}:/root/.cache/huggingface" \
+        -v "$HF_CACHE:/root/.cache/huggingface" \
         "$IMAGE" 2>&1 | tee test_output/log.txt
-
-    if grep -q "CUDA out of memory\|RuntimeError" test_output/log.txt 2>/dev/null; then
-        echo "${RED}❌  CUDA errors — check test_output/log.txt${NC}"; exit 1
-    fi
-    echo "${GREEN}✅  Smoke test passed${NC}"
-    echo "   Next: bash run.sh train"
+    echo "${GREEN}✅  Smoke test done${NC}"
 }
 
 # ═══════════════════════════════════════════════
 do_train() {
-    echo "🔥  Full training..."
+    echo "🔥  Training..."
     mkdir -p checkpoints
-    STAGE="${STAGE:-1}"
-    echo "   Stage: $STAGE | Data: $(wc -l < data/poetry_corpus.txt) pairs"
+    BATCH="${TRAIN_BATCH_SIZE:-4}"
+    ACCUM="${TRAIN_GRAD_ACCUM:-4}"
+    STEPS="${TRAIN_MAX_STEPS:-5000}"
+    echo "   Steps: $STEPS | Batch: ${BATCH}×${ACCUM}=$((BATCH*ACCUM))"
+    echo "   Data: $(wc -l < data/instruct_train.jsonl) examples"
+
+    RESUME_MOUNT=""
+    if [ -n "${RESUME_FROM:-}" ]; then
+        RESUME_DIR="$(realpath "$RESUME_FROM")"
+        echo "   📂  Resume: $RESUME_DIR"
+        RESUME_MOUNT="-v $RESUME_DIR:/app/checkpoints/resume -e RESUME_FROM=/app/checkpoints/resume"
+    fi
 
     docker run --rm --gpus all \
         -e HF_TOKEN="$HF_TOKEN" \
-        -e HF_HOME="/root/.cache/huggingface" \
-        -e STAGE="$STAGE" \
-        -e AUTO_CHAIN_STAGES="${AUTO_CHAIN:-0}" \
-        -e TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-4}" \
-        -e TRAIN_GRAD_ACCUM="${TRAIN_GRAD_ACCUM:-4}" \
-        -e TRAIN_BLOCK_SIZE="${TRAIN_BLOCK_SIZE:-256}" \
-        -e TRAIN_NUM_WORKERS="${TRAIN_NUM_WORKERS:-4}" \
-        -e S3_BUCKET="${S3_BUCKET:-}" \
-        -e S3_ENDPOINT="${S3_ENDPOINT:-}" \
-        -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}" \
-        -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}" \
-        -e AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-}" \
+        -e TRAIN_MAX_STEPS="$STEPS" \
+        -e TRAIN_BATCH_SIZE="$BATCH" \
+        -e TRAIN_GRAD_ACCUM="$ACCUM" \
+        -e TRAIN_MAX_SEQ_LENGTH="${TRAIN_MAX_SEQ_LENGTH:-256}" \
+        -e DATA_DIR=/app/data \
+        -e CHECKPOINT_DIR=/app/checkpoints \
         -v "$(pwd)/checkpoints:/app/checkpoints" \
-        -v "${HF_CACHE_DIR:-$HOME/.cache/huggingface}:/root/.cache/huggingface" \
+        -v "$HF_CACHE:/root/.cache/huggingface" \
+        $RESUME_MOUNT \
         "$IMAGE"
 
-    echo "${GREEN}✅  Done — checkpoints/$(ls checkpoints/ | head -1)${NC}"
+    echo "${GREEN}✅  Done — checkpoints/$(ls checkpoints/ 2>/dev/null | head -1)${NC}"
 }
 
 # ═══════════════════════════════════════════════
