@@ -19,7 +19,7 @@ Two approaches to the same problem — generating rule-compliant Lục Bát poet
 | **Method** | QLoRA fine-tuning | Trained from scratch |
 | **Params** | 1.5B (18.5M trainable) | 31.5M |
 | **All-5 accuracy** | 70.0% | 91.4% |
-| **HF Model** | [grindytech/poetry-dual-gpt-instruct-v5.1](https://huggingface.co/grindytech/poetry-dual-gpt-instruct-v5.1) | [grindytech/poetry-dual-gpt](https://huggingface.co/grindytech/poetry-dual-gpt) |
+| **HF Model** | [grindytech/poetry-dual-gpt-instruct](https://huggingface.co/grindytech/poetry-dual-gpt-instruct) | [grindytech/poetry-dual-gpt](https://huggingface.co/grindytech/poetry-dual-gpt) |
 
 > 🚀 Try it live at **[doitho.net](https://doitho.net)**
 
