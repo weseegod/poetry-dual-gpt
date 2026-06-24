@@ -9,6 +9,7 @@ venv/
 
 # Training artifacts
 checkpoints/
+checkpoints/training_artifacts/
 
 # Data files (generated locally, zipped, uploaded to Drive for Colab)
 data/

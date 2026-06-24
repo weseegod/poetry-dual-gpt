@@ -2,19 +2,65 @@
 
 # 🎭 PoetryDuel-GPT
 
-*A 31.5M-parameter GPT-style Transformer for Vietnamese Poetry Dueling (Đối Thơ)*
+*Vietnamese Lục Bát Poetry Generation — from scratch Transformers to QLoRA Instruct models*
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red?logo=pytorch)](https://pytorch.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Model](https://img.shields.io/badge/Params-31.5M-orange)](#model-architecture)
-[![HF Models](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/grindytech/poetry-dual-gpt)
+[![HF Models](https://img.shields.io/badge/🤗%20HF-Models-yellow)](https://huggingface.co/weseegod)
 
 </div>
 
-**PoetryDuel-GPT** is a GPT-style autoregressive Transformer built from scratch in raw PyTorch — zero HuggingFace wrappers. It performs **đối thơ** (Vietnamese poetry dueling): given one or two lines of Lục Bát poetry, the model responds with a matching couplet that follows rhyme, tone, and syllable constraints.
+Two approaches to the same problem — generating rule-compliant Lục Bát poetry couplets:
+
+| | v5.1 Instruct (QLoRA) | v4.2.3 (From Scratch) |
+|---|---|---|
+| **Base model** | Qwen2.5-1.5B-Instruct | 31.5M custom GPT |
+| **Method** | QLoRA fine-tuning | Trained from scratch |
+| **Params** | 1.5B (18.5M trainable) | 31.5M |
+| **All-5 accuracy** | 70.0% | 91.4% |
+| **HF Model** | [weseegod/poetry-dual-gpt-instruct-v5.1](https://huggingface.co/weseegod/poetry-dual-gpt-instruct-v5.1) | [grindytech/poetry-dual-gpt](https://huggingface.co/grindytech/poetry-dual-gpt) |
 
 > 🚀 Try it live at **[doitho.net](https://doitho.net)**
+
+---
+
+## 🆕 v5.1 Instruct (QLoRA on Qwen2.5-1.5B-Instruct)
+
+Instruction-tuned with chat template. Given a Lục line, generates the matching Bát line.
+
+### Evaluation (30 prompts, temp=0.6)
+
+| Rule | Accuracy | Target |
+|------|----------|--------|
+| R1 Rhyme (vần lưng) | 80.0% | 85% |
+| R2 Tone (B-T-B-B) | 97.5% | 90% |
+| R3 Syllable count (=8) | 100% | 90% |
+| R4 Trầm-Bổng | 93.3% | 85% |
+| R5 Rhythm | 100% | 90% |
+| **All 5 rules** | **70.0%** | 70% |
+
+### Quick Start
+
+```bash
+# Setup & train
+bash run.sh setup
+bash run.sh train --batch-size 8 --max-steps 7000
+
+# Resume from checkpoint
+bash run.sh train --batch-size 8 --max-steps 10000 --resume checkpoints/instruct_best
+
+# Evaluate
+python evaluate/eval_instruct.py --checkpoint checkpoints/instruct_best
+```
+
+See [`checkpoints/instruct_best/README.md`](checkpoints/instruct_best/README.md) for Python inference code.
+
+---
+
+## 🏗️ v4.2.3 — From-Scratch Transformer
+
+**PoetryDuel-GPT** is a GPT-style autoregressive Transformer built from scratch in raw PyTorch — zero HuggingFace wrappers. It performs **đối thơ** (Vietnamese poetry dueling): given one or two lines of Lục Bát poetry, the model responds with a matching couplet that follows rhyme, tone, and syllable constraints.
 
 ---
 
