@@ -101,14 +101,14 @@ def collate_batch(examples, tokenizer):
     return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
 
 
-def save_checkpoint(model, tokenizer, optimizer, step, loss, stage, path):
+def save_checkpoint(model, tokenizer, optimizer, step, loss, stage, path, plateau=0):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
     torch.save({
         "optimizer_state_dict": optimizer.state_dict(),
-        "step": step, "loss": loss, "stage": stage,
+        "step": step, "loss": loss, "stage": stage, "plateau": plateau,
     }, path / "training_state.pt")
     return path
 
@@ -158,12 +158,39 @@ def train(resume_from=None, max_steps_override=None):
 
     print(f"   Vocab: {len(tokenizer):,} (native, no new tokens)")
 
-    # ── LoRA ──
-    print(f"\n🎯  QLoRA r={LORA_CONFIG['r']} alpha={LORA_CONFIG['lora_alpha']}")
+    # ── LoRA / Resume ──
+    # Must resolve resume BEFORE apply LoRA, so we can either load saved
+    # adapter or create fresh one — never both (avoids double-wrapping).
+    start_step = 0
+    best_val = float("inf")
+    plateau = 0
+    resume_path = None
+    if resume_from:
+        resume_path = Path(resume_from)
+        if not resume_path.exists():
+            resume_path = CHECKPOINT_DIR / resume_from
+
     model = prepare_model_for_kbit_training(model)
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    lora_config = LoraConfig(**LORA_CONFIG)
-    model = get_peft_model(model, lora_config)
+
+    if resume_path and resume_path.exists():
+        # Load adapter directly from checkpoint (skip fresh LoRA init)
+        from peft import PeftModel
+        print(f"\n📂  Resume: {resume_path}")
+        model = PeftModel.from_pretrained(model, resume_path, is_trainable=True)
+        ckpt = torch.load(str(resume_path / "training_state.pt"), map_location=dev, weights_only=False)
+        start_step = ckpt.get("step", 0)
+        if start_step >= max_steps:
+            max_steps = start_step + 1000
+            print(f"   ⚠️  start_step ({start_step}) >= max_steps, extending to {max_steps}")
+        best_val = ckpt.get("loss", float("inf"))
+        plateau = ckpt.get("plateau", 0)
+        print(f"   Step: {start_step} | Best val: {best_val:.4f} | Plateau: {plateau} | Max: {max_steps}")
+    else:
+        # Fresh LoRA
+        print(f"\n🎯  QLoRA r={LORA_CONFIG['r']} alpha={LORA_CONFIG['lora_alpha']}")
+        lora_config = LoraConfig(**LORA_CONFIG)
+        model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
     # ── Data ──
@@ -212,34 +239,22 @@ def train(resume_from=None, max_steps_override=None):
     opt = torch.optim.AdamW(model.parameters(), lr=TC["learning_rate"],
                              betas=(0.9, 0.95), weight_decay=TC["weight_decay"])
 
-    # ── Resume ──
-    start_step = 0
-    if resume_from:
-        from peft import PeftModel
-        resume_path = Path(resume_from)
-        if not resume_path.exists():
-            resume_path = CHECKPOINT_DIR / resume_from
-        print(f"\n📂  Resume: {resume_path}")
-        model = PeftModel.from_pretrained(model, resume_path)
-        ckpt = torch.load(str(resume_path / "training_state.pt"), map_location=dev, weights_only=False)
+    # Load optimizer state if resuming
+    if resume_path and resume_path.exists():
         opt.load_state_dict(ckpt["optimizer_state_dict"])
-        start_step = ckpt.get("step", 0)
-        max_steps = max(max_steps, start_step + 1000)
-        print(f"   Step: {start_step} | Max: {max_steps}")
 
     # ── Training ──
     print(f"\n{'='*60}\n🔥  TRAINING\n{'='*60}\n")
     model.train()
     step = start_step
-    best_val = float("inf")
-    plateau = 0
     loss_sum = 0.0
     loss_cnt = 0
     micro_step = 0
     t0 = time.time()
     it = iter(train_loader)
 
-    pbar = tqdm(total=TC["eval_interval"], desc=f"  Steps 0-{TC['eval_interval']}", 
+    nxt = min(start_step + TC["eval_interval"], max_steps)
+    pbar = tqdm(total=TC["eval_interval"], desc=f"  Steps {start_step}-{nxt}", 
                 unit="s", leave=False)
 
     while step < max_steps:
@@ -293,7 +308,7 @@ def train(resume_from=None, max_steps_override=None):
 
             if is_best:
                 p = save_checkpoint(model, tokenizer, opt, step, val_loss, "instruct",
-                                    CHECKPOINT_DIR / "instruct_best")
+                                    CHECKPOINT_DIR / "instruct_best", plateau)
                 print(f"   💾  {p.name}")
 
             if TC["patience"] > 0 and plateau >= TC["patience"]:
@@ -309,7 +324,7 @@ def train(resume_from=None, max_steps_override=None):
 
     # ── Save final ──
     final = save_checkpoint(model, tokenizer, opt, step, best_val, "instruct",
-                            CHECKPOINT_DIR / "instruct_final")
+                            CHECKPOINT_DIR / "instruct_final", plateau)
     elapsed = time.time() - t0
     print(f"\n{'='*60}")
     print(f"✅  Done! {elapsed:.0f}s | Best val: {best_val:.4f} | {final}")
