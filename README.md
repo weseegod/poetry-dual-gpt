@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red?logo=pytorch)](https://pytorch.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![HF Models](https://img.shields.io/badge/🤗%20HF-Models-yellow)](https://huggingface.co/weseegod)
+[![HF Models](https://img.shields.io/badge/🤗%20HF-Models-yellow)](https://huggingface.co/grindytech)
 
 </div>
 
@@ -19,7 +19,7 @@ Two approaches to the same problem — generating rule-compliant Lục Bát poet
 | **Method** | QLoRA fine-tuning | Trained from scratch |
 | **Params** | 1.5B (18.5M trainable) | 31.5M |
 | **All-5 accuracy** | 70.0% | 91.4% |
-| **HF Model** | [weseegod/poetry-dual-gpt-instruct-v5.1](https://huggingface.co/weseegod/poetry-dual-gpt-instruct-v5.1) | [grindytech/poetry-dual-gpt](https://huggingface.co/grindytech/poetry-dual-gpt) |
+| **HF Model** | [grindytech/poetry-dual-gpt-instruct-v5.1](https://huggingface.co/grindytech/poetry-dual-gpt-instruct-v5.1) | [grindytech/poetry-dual-gpt](https://huggingface.co/grindytech/poetry-dual-gpt) |
 
 > 🚀 Try it live at **[doitho.net](https://doitho.net)**
 
